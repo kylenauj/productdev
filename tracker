@@ -1,0 +1,1837 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Adult Rec — Product Launch Dashboard 2026</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0f1729;--bg2:#162040;--bg3:#0a1120;
+  --text:#e8edf8;--text2:#8fa3c8;--text3:#6b85a8;
+  --bdr:rgba(255,255,255,.08);--bdr2:rgba(255,255,255,.18);
+  --ok-bg:#0a2214;--ok:#6dba7a;
+  --info-bg:#0d1f3c;--info:#5b9bd5;
+  --warn-bg:#271900;--warn:#e09b3d;
+  --err-bg:#250d0d;--err:#e07878;
+  --r:8px;--rl:12px;
+  --rd-col:#2468b8;--rd-light:#162a50;
+  --pr-col:#d4944a;--pr-light:#28190a;
+  --op-col:#3dba8a;--op-light:#0c2a22;
+}
+
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg3);color:var(--text);font-size:14px;line-height:1.5}
+#root{max-width:1200px;margin:0 auto;padding:20px 16px 40px}
+.shell{background:var(--bg);border:0.5px solid var(--bdr);border-radius:var(--rl);overflow:hidden}
+.fullscreen-shell{border-radius:var(--rl)}
+.topbar{display:flex;align-items:center;border-bottom:0.5px solid var(--bdr);padding:0 12px;min-height:44px;flex-wrap:nowrap;overflow-x:auto}
+.main{min-width:0}
+.ptab{background:transparent;border:none;border-bottom:2px solid transparent;cursor:pointer;padding:9px 14px;font:500 13px inherit;color:var(--text2);white-space:nowrap}
+.ptab:hover{color:var(--text)}
+.ptab.on{color:var(--text);border-bottom-color:var(--bdr2)}
+.stab{background:transparent;border:none;border-bottom:2px solid transparent;cursor:pointer;padding:7px 14px;font:inherit;font-size:13px;color:var(--text2)}
+.stab.on{color:var(--text);border-bottom-color:var(--bdr2);font-weight:500}
+.sectabs{display:flex;border-bottom:0.5px solid var(--bdr);padding:0 20px}
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:500;white-space:nowrap}
+.prod-header{padding:16px 20px 14px;border-bottom:0.5px solid var(--bdr)}
+.editable{cursor:pointer;border-radius:4px;padding:1px 4px;display:inline-block;min-width:10px}
+.editable:hover{background:var(--bg2);outline:1px dashed var(--bdr2)}
+input.ei,textarea.ei,select.ei{background:var(--bg2);border:1.5px solid var(--info);border-radius:4px;color:var(--text);font:inherit;font-size:inherit;padding:2px 6px;outline:none;width:100%}
+textarea.ei{resize:vertical;min-height:52px}
+.cat-header{display:flex;align-items:center;gap:8px;padding:8px 20px;font-size:12px;font-weight:700;cursor:pointer;user-select:none;border-bottom:0.5px solid var(--bdr)}
+.task-tbl{width:100%;border-collapse:collapse}
+.task-tbl th{padding:6px 10px;text-align:left;font-size:11px;font-weight:500;color:var(--text2);letter-spacing:.04em;background:var(--bg2);border-bottom:0.5px solid var(--bdr)}
+.task-tbl td{padding:5px 10px;font-size:12px;border-bottom:0.5px solid var(--bdr);vertical-align:middle}
+.task-tbl tr:last-child td{border-bottom:none}
+.task-tbl tr:hover td{filter:brightness(.97)}
+.add-row{background:transparent;border:none;cursor:pointer;color:var(--text3);font:12px inherit;padding:6px 20px;display:flex;align-items:center;gap:5px;width:100%;border-top:0.5px solid var(--bdr)}
+.add-row:hover{color:var(--text);background:var(--bg2)}
+.icon-btn{background:transparent;border:none;cursor:pointer;color:var(--text3);padding:3px 5px;border-radius:4px;display:inline-flex;align-items:center}
+.icon-btn:hover{color:var(--text);background:var(--bg2)}
+.btn{background:var(--bg2);border:0.5px solid var(--bdr2);border-radius:6px;cursor:pointer;padding:6px 14px;font:inherit;font-size:12px;color:var(--text2);display:inline-flex;align-items:center;gap:5px}
+.btn:hover{background:var(--bg3)}
+.gantt-wrap{padding:16px 20px}
+.gantt-toolbar{display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+.gantt-btn{background:var(--bg2);border:0.5px solid var(--bdr);border-radius:5px;cursor:pointer;padding:5px 10px;font:12px inherit;color:var(--text2);display:inline-flex;align-items:center;gap:4px}
+.gantt-btn:hover{background:var(--bg3)}
+.gantt-cat-hd{display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:5px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;margin:12px 0 4px}
+.gantt-bar{position:absolute;height:100%;border-radius:4px;overflow:hidden;display:flex;align-items:center;padding:0 6px;min-width:4px}
+.gantt-bar:hover{opacity:.82}
+.specs-wrap{padding:16px 20px}
+.spec-section{background:var(--bg);border:0.5px solid var(--bdr);border-radius:var(--rl);margin-bottom:12px;overflow:hidden}
+.spec-sec-hd{padding:9px 14px;font-size:12px;font-weight:700;letter-spacing:.04em;background:var(--bg2);border-bottom:0.5px solid var(--bdr);display:flex;align-items:center;gap:7px;cursor:pointer;user-select:none}
+.spec-grid{display:grid;grid-template-columns:1fr 1fr}
+.spec-field{display:flex;padding:7px 14px;border-bottom:0.5px solid var(--bdr);gap:12px}
+.spec-field:nth-child(odd){border-right:0.5px solid var(--bdr)}
+.spec-field.full{grid-column:1/-1;border-right:none}
+.spec-img-row{display:flex;gap:16px;padding:14px 14px 10px;border-bottom:0.5px solid var(--bdr)}
+.spec-key{font-size:11px;color:var(--text2);width:160px;flex-shrink:0;padding-top:2px}
+.spec-val{font-size:13px;flex:1;min-width:0}
+.page-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:10px}
+.page-hd h1{font-size:22px;font-weight:800;letter-spacing:-.4px}
+.save-ind{font-size:11px;color:var(--ok);display:flex;align-items:center;gap:4px}
+.truncate{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+div:hover > .rm-btn{display:block!important}
+/* Leaflet map tweaks */
+.leaflet-container{font-family:inherit;font-size:12px}
+.leaflet-tooltip{background:var(--bg);color:var(--text);border:0.5px solid var(--bdr2);border-radius:6px;padding:5px 10px;box-shadow:0 2px 8px rgba(0,0,0,.3);font-family:inherit}
+.leaflet-tooltip-top::before{border-top-color:var(--bdr2)}
+.leaflet-control-attribution{font-size:9px;opacity:.5}
+.leaflet-tile{filter:brightness(0.85) saturate(0.9)}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script>
+'use strict';
+const {useState,useEffect,useRef,useCallback}=React;
+const el=React.createElement;
+const TODAY_D=new Date('2026-05-21T00:00:00');
+const parseD=s=>s?new Date(s+'T00:00:00'):null;
+const fmtD=s=>{if(!s)return'—';const d=parseD(s);return d.toLocaleDateString('en-CA',{month:'short',day:'numeric',year:'2-digit'});};
+const dLeft=s=>{if(!s)return null;return Math.ceil((parseD(s)-TODAY_D)/86400000);};
+const uid=()=>'t'+Math.random().toString(36).slice(2,8);
+const fmtTs=d=>d?new Date(d).toLocaleString('en-CA',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}):'—';
+
+const SC={'Done':{bg:'var(--ok-bg)',tx:'var(--ok)'},'In Progress':{bg:'var(--info-bg)',tx:'var(--info)'},'Not Started':{bg:'var(--bg2)',tx:'var(--text3)'},'Blocked':{bg:'var(--err-bg)',tx:'var(--err)'},'Delayed':{bg:'var(--err-bg)',tx:'var(--err)'},'High Priority':{bg:'var(--warn-bg)',tx:'var(--warn)'},'Accepted':{bg:'var(--ok-bg)',tx:'var(--ok)'},'Rejected':{bg:'var(--err-bg)',tx:'var(--err)'},'Cancelled':{bg:'var(--bg2)',tx:'var(--text3)'},'On Track':{bg:'var(--ok-bg)',tx:'var(--ok)'},'Pending':{bg:'var(--warn-bg)',tx:'var(--warn)'},'Launched':{bg:'var(--ok-bg)',tx:'var(--ok)'},'At Risk':{bg:'var(--warn-bg)',tx:'var(--warn)'}};
+const sc=s=>SC[s]||{bg:'var(--bg2)',tx:'var(--text2)'};
+const ALL_TAG_OPTIONS=['Accepted','Rejected','Cancelled','Delayed','On Track','In Progress','High Priority','Blocked','At Risk','Launched','Pending'];
+const STATUS_OPTS=['Not Started','In Progress','Done','Blocked','Delayed'];
+const CAT={rd:{id:'rd',label:'R&D',light:'var(--rd-light)',text:'#9ac5f5',col:'#2468b8'},procurement:{id:'procurement',label:'Procurement',light:'var(--pr-light)',text:'#e8a84a',col:'#d4944a'},operations:{id:'operations',label:'Operations & Delivery',light:'var(--op-light)',text:'#4ecfa0',col:'#3dba8a'}};
+const CAT_ORDER=['rd','procurement','operations'];
+const TCAT={'R&D':'rd','Product Specs / Submission':'rd','Formulation Dev':'rd','Sensory':'rd','Sensory – Internal':'rd','Sensory – Customer':'rd','Formulation Finalization':'rd','NNCP/GTIN':'rd','Financial Analysis':'rd','Packaging Dev':'rd','Labels':'procurement','Input':'procurement','Internal Packaging':'procurement','External Packaging':'procurement','Materials On Site':'operations','Labour':'operations','Samples Ready':'operations','Sample Run':'operations','Base Marketing Materials':'operations','Pre-Sell / Promo':'operations','Pre-Selling':'operations','PO Received':'operations','Production Week':'operations','Bulk Production':'operations','Production/Shipment':'operations','Delivery into OCS':'operations'};
+const getTC=n=>TCAT[n]||'operations';
+const BCOL={
+  'Done':      {rd:'#1a5fa8',   procurement:'#d4944a',  operations:'#2da878'},
+  'In Progress':{rd:'#3478c8',  procurement:'#b87c32',  operations:'#1f9464'},
+  'Not Started':{rd:'#1a3660',  procurement:'#251508',  operations:'#0a2018'},
+};
+const BCOL_TEXT={
+  'Done':      {rd:'#ffffff',   procurement:'#0d1829',  operations:'#0d1829'},
+  'In Progress':{rd:'#e8edf8',  procurement:'#e8d5b0',  operations:'#c8ede0'},
+  'Not Started':{rd:'#7db8f0',  procurement:'#c8902a',  operations:'#2a9e70'},
+};
+const barC=(cat,st)=>(BCOL[st]||BCOL['Not Started'])[cat]||'#333';
+const barT=(cat,st)=>(BCOL_TEXT[st]||BCOL_TEXT['Not Started'])[cat]||'#ccc';
+const BRAND_COL={'Litti':'var(--info)','Greazy':'var(--ok)','Shatterizer':'var(--warn)','Buddy Blooms':'var(--err)'};
+const prodStat=p=>{const d=p.tasks.filter(t=>t.status==='Done').length,tot=p.tasks.length,pct=tot?d/tot:0;if(p.tags&&p.tags.includes('Launched'))return'Launched';if(p.launchDate&&parseD(p.launchDate)<TODAY_D&&pct<1)return'Delayed';if(pct===1)return'Launched';if(pct>=0.55)return'On Track';return'In Progress';};
+const mk=(id,name,owner,status,start,end,notes='',atRisk=false)=>({id,name,owner,status,start,end,notes,atRisk,cat:getTC(name)});
+const PRESELL_NAMES=['Pre-Selling','Pre-Sell / Promo','Pre-Sell','Presell'];
+const getPreSellDate=tasks=>{const t=tasks.find(t=>PRESELL_NAMES.includes(t.name)&&t.start);return t?t.start:null;};
+const isOverdue=t=>t.end&&parseD(t.end)<TODAY_D&&t.status!=='Done';
+
+const IMAGE_FIELDS=['Target Product Image','Target Accessory Image'];
+const SPEC_SECTIONS=[
+  {key:'overview',label:'Product Overview',icon:'ti-info-circle',fields:['Planned Launch Time','Commercial Lead','Formulation Lead','Ops Lead','Brand Name Internal','Product Name Internal','Manufactured by: LP Name','Stocking Status','Launch Window','Stocking Type','Initial Case Offering (FT)','Samples Required']},
+  {key:'financial',label:'Financials',icon:'ti-currency-dollar',fields:['Landed Cost','Wholesale Cost','MSRP','Launch PO']},
+  {key:'product',label:'Product Specifics',icon:'ti-flask',fields:['Category','Product Size','Formulated Range','Label THC Range','Target CBD Range','Other Cannabinoids, Range','Flavouring Type','Flavour Description','Biomass Input','Formulations','Ingredients']},
+  {key:'packaging',label:'Packaging Requirements',icon:'ti-box',fields:['Target Product Image','Target Accessory Image','Product Primary/Hardware','Product Package/Outer','Packaging Labels','Accessory','Master Case GTIN','Retail Pack GTIN','Master Case Dimensions','Units per Master Shipper/Case','Who is responsible for Labels Sourcing?','Do we need new dies for labels?','Vendor providing retail labels?','Vendor providing case labels?']},
+  {key:'notes',label:'Notes',icon:'ti-notes',fields:['Additional Notes']}
+];
+
+const BLANK_PROD=pcLabel=>({
+  id:uid(),brand:'New Brand',name:'New Product',shortName:'New Product',launchDate:'',tags:['In Progress'],
+  notes:{updates:'',blockers:''},
+  specs:{'Planned Launch Time':pcLabel,'Brand Name Internal':'','Product Name Internal':'','Manufactured by: LP Name':'Mera Cannabis Corp.','Launch Window':'TBD','Stocking Type':'Stocking > FT','Initial Case Offering (FT)':'TBD','Samples Required':'Yes','Landed Cost':'—','Wholesale Cost':'—','MSRP':'—','Margin %':'—','Category':'','Product Size':''},
+  tasks:[mk(uid(),'NNCP/GTIN','','Not Started','',''),mk(uid(),'Formulation Dev','Chi','Not Started','',''),mk(uid(),'Sensory','','Not Started','',''),mk(uid(),'Packaging Dev','','Not Started','',''),mk(uid(),'Financial Analysis','','Not Started','',''),mk(uid(),'Labels','','Not Started','',''),mk(uid(),'Input','','Not Started','',''),mk(uid(),'Internal Packaging','','Not Started','',''),mk(uid(),'External Packaging','','Not Started','',''),mk(uid(),'Materials On Site','','Not Started','',''),mk(uid(),'Sample Run','','Not Started','',''),mk(uid(),'Pre-Selling','','Not Started','',''),mk(uid(),'Bulk Production','','Not Started','',''),mk(uid(),'Production/Shipment','','Not Started','',''),mk(uid(),'Delivery into OCS','','Not Started','')]
+});
+
+/* ── DATA ── */
+const INITIAL={
+pcTabs:[{id:'pc1',label:'PC#1 2026'},{id:'pc2',label:'PC#2 2026'},{id:'pc3',label:'PC#3 2026'}],
+pc1:[
+  {id:'bb',brand:'Litti',name:'Berry Blaze Liquid Diamonds All-in-One',shortName:'Berry Blaze AIO',launchDate:'2026-04-30',tags:['Accepted'],notes:{updates:'Branded pouches path being evaluated.',blockers:'Pouch delivery timeline risk.'},specs:{'Planned Launch Time':'Spring 2026 - ACCEPTED','Commercial Lead':'Jim','Formulation Lead':'Chi','Ops Lead':'Ian','Brand Name Internal':'Litti','Product Name Internal':'Berry Blaze Liquid Diamonds All-in-One','Manufactured by: LP Name':'Mera Cannabis Corp.','Stocking Status':'TBD','Launch Window':'April 1, 2026','Stocking Type':'Flowthrough','Initial Case Offering (FT)':'N/A','Samples Required':'100 units','Landed Cost':'$22.00','Wholesale Cost':'$27.50','MSRP':'$38.50','Margin %':'41%','Launch PO':'2400 units','Sales Target':'4,000/month','Category':'Vape - All-in-One','Product Size':'1g','Formulated Range':'85%','Label THC Range':'95-99% (98%)','Target CBD Range':'0-5%','Other Cannabinoids, Range':'N/A','Flavouring Type':'Botanical Terpenes','Flavour Description':'Berry Blaze','Biomass Input':'N/A','Formulations':'52 wt.% Distillate + 38 wt.% Liquid Diamonds + 10 wt.% Botanical Terpene','Ingredients':'Cannabis Extract, Botanical Terpenes','Target Product Image':'TBD','Target Accessory Image':'N/A','Product Primary/Hardware':'Cilicon – Nova Deli 1','Product Package/Outer':'4×6" Branded Pouch','Packaging Labels':'3.25"×4.25" front label','Accessory':'THC sticker','Master Case GTIN':'10876936002466','Retail Pack GTIN':'876936002469','Master Case Dimensions':'6×6×4','Units per Master Shipper/Case':'12','Who is responsible for Labels Sourcing?':'Mera Cannabis Corp.','Do we need new dies for labels?':'No','Vendor providing retail labels?':'Minuteman Press','Vendor providing case labels?':'MERA In-House','Action Items':'Branded China Vendor Pouches: 2–3 wks manufacture + ~45 days delivery. Path 1: Branded & hope for April. Path 2: Unbranded → branded. Path 3: ePac/local.'},
+   tasks:[mk('a1','R&D','','In Progress','2025-10-01','2025-11-07'),mk('a2','Product Specs / Submission','Kyle N.','In Progress','2025-10-01','2025-11-07','',true),mk('a3','Formulation Dev','Wei','Done','2025-10-01','2025-11-07','',true),mk('a4','Sensory','Wei','Done','2025-10-01','2025-11-07','External Sensory Validation pending'),mk('a5','Packaging Dev','Kyle N.','Done','2025-10-01','2025-12-10','Review Branded option w/ Jim'),mk('a6','Financial Analysis','Aamir','Done','2025-10-01','2025-11-07','Margin confirmed 41%',true),mk('a7','Labels','Kyle N.','In Progress','2026-02-12','2026-03-04','Reach out to Chris'),mk('a8','Input','Chi','Done','2026-02-05','2026-03-04'),mk('a9','Internal Packaging','Kyle N.','Done','2025-12-10','2026-03-04'),mk('a10','External Packaging','Kyle N.','In Progress','2026-02-06','2026-03-04','Poke timeline – Zafeer'),mk('a11','Materials On Site','Jeremy','In Progress','2026-02-23','2026-03-06'),mk('a12','Samples Ready','Jeremy','Not Started','2026-03-09','2026-03-13','Fill carts first'),mk('a13','Base Marketing Materials','Cece','In Progress','2026-03-09','2026-03-13'),mk('a14','Pre-Sell / Promo','Sales Team','Not Started','2026-03-13','2026-04-14'),mk('a15','PO Received','Jeremy','Not Started','2026-04-20','2026-04-22')]},
+  {id:'cc',brand:'Litti',name:'Cherry Chonk Liquid Diamonds All-in-One',shortName:'Cherry Chonk AIO',launchDate:'2026-04-30',tags:['Accepted'],notes:{updates:'',blockers:''},specs:{'Planned Launch Time':'Spring 2026 - ACCEPTED','Commercial Lead':'Jim','Formulation Lead':'Chi','Ops Lead':'Ian','Brand Name Internal':'Litti','Product Name Internal':'Cherry Chonk Liquid Diamonds All-in-One','Manufactured by: LP Name':'Mera Cannabis Corp.','Stocking Status':'TBD','Launch Window':'April 1, 2026','Stocking Type':'Flowthrough','Initial Case Offering (FT)':'N/A','Samples Required':'100 units','Landed Cost':'$22.00','Wholesale Cost':'$27.50','MSRP':'$38.50','Margin %':'41%','Launch PO':'2400 units','Sales Target':'4,000/month','Category':'Vape - All-in-One','Product Size':'1g','Label THC Range':'95-99% (98%)','Flavouring Type':'Botanical Terpenes','Master Case GTIN':'10876936002497','Retail Pack GTIN':'876936002490','Master Case Dimensions':'6×6×4','Units per Master Shipper/Case':'12','Who is responsible for Labels Sourcing?':'Mera Cannabis Corp.','Do we need new dies for labels?':'No','Vendor providing retail labels?':'Minuteman Press','Vendor providing case labels?':'MERA In-House'},
+   tasks:[mk('b1','R&D','','In Progress','2025-10-01','2025-11-07'),mk('b2','Product Specs / Submission','Kyle N.','In Progress','2025-10-01','2025-11-07','',true),mk('b3','Formulation Dev','Wei','Done','2025-10-01','2025-11-07'),mk('b4','Sensory','Wei','Done','2025-10-01','2025-11-07'),mk('b5','Packaging Dev','Kyle N.','Done','2025-10-01','2025-12-10'),mk('b6','Financial Analysis','Aamir','Done','2025-10-01','2025-11-07','41%',true),mk('b7','Labels','Kyle N.','Not Started','2026-03-16','2026-03-31'),mk('b8','Input','Chi','Not Started','2026-03-01','2026-03-31'),mk('b9','Internal Packaging','Kyle N.','In Progress','2025-12-10','2026-03-31'),mk('b10','External Packaging','Kyle N.','In Progress','2026-03-01',''),mk('b11','Materials On Site','Jeremy','Not Started','',''),mk('b12','Labour','Jeremy','Not Started','',''),mk('b13','PO Received','Jeremy','Not Started','',''),mk('b14','Production/Shipment','Kevin','Not Started','','')]},
+  {id:'nlpr',brand:'Shatterizer',name:'NL 60+ Diamonds & Shatter Infused Pre-Rolls 3×0.5g',shortName:'NL 60+ Pre-Rolls',launchDate:'2026-04-30',tags:['Accepted'],notes:{updates:'',blockers:'Lock in tube spec.'},specs:{'Planned Launch Time':'Spring 2026 - ACCEPTED','Commercial Lead':'Jim','Formulation Lead':'Chi','Ops Lead':'Ian','Brand Name Internal':'Shatterizer','Product Name Internal':'NL 60+ Diamonds & Shatter Infused Pre-Rolls','Manufactured by: LP Name':'Mera Cannabis Corp.','Stocking Status':'TBD','Launch Window':'April 1, 2026','Stocking Type':'Flowthrough','Initial Case Offering (FT)':'N/A','Samples Required':'100 units','Landed Cost':'$18.68','Margin %':'42%','Sales Target':'3,000/month','Category':'Infused Pre-Roll','Product Size':'3×0.5g (1.5g)','Label THC Range':'60-66% (62%)','Flavouring Type':'CDTs','Formulations':'40 wt% biomass + 54 wt.% Extracts + 6 wt.% terpenes','Ingredients':'Dried Cannabis, Cannabis Extract','Master Case GTIN':'10876936002480','Retail Pack GTIN':'876936002483','Who is responsible for Labels Sourcing?':'Mera Cannabis Corp.','Do we need new dies for labels?':'No','Vendor providing retail labels?':'Minuteman Press','Vendor providing case labels?':'MERA In-House','Action Items':'Confirm final product and package specs from sample. Validate quality w/ Wei. Lock in TUBE!'},
+   tasks:[mk('c1','R&D','','In Progress','2025-10-01','2025-11-07'),mk('c2','Product Specs / Submission','Kyle N.','Done','2025-10-01','2025-11-07'),mk('c3','Formulation Dev','Wei','In Progress','2025-11-05','2025-11-26'),mk('c4','Sensory – Internal','Wei','Not Started','2025-11-26','2025-12-03'),mk('c5','Sensory – Customer','Kyle N.','Not Started','2025-12-03','2025-12-10'),mk('c6','Formulation Finalization','Wei','Not Started','',''),mk('c7','Packaging Dev','Kyle N.','Done','2025-10-01','2025-12-10','Acceptable Kief loss – send to Jim'),mk('c8','Financial Analysis','Aamir','Done','2025-10-01','2025-11-07'),mk('c9','Labels','Kyle N.','Not Started','',''),mk('c10','Input','Chi','Not Started','',''),mk('c11','Internal Packaging','Kyle N.','In Progress','2025-12-10',''),mk('c12','External Packaging','Kyle N.','In Progress','2025-12-10','')]},
+  {id:'ting',brand:'Litti',name:'Ting-a-Ling Zing Liquid Diamonds All-in-One',shortName:'Ting-a-Ling AIO',launchDate:'',tags:['Rejected'],notes:{updates:'',blockers:''},specs:{'Brand Name Internal':'Litti','Product Name Internal':'Ting-a-Ling Zing AIO','Manufactured by: LP Name':'Mera Cannabis Corp.','Stocking Status':'Rejected','Launch Window':'April-May','Margin %':'41%','Category':'Vape - All-in-One','Product Size':'1g','Label THC Range':'95-99% (98%)'},tasks:[]},
+],
+pc2:[
+  {id:'bcp',brand:'Greazy',name:'Black Cherry Punch Live Rosin 1g',shortName:'Black Cherry Rosin',launchDate:'2026-07-30',tags:['In Progress'],notes:{updates:'',blockers:''},specs:{'Planned Launch Time':'PC#2 2026','Commercial Lead':'Jim','Formulation Lead':'Chi','Ops Lead':'Ian','Brand Name Internal':'Greazy','Manufactured by: LP Name':'Mera Cannabis Corp.','Launch Window':'June–July 2026','Stocking Type':'Stocking > FT','Initial Case Offering (FT)':'300 (60 cases/day wk1)','Samples Required':'Yes','Landed Cost':'—','Margin %':'—','Category':'Cannabis Extract','Product Size':'1g','Label THC Range':'66-74% (10-15% Terps)','Biomass Input':'Black Cherry Punch','Ingredients':'Cannabis Extract','Product Package/Outer':'ND Rooke Concentrate Jar','Packaging Labels':'1 label','Master Case GTIN':'TBD','Retail Pack GTIN':'TBD','Master Case Dimensions':'4×5×3.5','Units per Master Shipper/Case':'6','Who is responsible for Labels Sourcing?':'Mera Cannabis Corp.','Do we need new dies for labels?':'No','Vendor providing retail labels?':'Minuteman Press','Vendor providing case labels?':'Mera Cannabis Corp.'},
+   tasks:[mk('d1','NNCP/GTIN','','Done','2026-01-01','2026-01-30'),mk('d2','Formulation Dev','Chi','In Progress','2026-01-01','2026-05-02'),mk('d3','Sensory','','Not Started','2026-04-07','2026-04-09'),mk('d4','Packaging Dev','','Done','2026-01-01','2026-01-30'),mk('d5','Financial Analysis','','Done','2026-01-01','2026-01-30'),mk('d6','Labels','','Not Started','2026-04-13','2026-05-01'),mk('d7','Input','','Not Started','2026-03-16','2026-05-01'),mk('d8','Internal Packaging','','Not Started','2026-04-13','2026-05-01'),mk('d9','External Packaging','','Not Started','2026-03-16','2026-05-01'),mk('d10','Materials On Site','','Not Started','2026-06-01','2026-06-05'),mk('d11','Sample Run','','Not Started','2026-05-25','2026-06-19','GS1 photography needed'),mk('d12','PO Received','','Not Started','2026-06-04','2026-06-11'),mk('d13','Pre-Selling','','Not Started','2026-06-22','2026-08-04'),mk('d14','Production/Shipment','Kevin','Not Started','2026-07-13','2026-07-24'),mk('d15','Delivery into OCS','','Not Started','2026-07-28','2026-08-04')]},
+  {id:'ww',brand:'Litti',name:'Watermelon Whammy Liquid Diamonds 510 Vape Cart 1g',shortName:'Watermelon Whammy',launchDate:'2026-07-30',tags:['In Progress'],notes:{updates:'',blockers:''},specs:{'Planned Launch Time':'PC#2 2026','Commercial Lead':'Jim','Formulation Lead':'Chi','Ops Lead':'Ian','Brand Name Internal':'Litti','Manufactured by: LP Name':'Mera Cannabis Corp.','Launch Window':'June–July 2026','Stocking Type':'Stocking > FT','Initial Case Offering (FT)':'300','Samples Required':'Yes','Landed Cost':'—','Margin %':'—','Category':'Vape – 510 Thread','Product Size':'1g','Formulated Range':'84.4%','Label THC Range':'95-99% (98%)','Flavouring Type':'Botanical Terpenes','Flavour Description':'Watermelon','Formulations':'50 wt.% Distillate + 40 wt.% Liquid Diamonds + 10 wt.% BT','Ingredients':'Cannabis Extract, Botanical Terpenes','Product Primary/Hardware':'BB TANK – 1G Postless','Product Package/Outer':'116mm tube – white','Packaging Labels':'1 label','Master Case GTIN':'TBD','Retail Pack GTIN':'TBD','Master Case Dimensions':'5×5×4','Units per Master Shipper/Case':'12','Who is responsible for Labels Sourcing?':'Mera Cannabis Corp.','Do we need new dies for labels?':'No','Vendor providing retail labels?':'Minuteman Press','Vendor providing case labels?':'Mera Cannabis Corp.'},
+   tasks:[mk('e1','NNCP/GTIN','','Done','2026-01-01','2026-01-30'),mk('e2','Formulation Dev','Chi','In Progress','2026-01-01','2026-04-10'),mk('e3','Sensory','','Not Started','2026-04-07','2026-04-09'),mk('e4','Packaging Dev','','Done','2026-01-01','2026-01-30'),mk('e5','Financial Analysis','','Done','2026-01-01','2026-01-30'),mk('e6','Labels','','Not Started','2026-04-13','2026-05-01'),mk('e7','Input','','Not Started','2026-03-16','2026-05-01'),mk('e8','Internal Packaging','','Not Started','2026-04-13','2026-05-01'),mk('e9','External Packaging','','Not Started','2026-03-16','2026-05-01'),mk('e10','Materials On Site','','Not Started','2026-05-01','2026-05-13'),mk('e11','Sample Run','','Not Started','2026-05-14','2026-05-29'),mk('e12','Bulk Production','','Not Started','2026-06-22','2026-07-03'),mk('e13','Production/Shipment','','Not Started','2026-07-07','2026-07-13')]},
+  {id:'gp',brand:'Greazy',name:'Golden Pineapple Live Resin & Liquid Diamonds AIO 1g',shortName:'Golden Pineapple AIO',launchDate:'2026-07-30',tags:['In Progress'],notes:{updates:'',blockers:'Pouch revision pending.'},specs:{'Planned Launch Time':'PC#2 2026','Commercial Lead':'Jim','Brand Name Internal':'Greazy','Manufactured by: LP Name':'Mera Cannabis Corp.','Launch Window':'July 2026','Stocking Type':'Stocking > FT','Initial Case Offering (FT)':'300','Samples Required':'Yes','Landed Cost':'—','Margin %':'—','Category':'Vape – All-in-One','Product Size':'1g','Label THC Range':'88-94% (93.1%)','Flavouring Type':'CDTs & BTs','Flavour Description':'Pineapple','Ingredients':'Cannabis Extract, Botanical Terpenes','Product Primary/Hardware':'Cilicon – Nova Deli 1','Product Package/Outer':'4"×6" Near Notch – Bottom Fill','Packaging Labels':'TBD','Accessory':'.25" THC Sticker','Master Case GTIN':'TBD','Retail Pack GTIN':'TBD','Master Case Dimensions':'6×6×4','Units per Master Shipper/Case':'12','Who is responsible for Labels Sourcing?':'Mera Cannabis Corp.','Do we need new dies for labels?':'No','Vendor providing retail labels?':'Minuteman Press','Vendor providing case labels?':'Mera Cannabis Corp.'},
+   tasks:[mk('f1','NNCP/GTIN','','Done','2026-01-01','2026-01-30'),mk('f2','Formulation Dev','Chi','In Progress','2026-01-01','2026-04-10'),mk('f3','Sensory','','Not Started','2026-04-07','2026-04-09'),mk('f4','Packaging Dev','','Done','2026-01-01','2026-01-30','Pouch revision pending'),mk('f5','Financial Analysis','','Done','2026-01-01','2026-01-30'),mk('f6','Labels','','Not Started','2026-04-13','2026-05-01'),mk('f7','Input','','Not Started','2026-03-16','2026-05-01'),mk('f8','Internal Packaging','','Not Started','2026-04-13','2026-05-01'),mk('f9','External Packaging','','Not Started','2026-03-16','2026-05-01'),mk('f10','Materials On Site','','Not Started','2026-05-01','2026-05-13'),mk('f11','Sample Run','','Not Started','2026-05-14','2026-05-29'),mk('f12','Bulk Production','','Not Started','2026-06-22','2026-07-03'),mk('f13','Production/Shipment','','Not Started','2026-07-07','2026-07-13')]},
+  {id:'nlb',brand:'Shatterizer',name:'Northern Lights 60+ Diamonds & Shatter Infused Blunt 1g',shortName:'NL 60+ Blunt',launchDate:'2026-06-12',tags:['In Progress'],notes:{updates:'Black smoke concern on sample run – investigating.',blockers:'Sample quality issue.'},specs:{'Planned Launch Time':'PC#2 2026','Commercial Lead':'Jim','Brand Name Internal':'Shatterizer','Manufactured by: LP Name':'Mera Cannabis Corp.','Launch Window':'June–July 2026','Stocking Type':'Stocking > FT','Initial Case Offering (FT)':'300','Samples Required':'Yes','Landed Cost':'$18.68','Margin %':'52%','Category':'Infused Pre-Roll','Product Size':'1g','Label THC Range':'60-66% (62.6%)','Flavouring Type':'CDTs','Formulations':'42% Flower, 41% THCA, 7% Distillate, 5% Terp Sauce, 5% CDTs','Ingredients':'Dried Cannabis, Cannabis Extract','Product Primary/Hardware':'StephenG Blunt Cone','Product Package/Outer':'116mm Black Tube','Packaging Labels':'TBD','Master Case GTIN':'TBD','Retail Pack GTIN':'TBD','Master Case Dimensions':'5×5×4','Units per Master Shipper/Case':'12','Who is responsible for Labels Sourcing?':'Mera Cannabis Corp.','Do we need new dies for labels?':'No','Vendor providing retail labels?':'Minuteman Press','Vendor providing case labels?':'Mera Cannabis Corp.'},
+   tasks:[mk('g1','NNCP/GTIN','','Done','2026-01-01','2026-01-30'),mk('g2','Formulation Dev','Chi','Done','2026-01-01','2026-04-10','2nd run to validate quality'),mk('g3','Sensory','','Done','2026-04-07','2026-04-09','Validate before shipping'),mk('g4','Packaging Dev','','Done','2026-01-01','2026-01-30'),mk('g5','Financial Analysis','','Done','2026-01-01','2026-01-30'),mk('g6','Labels','','Done','2026-04-13','2026-05-01'),mk('g7','Input','','Done','2026-03-16','2026-05-01'),mk('g8','Internal Packaging','','Done','2026-04-13','2026-05-01'),mk('g9','External Packaging','','Done','2026-03-16','2026-05-01'),mk('g10','Materials On Site','','In Progress','2026-05-01','2026-05-08'),mk('g11','Sample Run','','In Progress','2026-05-08','2026-05-15','Black smoke concern'),mk('g12','Pre-Selling','','In Progress','2026-05-11','2026-06-08'),mk('g13','Bulk Production','','Not Started','2026-05-17','2026-06-01'),mk('g14','Production/Shipment','','In Progress','2026-04-24','2026-06-19')]},
+  {id:'gdp',brand:'Shatterizer',name:'Granddaddy Purple 60+ Diamonds & Shatter Pre-Rolls 3×0.5g',shortName:'GDP Pre-Rolls',launchDate:'2026-07-30',tags:['In Progress'],notes:{updates:'',blockers:''},specs:{'Planned Launch Time':'PC#2 2026','Brand Name Internal':'Shatterizer','Manufactured by: LP Name':'Mera Cannabis Corp.','Launch Window':'June–July 2026','Stocking Type':'Stocking > FT','Initial Case Offering (FT)':'300','Samples Required':'Yes','Landed Cost':'—','Margin %':'—','Category':'Infused Pre-Roll','Product Size':'3×0.5g','Label THC Range':'60-66% (62.6%)','Flavouring Type':'CDTs','Formulations':'40 wt% biomass + 54 wt.% Extracts + 6 wt.% terpenes','Ingredients':'Dried Cannabis, Cannabis Extract','Product Primary/Hardware':'98/26mm Reefer','Product Package/Outer':'13 Dram CR Pop-Top Bottles – Black','Packaging Labels':'1 label','Master Case GTIN':'TBD','Retail Pack GTIN':'TBD','Master Case Dimensions':'5×4×3.5"','Units per Master Shipper/Case':'12','Who is responsible for Labels Sourcing?':'Mera Cannabis Corp.','Do we need new dies for labels?':'No','Vendor providing retail labels?':'Minuteman Press','Vendor providing case labels?':'Mera Cannabis Corp.'},
+   tasks:[mk('h1','NNCP/GTIN','','Done','2026-01-01','2026-01-30'),mk('h2','Formulation Dev','Chi','In Progress','2026-01-01','2026-04-10'),mk('h3','Sensory','','Not Started','2026-04-07','2026-04-09'),mk('h4','Packaging Dev','','Done','2026-01-01','2026-01-30'),mk('h5','Financial Analysis','','Done','2026-01-01','2026-01-30'),mk('h6','Labels','','Not Started','2026-04-13','2026-05-01'),mk('h7','Input','','Not Started','2026-03-16','2026-05-01'),mk('h8','Internal Packaging','','Not Started','2026-04-13','2026-05-01'),mk('h9','External Packaging','','Not Started','2026-03-16','2026-05-01'),mk('h10','Materials On Site','','Not Started','2026-05-01','2026-05-08'),mk('h11','Sample Run','','Not Started','2026-05-08','2026-05-15'),mk('h12','Pre-Selling','','Not Started','2026-05-11','2026-06-09'),mk('h13','Bulk Production','','Not Started','2026-05-17','2026-06-01'),mk('h14','Production/Shipment','','In Progress','2026-04-24','2026-06-08')]},
+  {id:'ph',brand:'Buddy Blooms',name:"Purple Haze & Strawberry OG Best Buds Mix'd Pre-Rolls 10×0.5g",shortName:"Purple Haze Mix'd",launchDate:'2026-07-30',tags:['In Progress'],notes:{updates:'',blockers:''},specs:{'Planned Launch Time':'PC#2 2026','Brand Name Internal':'Buddy Blooms','Manufactured by: LP Name':'Mera Cannabis Corp.','Launch Window':'June–July 2026','Stocking Type':'Stocking > FT','Initial Case Offering (FT)':'300','Samples Required':'Yes','Landed Cost':'$15.25','Wholesale Cost':'$19.67','MSRP':'$27.50','Margin %':'33%','Category':'Dried Flower Pre-Roll','Product Size':'10×0.5g (5g)','Label THC Range':'30–33%','Flavouring Type':'N/A','Ingredients':'Dried Cannabis','Product Primary/Hardware':'98mm Natural Brown Paper, Conical, White Branded Tip','Product Package/Outer':'Inquire on size','Packaging Labels':'1 label','Master Case Dimensions':'?','Units per Master Shipper/Case':'12'},
+   tasks:[mk('i1','NNCP/GTIN','','Done','2026-01-01','2026-01-30'),mk('i2','Formulation Dev','Chi','In Progress','2026-01-01','2026-05-02'),mk('i3','Sensory','','Not Started','2026-04-07','2026-04-09'),mk('i4','Packaging Dev','','Done','2026-01-01','2026-01-30','Strain info focus'),mk('i5','Financial Analysis','','Done','2026-01-01','2026-01-30'),mk('i6','Labels','','Not Started','2026-04-13','2026-05-01'),mk('i7','Input','','Not Started','2026-03-16','2026-05-01'),mk('i8','Internal Packaging','','Not Started','2026-04-13','2026-05-01'),mk('i9','External Packaging','','Not Started','2026-03-16','2026-05-01'),mk('i10','Materials On Site','','Not Started','2026-06-01','2026-06-05'),mk('i11','Sample Run','','Not Started','2026-05-25','2026-06-19'),mk('i12','PO Received','','Not Started','2026-06-04','2026-06-11'),mk('i13','Pre-Selling','','Not Started','2026-06-22','2026-08-04'),mk('i14','Production/Shipment','Kevin','Not Started','2026-07-13','2026-07-24'),mk('i15','Delivery into OCS','','Not Started','2026-07-28','2026-08-04')]},
+],
+pc3:[
+  {id:'pp',brand:'Litti',name:"Pushin' Peach Liquid Diamonds All-in-One",shortName:"Pushin' Peach AIO",launchDate:'2026-09-01',tags:['In Progress'],notes:{updates:'',blockers:''},specs:{'Planned Launch Time':'PC#3 2026','Brand Name Internal':'Litti','Launch Window':'Aug–Sep 2026','Stocking Type':'Stocking > FT','Samples Required':'Yes','Category':'Vape – All-in-One','Product Size':'1g','Flavouring Type':'Botanical Terpenes','Flavour Description':'Peach'},tasks:[mk('j1','NNCP/GTIN','','Not Started','',''),mk('j2','Formulation Dev','Chi','Not Started','',''),mk('j3','Sensory','','Not Started','',''),mk('j4','Packaging Dev','','Not Started','',''),mk('j5','Financial Analysis','','Not Started','',''),mk('j6','Labels','','Not Started','',''),mk('j7','Input','','Not Started','',''),mk('j8','Internal Packaging','','Not Started','',''),mk('j9','External Packaging','','Not Started','',''),mk('j10','Materials On Site','','Not Started','',''),mk('j11','Sample Run','','Not Started','',''),mk('j12','Pre-Selling','','Not Started','',''),mk('j13','Bulk Production','','Not Started','',''),mk('j14','Production/Shipment','','Not Started','','')]},
+  {id:'gfiz',brand:'Greazy',name:'Ginger Fizz All-in-One',shortName:'Ginger Fizz AIO',launchDate:'2026-09-01',tags:['In Progress'],notes:{updates:'',blockers:''},specs:{'Planned Launch Time':'PC#3 2026','Brand Name Internal':'Greazy','Launch Window':'Aug–Sep 2026','Samples Required':'Yes','Category':'Vape – All-in-One','Product Size':'1g','Flavouring Type':'CDTs & BTs','Flavour Description':'Ginger Fizz'},tasks:[mk('k1','NNCP/GTIN','','Not Started','',''),mk('k2','Formulation Dev','Chi','Not Started','',''),mk('k3','Sensory','','Not Started','',''),mk('k4','Packaging Dev','','Not Started','',''),mk('k5','Financial Analysis','','Not Started','',''),mk('k6','Labels','','Not Started','',''),mk('k7','Input','','Not Started','',''),mk('k8','Internal Packaging','','Not Started','',''),mk('k9','External Packaging','','Not Started','',''),mk('k10','Materials On Site','','Not Started','',''),mk('k11','Sample Run','','Not Started','',''),mk('k12','Pre-Selling','','Not Started','',''),mk('k13','Bulk Production','','Not Started','',''),mk('k14','Production/Shipment','','Not Started','','')]},
+  {id:'gdpblunt',brand:'Shatterizer',name:'Granddaddy Purple 60+ Diamonds & Shatter Infused Blunt 1g',shortName:'GDP Blunt',launchDate:'2026-09-01',tags:['In Progress'],notes:{updates:'',blockers:''},specs:{'Planned Launch Time':'PC#3 2026','Brand Name Internal':'Shatterizer','Launch Window':'Aug–Sep 2026','Category':'Infused Pre-Roll','Product Size':'1g'},tasks:[mk('l1','NNCP/GTIN','','Not Started','',''),mk('l2','Formulation Dev','Chi','Not Started','',''),mk('l3','Sensory','','Not Started','',''),mk('l4','Packaging Dev','','Not Started','',''),mk('l5','Financial Analysis','','Not Started','',''),mk('l6','Labels','','Not Started','',''),mk('l7','Input','','Not Started','',''),mk('l8','Internal Packaging','','Not Started','',''),mk('l9','External Packaging','','Not Started','',''),mk('l10','Materials On Site','','Not Started','',''),mk('l11','Sample Run','','Not Started','',''),mk('l12','Pre-Selling','','Not Started','',''),mk('l13','Bulk Production','','Not Started','',''),mk('l14','Production/Shipment','','Not Started','','')]},
+  {id:'triplepr',brand:'Shatterizer',name:'Triple Infused Pre-Rolls 3×0.5g',shortName:'Triple Infused PRs',launchDate:'2026-09-01',tags:['In Progress'],notes:{updates:'',blockers:''},specs:{'Planned Launch Time':'PC#3 2026','Brand Name Internal':'Shatterizer','Launch Window':'Aug–Sep 2026','Category':'Infused Pre-Roll','Product Size':'3×0.5g'},tasks:[mk('m1','NNCP/GTIN','','Not Started','',''),mk('m2','Formulation Dev','Chi','Not Started','',''),mk('m3','Sensory','','Not Started','',''),mk('m4','Packaging Dev','','Not Started','',''),mk('m5','Financial Analysis','','Not Started','',''),mk('m6','Labels','','Not Started','',''),mk('m7','Input','','Not Started','',''),mk('m8','Internal Packaging','','Not Started','',''),mk('m9','External Packaging','','Not Started','',''),mk('m10','Materials On Site','','Not Started','',''),mk('m11','Sample Run','','Not Started','',''),mk('m12','Pre-Selling','','Not Started','',''),mk('m13','Bulk Production','','Not Started','',''),mk('m14','Production/Shipment','','Not Started','','')]},
+  {id:'crgfiz',brand:'Greazy',name:'Cranberry Ginger Fizz All-in-One',shortName:'Cranberry Ginger Fizz',launchDate:'2026-10-01',tags:['In Progress'],notes:{updates:'',blockers:''},specs:{'Planned Launch Time':'PC#3 2026','Brand Name Internal':'Greazy','Launch Window':'October 2026','Category':'Vape – All-in-One','Flavour Description':'Cranberry Ginger Fizz'},tasks:[mk('n1','NNCP/GTIN','','Not Started','',''),mk('n2','Formulation Dev','Chi','Not Started','',''),mk('n3','Sensory','','Not Started','',''),mk('n4','Packaging Dev','','Not Started','',''),mk('n5','Financial Analysis','','Not Started','',''),mk('n6','Labels','','Not Started','',''),mk('n7','Input','','Not Started','',''),mk('n8','Internal Packaging','','Not Started','',''),mk('n9','External Packaging','','Not Started','',''),mk('n10','Materials On Site','','Not Started','',''),mk('n11','Sample Run','','Not Started','',''),mk('n12','Pre-Selling','','Not Started','',''),mk('n13','Bulk Production','','Not Started','',''),mk('n14','Production/Shipment','','Not Started','','')]},
+  {id:'bcpbh',brand:'Buddy Blooms',name:'Black Cherry Punch Bubble Hash Pre-Rolls',shortName:'BCP Bubble Hash PRs',launchDate:'2026-09-01',tags:['In Progress'],notes:{updates:'',blockers:''},specs:{'Planned Launch Time':'PC#3 2026','Brand Name Internal':'Buddy Blooms','Launch Window':'Aug–Sep 2026','Category':'Infused Pre-Roll','Biomass Input':'Black Cherry Punch'},tasks:[mk('o1','NNCP/GTIN','','Not Started','',''),mk('o2','Formulation Dev','Chi','Not Started','',''),mk('o3','Sensory','','Not Started','',''),mk('o4','Packaging Dev','','Not Started','',''),mk('o5','Financial Analysis','','Not Started','',''),mk('o6','Labels','','Not Started','',''),mk('o7','Input','','Not Started','',''),mk('o8','Internal Packaging','','Not Started','',''),mk('o9','External Packaging','','Not Started','',''),mk('o10','Materials On Site','','Not Started','',''),mk('o11','Sample Run','','Not Started','',''),mk('o12','Pre-Selling','','Not Started','',''),mk('o13','Bulk Production','','Not Started','',''),mk('o14','Production/Shipment','','Not Started','','')]},
+]};
+
+const LS_KEY='au_dash_v8';
+const loadState=()=>{try{const s=localStorage.getItem(LS_KEY);return s?JSON.parse(s):null;}catch{return null;}};
+const saveState=s=>{try{localStorage.setItem(LS_KEY,JSON.stringify(s));}catch{}};
+
+/* ── TagEditor ── */
+function TagEditor({tags,onChange}){
+  const [open,setOpen]=useState(false);const ref=useRef();
+  useEffect(()=>{if(!open)return;const h=e=>{if(ref.current&&!ref.current.contains(e.target))setOpen(false);};document.addEventListener('mousedown',h);return()=>document.removeEventListener('mousedown',h);},[open]);
+  const avail=ALL_TAG_OPTIONS.filter(t=>!(tags||[]).includes(t));
+  return el('div',{style:{display:'flex',alignItems:'center',gap:5,flexWrap:'wrap',position:'relative'},ref},
+    (tags||[]).map(t=>{const s=sc(t);return el('span',{key:t,className:'badge',style:{background:s.bg,color:s.tx,gap:4,cursor:'default'}},t,
+      el('button',{onClick:()=>onChange(tags.filter(x=>x!==t)),style:{background:'none',border:'none',cursor:'pointer',color:s.tx,padding:'0 2px',lineHeight:1,fontSize:11,display:'inline-flex',alignItems:'center'}},el('i',{className:'ti ti-x',style:{fontSize:9}}))
+    );}),
+    avail.length>0&&el('button',{onClick:()=>setOpen(o=>!o),style:{background:'var(--bg2)',border:'0.5px dashed var(--bdr2)',borderRadius:10,padding:'2px 8px',cursor:'pointer',fontSize:11,color:'var(--text2)',display:'inline-flex',alignItems:'center',gap:3}},el('i',{className:'ti ti-plus',style:{fontSize:10}}),' tag'),
+    open&&el('div',{style:{position:'absolute',top:'calc(100% + 4px)',left:0,background:'var(--bg)',border:'0.5px solid var(--bdr2)',borderRadius:'var(--r)',boxShadow:'0 4px 20px rgba(0,0,0,.15)',zIndex:300,padding:4,minWidth:148}},
+      avail.map(t=>{const s=sc(t);return el('div',{key:t,onClick:()=>{onChange([...(tags||[]),t]);setOpen(false);},style:{padding:'6px 10px',borderRadius:4,cursor:'pointer',fontSize:12,display:'flex',alignItems:'center',gap:8}},
+        el('span',{style:{width:8,height:8,borderRadius:'50%',background:s.tx,flexShrink:0}}),t
+      );})
+    )
+  );
+}
+
+/* ── Editable ── */
+function Editable({value,onChange,multiline=false,style={},placeholder='',className=''}){
+  const [editing,setEditing]=useState(false);const [val,setVal]=useState(value||'');const ref=useRef();
+  useEffect(()=>{setVal(value||'');},[value]);
+  useEffect(()=>{if(editing&&ref.current)ref.current.focus();},[editing]);
+  const commit=()=>{setEditing(false);if(val!==(value||''))onChange(val);};
+  if(editing)return multiline
+    ?el('textarea',{ref,className:'ei '+className,style:{...style,width:'100%'},value:val,onChange:ev=>setVal(ev.target.value),onBlur:commit,onKeyDown:ev=>ev.key==='Escape'&&(setVal(value||''),setEditing(false))})
+    :el('input',{ref,type:'text',className:'ei '+className,style,value:val,onChange:ev=>setVal(ev.target.value),onBlur:commit,onKeyDown:ev=>{if(ev.key==='Enter')commit();if(ev.key==='Escape'){setVal(value||'');setEditing(false);}}});
+  return el('span',{className:'editable '+className,style,onClick:()=>setEditing(true),title:'Click to edit'},val||el('span',{style:{color:'var(--text3)',fontStyle:'italic'}},placeholder));
+}
+function ESelect({value,options,onChange,style={}}){
+  return el('select',{className:'ei',style,value:value||options[0],onChange:ev=>onChange(ev.target.value)},options.map(o=>el('option',{key:o,value:o},o)));
+}
+
+/* ── Ring (donut progress) ── */
+function Ring({rd,pr,op,size=48}){
+  const r=size/2-4,circ=2*Math.PI*r,total=rd+pr+op||1;
+  const segs=[{v:rd,c:CAT.rd.col},{v:pr,c:CAT.procurement.col},{v:op,c:CAT.operations.col}];
+  let off=0;
+  return el('svg',{width:size,height:size,viewBox:`0 0 ${size} ${size}`,style:{transform:'rotate(-90deg)',flexShrink:0}},
+    el('circle',{cx:size/2,cy:size/2,r,fill:'none',stroke:'var(--bg3)',strokeWidth:4}),
+    segs.map((s,i)=>{const dash=circ*s.v/total,gap=circ-dash,o=off;off+=dash;return s.v>0&&el('circle',{key:i,cx:size/2,cy:size/2,r,fill:'none',stroke:s.c,strokeWidth:4,strokeDasharray:`${dash} ${gap}`,strokeDashoffset:-o,strokeLinecap:'butt'});})
+  );
+}
+
+/* ── Summary View ── */
+function SummaryView({prods,onSelect}){
+  const overallOverdue=prods.reduce((a,p)=>a+p.tasks.filter(t=>isOverdue(t)).length,0);
+  return el('div',{style:{padding:'20px'}},
+    overallOverdue>0&&el('div',{style:{background:'var(--err-bg)',border:'0.5px solid var(--err)',borderRadius:'var(--r)',padding:'10px 16px',marginBottom:16,display:'flex',alignItems:'center',gap:10}},
+      el('i',{className:'ti ti-alert-triangle',style:{color:'var(--err)',fontSize:18,flexShrink:0}}),
+      el('span',{style:{fontSize:13,color:'var(--err)',fontWeight:500}},overallOverdue+' overdue task'+(overallOverdue>1?'s':'')+' across this product call — check tasks highlighted in red.')
+    ),
+    el('div',{style:{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(220px,1fr))',gap:14}},
+      prods.map(p=>{
+        const done=p.tasks.filter(t=>t.status==='Done').length;
+        const rdDone=p.tasks.filter(t=>t.cat==='rd'&&t.status==='Done').length;
+        const prDone=p.tasks.filter(t=>t.cat==='procurement'&&t.status==='Done').length;
+        const opDone=p.tasks.filter(t=>t.cat==='operations'&&t.status==='Done').length;
+        const tot=p.tasks.length,pct=tot?Math.round(done/tot*100):0;
+        const ps=prodStat(p),pss=sc(ps);
+        const dl=dLeft(p.launchDate),psd=dLeft(getPreSellDate(p.tasks));
+        const overdue=p.tasks.filter(t=>isOverdue(t)).length;
+        const mg=p.specs['Margin %'];
+        return el('div',{key:p.id,onClick:()=>onSelect(p.id),style:{background:'var(--bg)',border:'0.5px solid var(--bdr)',borderRadius:'var(--rl)',padding:'16px',cursor:'pointer',transition:'box-shadow .15s,transform .15s',position:'relative'},
+          onMouseEnter:e=>{e.currentTarget.style.boxShadow='0 4px 16px rgba(0,0,0,.10)';e.currentTarget.style.transform='translateY(-1px)';},
+          onMouseLeave:e=>{e.currentTarget.style.boxShadow='';e.currentTarget.style.transform='';}},
+          overdue>0&&el('div',{style:{position:'absolute',top:10,right:10,background:'var(--err)',color:'#fff',borderRadius:10,padding:'1px 7px',fontSize:10,fontWeight:700}},overdue+' overdue'),
+          el('div',{style:{fontSize:10,color:BRAND_COL[p.brand]||'var(--info)',fontWeight:700,textTransform:'uppercase',letterSpacing:'.07em',marginBottom:4}},p.brand),
+          el('div',{style:{fontSize:13,fontWeight:700,lineHeight:1.35,marginBottom:10,paddingRight:overdue>0?56:0}},p.shortName),
+          el('div',{style:{display:'flex',alignItems:'center',gap:10,marginBottom:12}},
+            el(Ring,{rd:rdDone,pr:prDone,op:opDone,size:44}),
+            el('div',null,
+              el('div',{style:{fontSize:20,fontWeight:800,lineHeight:1}},pct+'%'),
+              el('div',{style:{fontSize:10,color:'var(--text3)'}},done+'/'+tot+' tasks')
+            )
+          ),
+          el('div',{style:{display:'flex',gap:6,flexWrap:'wrap',marginBottom:10}},
+            (p.tags||[]).map(t=>{const s=sc(t);return el('span',{key:t,className:'badge',style:{background:s.bg,color:s.tx,fontSize:10}},t);}),
+            mg&&mg!=='—'&&el('span',{className:'badge',style:{background:'var(--bg2)',color:'var(--text2)',fontSize:10}},'Margin: '+mg)
+          ),
+          el('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6}},
+            el('div',{style:{background:'var(--bg2)',borderRadius:6,padding:'6px 8px'}},
+              el('div',{style:{fontSize:9,color:'var(--text3)',textTransform:'uppercase',letterSpacing:'.06em',marginBottom:2}},'Launch'),
+              el('div',{style:{fontSize:13,fontWeight:700,color:dl===null?'var(--text)':dl<0?'var(--err)':dl<30?'var(--warn)':'var(--ok)'}},dl===null?'—':Math.abs(dl)+' d'),
+              el('div',{style:{fontSize:9,color:'var(--text3)'}},dl===null?'no date':dl<0?'overdue':'remaining')
+            ),
+            el('div',{style:{background:'var(--bg2)',borderRadius:6,padding:'6px 8px'}},
+              el('div',{style:{fontSize:9,color:'var(--text3)',textTransform:'uppercase',letterSpacing:'.06em',marginBottom:2}},'Pre-Sell'),
+              el('div',{style:{fontSize:13,fontWeight:700,color:psd===null?'var(--text3)':psd<0?'var(--ok)':psd<21?'var(--warn)':'var(--info)'}},psd===null?'—':psd<0?'Active':psd+' d'),
+              el('div',{style:{fontSize:9,color:'var(--text3)'}},psd===null?'no date':psd<0?'started':'away')
+            )
+          )
+        );
+      })
+    )
+  );
+}
+
+/* ── Product Panels ── */
+function ProductPanels({prods,selId,setSelId,onAdd,onRemove}){
+  return el('div',{style:{display:'flex',overflowX:'auto',borderBottom:'0.5px solid var(--bdr)',alignItems:'stretch'}},
+    prods.map(p=>{
+      const done=p.tasks.filter(t=>t.status==='Done').length,tot=p.tasks.length,pct=tot?Math.round(done/tot*100):0;
+      const overdue=p.tasks.filter(t=>isOverdue(t)).length;
+      const isOn=p.id===selId,firstTag=p.tags&&p.tags[0],ts=firstTag?sc(firstTag):{bg:'var(--bg2)',tx:'var(--text3)'};
+      return el('div',{key:p.id,style:{flexShrink:0,width:160,padding:'11px 12px',cursor:'pointer',borderRight:'0.5px solid var(--bdr)',borderBottom:isOn?'2.5px solid var(--text)':'2.5px solid transparent',background:isOn?'var(--bg2)':'var(--bg)',transition:'background .12s',position:'relative',boxSizing:'border-box'}},
+        el('div',{onClick:()=>setSelId(p.id)},
+          el('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:3}},
+            el('div',{style:{fontSize:10,color:BRAND_COL[p.brand]||'var(--info)',fontWeight:700,textTransform:'uppercase',letterSpacing:'.07em',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},p.brand||'Brand'),
+            overdue>0&&el('span',{style:{fontSize:9,background:'var(--err)',color:'#fff',borderRadius:8,padding:'0 5px',fontWeight:700,flexShrink:0}},overdue+'!')
+          ),
+          el('div',{style:{fontSize:12,fontWeight:600,lineHeight:1.3,marginBottom:6,overflow:'hidden',display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical'}},p.shortName),
+          el('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:4}},
+            el('span',{style:{fontSize:10,color:'var(--text3)'}},pct+'% done'),
+            firstTag&&el('span',{style:{fontSize:10,background:ts.bg,color:ts.tx,borderRadius:8,padding:'1px 6px',fontWeight:500}},firstTag)
+          ),
+          el('div',{style:{height:3,background:'var(--bg3)',borderRadius:2,overflow:'hidden'}},
+            el('div',{style:{height:'100%',width:pct+'%',background:pct===100?'var(--ok)':pct>50?'var(--info)':'var(--warn)',borderRadius:2}})
+          )
+        ),
+        el('button',{className:'rm-btn',onClick:e=>{e.stopPropagation();if(confirm('Remove "'+p.shortName+'"?'))onRemove(p.id);},title:'Remove product',style:{position:'absolute',top:5,right:5,background:'rgba(0,0,0,.08)',border:'none',cursor:'pointer',color:'var(--text2)',fontSize:12,padding:'2px 4px',borderRadius:4,lineHeight:1,display:'none'}},el('i',{className:'ti ti-x'}))
+      );
+    }),
+    el('div',{style:{flexShrink:0,display:'flex',alignItems:'center',padding:'0 14px',borderLeft:'0.5px solid var(--bdr)'}},
+      el('button',{onClick:onAdd,style:{background:'var(--bg2)',border:'0.5px dashed var(--bdr2)',borderRadius:8,padding:'8px 12px',cursor:'pointer',fontSize:12,color:'var(--text2)',display:'flex',alignItems:'center',gap:5,whiteSpace:'nowrap'}},el('i',{className:'ti ti-plus'}),' Add Product')
+    )
+  );
+}
+
+/* ── Notes Row ── */
+function NotesRow({notes,onChange,launchDate,tasks}){
+  const dl=dLeft(launchDate),dlC=dl===null?'var(--text)':dl<0?'var(--err)':dl<30?'var(--warn)':'var(--ok)';
+  const psDate=getPreSellDate(tasks||[]),psDl=dLeft(psDate),psC=psDl===null?'var(--text3)':psDl<0?'var(--ok)':psDl<21?'var(--warn)':'var(--info)';
+  return el('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr auto auto',gap:0,borderBottom:'0.5px solid var(--bdr)'}},
+    [['updates','📋 Key Updates','Updates…'],['blockers','🚧 Blockers','Any blockers?']].map(([k,label,ph])=>
+      el('div',{key:k,style:{padding:'12px 16px',borderRight:'0.5px solid var(--bdr)'}},
+        el('div',{style:{fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:'.07em',color:'var(--text3)',marginBottom:5}},label),
+        el(Editable,{value:notes[k]||'',onChange:v=>onChange({...notes,[k]:v}),multiline:true,placeholder:ph,style:{fontSize:13,lineHeight:1.5,width:'100%',display:'block',minHeight:38}})
+      )
+    ),
+    el('div',{style:{padding:'12px 18px',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',minWidth:110,borderRight:'0.5px solid var(--bdr)'}},
+      el('div',{style:{fontSize:9,fontWeight:700,textTransform:'uppercase',letterSpacing:'.07em',color:'var(--text3)',marginBottom:4,textAlign:'center'}},'Days to Pre-Selling'),
+      el('div',{style:{fontSize:26,fontWeight:800,color:psC,lineHeight:1}},psDl===null?'—':psDl<0?el('span',null,el('i',{className:'ti ti-check',style:{fontSize:18}})):String(psDl)),
+      el('div',{style:{fontSize:10,color:'var(--text3)',marginTop:2,textAlign:'center'}},psDl===null?'no date':psDl<0?'started '+Math.abs(psDl)+'d ago':fmtD(psDate))
+    ),
+    el('div',{style:{padding:'12px 18px',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',minWidth:100}},
+      el('div',{style:{fontSize:9,fontWeight:700,textTransform:'uppercase',letterSpacing:'.07em',color:'var(--text3)',marginBottom:4,textAlign:'center'}},'Days to Launch'),
+      el('div',{style:{fontSize:26,fontWeight:800,color:dlC,lineHeight:1}},dl===null?'—':Math.abs(dl)),
+      el('div',{style:{fontSize:10,color:'var(--text3)',marginTop:2,textAlign:'center'}},dl===null?'no date':dl<0?'overdue '+Math.abs(dl)+'d':dl===0?'today!':'remaining')
+    )
+  );
+}
+
+/* ── Gantt ── */
+function GanttChart({tasks,launchDate}){
+  const [zoom,setZoom]=useState(1);
+  const LW=134,dated=tasks.filter(t=>t.start&&t.end);
+  if(!dated.length)return el('div',{style:{padding:'28px 20px',color:'var(--text2)',fontSize:13,textAlign:'center'}},el('i',{className:'ti ti-calendar-off',style:{fontSize:28,display:'block',marginBottom:8,opacity:.4}}),'Add start and end dates to tasks to see the Gantt chart.');
+  const ds=dated.flatMap(t=>[parseD(t.start),parseD(t.end)]);
+  if(launchDate&&parseD(launchDate))ds.push(parseD(launchDate));
+  let mn=new Date(Math.min(...ds));mn.setDate(1);
+  let mx=new Date(Math.max(...ds));mx.setMonth(mx.getMonth()+1);mx.setDate(0);
+  const tot=mx-mn;
+  const pL=d=>Math.max(0,Math.min(100,(parseD(d)-mn)/tot*100));
+  const pW=(s,e)=>Math.max(0.2,(parseD(e)-parseD(s))/tot*100);
+  const tdP=(TODAY_D-mn)/tot*100,showTd=tdP>=0&&tdP<=100;
+  const lP=launchDate&&parseD(launchDate)?pL(launchDate):null;
+  const months=[];const dd=new Date(mn);
+  while(dd<=mx){months.push({l:dd.toLocaleString('en-CA',{month:'short'}),y:String(dd.getFullYear()).slice(2),p:(dd-mn)/tot*100});dd.setMonth(dd.getMonth()+1);}
+  const BW=Math.round(680*zoom);
+  const groups=CAT_ORDER.map(cid=>({...CAT[cid],items:dated.filter(t=>t.cat===cid)})).filter(g=>g.items.length);
+  return el('div',{className:'gantt-wrap'},
+    el('div',{className:'gantt-toolbar'},
+      el('button',{className:'gantt-btn',onClick:()=>setZoom(z=>Math.min(z+0.3,3))},el('i',{className:'ti ti-zoom-in'}),' In'),
+      el('button',{className:'gantt-btn',onClick:()=>setZoom(z=>Math.max(z-0.3,0.5))},el('i',{className:'ti ti-zoom-out'}),' Out'),
+      el('button',{className:'gantt-btn',onClick:()=>setZoom(1)},el('i',{className:'ti ti-refresh'}),' Reset'),
+      el('span',{style:{fontSize:11,color:'var(--text3)',marginLeft:6}},
+        showTd?el('span',null,el('span',{style:{color:'var(--err)',fontWeight:700}},'┃'),' Today  '):'',
+        lP!==null?el('span',null,el('span',{style:{color:'var(--ok)',fontWeight:700}},'┃'),' Launch'):'')
+    ),
+    el('div',{style:{overflowX:'auto'}},
+      el('div',{style:{minWidth:LW+BW}},
+        el('div',{style:{display:'flex',marginBottom:4}},
+          el('div',{style:{width:LW,flexShrink:0}}),
+          el('div',{style:{width:BW,flex:'none',position:'relative',height:22}},
+            months.map((m,i)=>el('span',{key:i,style:{position:'absolute',left:(m.p/100*BW)+'px',transform:'translateX(-50%)',fontSize:10,color:'var(--text3)',userSelect:'none',whiteSpace:'nowrap'}},m.l+' \''+m.y))
+          )
+        ),
+        groups.map(g=>el('div',{key:g.id},
+          el('div',{className:'gantt-cat-hd',style:{background:g.light,color:g.text}},el('i',{className:'ti ti-circle-filled',style:{fontSize:8}}),g.label),
+          g.items.map(t=>{
+            const l=pL(t.start),w=pW(t.start,t.end),col=barC(t.cat,t.status),od=isOverdue(t);
+            return el('div',{key:t.id,style:{display:'flex',alignItems:'center',marginBottom:5}},
+              el('div',{style:{width:LW,flexShrink:0,fontSize:11,paddingRight:8,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',color:od?'var(--err)':'var(--text2)',fontWeight:od?600:'normal'}},
+                (t.atRisk||od)&&el('i',{className:'ti ti-alert-triangle',style:{fontSize:10,color:'var(--err)',marginRight:2}}),t.name
+              ),
+              el('div',{style:{width:BW,flex:'none',position:'relative',height:26}},
+                showTd&&el('div',{style:{position:'absolute',left:(tdP/100*BW)+'px',top:-2,bottom:-2,width:2,background:'var(--err)',zIndex:3,opacity:.85}}),
+                lP!==null&&el('div',{style:{position:'absolute',left:(lP/100*BW)+'px',top:-2,bottom:-2,width:2,background:'var(--ok)',zIndex:3}}),
+                el('div',{className:'gantt-bar',title:t.name+' | '+t.status+'\n'+fmtD(t.start)+' → '+fmtD(t.end)+(od?'\n⚠ OVERDUE':'')+(t.notes?'\n'+t.notes:''),style:{left:(l/100*BW)+'px',width:Math.max(4,w/100*BW)+'px',background:od?'var(--err)':col,outline:od?'2px solid var(--err)':'none'}},
+                  w*BW/100>55&&el('span',{style:{fontSize:10,fontWeight:600,color:od?'#fff':barT(t.cat,t.status),whiteSpace:'nowrap',overflow:'hidden'}},t.name)
+                )
+              )
+            );
+          })
+        )),
+        el('div',{style:{display:'flex',gap:12,marginTop:14,paddingLeft:LW,flexWrap:'wrap'}},
+          CAT_ORDER.flatMap(cid=>['Done','In Progress','Not Started'].map(st=>el('div',{key:cid+st,style:{display:'flex',alignItems:'center',gap:4}},
+            el('div',{style:{width:11,height:11,borderRadius:3,background:barC(cid,st)}}),
+            el('span',{style:{fontSize:10,color:'var(--text2)'}},CAT[cid].label.split(' ')[0]+' – '+st)
+          ))),
+          el('div',{style:{display:'flex',alignItems:'center',gap:4}},
+            el('div',{style:{width:11,height:11,borderRadius:3,background:'var(--err)'}}),
+            el('span',{style:{fontSize:10,color:'var(--text2)'}},'Overdue')
+          )
+        )
+      )
+    )
+  );
+}
+
+/* ── Tasks ── */
+function TasksPanel({tasks,onChange,onAdd,onDel}){
+  const [coll,setColl]=useState({});
+  const [ownerFilter,setOwnerFilter]=useState('All');
+  const upd=(id,f,v)=>onChange(tasks.map(t=>t.id===id?{...t,[f]:v}:t));
+  const bulkStatus=(catId,status)=>onChange(tasks.map(t=>t.cat===catId?{...t,status}:t));
+  const allOwners=['All',...[...new Set(tasks.map(t=>t.owner).filter(Boolean))].sort()];
+  const groups=CAT_ORDER.map(cid=>({...CAT[cid],items:tasks.filter(t=>t.cat===cid&&(ownerFilter==='All'||t.owner===ownerFilter))}));
+  return el('div',null,
+    el('div',{style:{display:'flex',alignItems:'center',gap:8,padding:'8px 20px',borderBottom:'0.5px solid var(--bdr)',background:'var(--bg2)',flexWrap:'wrap'}},
+      el('span',{style:{fontSize:11,color:'var(--text2)',fontWeight:500}},el('i',{className:'ti ti-filter',style:{fontSize:12,marginRight:3}}),'Owner:'),
+      allOwners.map(o=>el('button',{key:o,onClick:()=>setOwnerFilter(o),style:{background:ownerFilter===o?'var(--bg)':'transparent',border:ownerFilter===o?'0.5px solid var(--bdr2)':'0.5px solid transparent',borderRadius:6,cursor:'pointer',padding:'3px 10px',fontSize:11,color:ownerFilter===o?'var(--text)':'var(--text2)',fontWeight:ownerFilter===o?500:'normal'}},o))
+    ),
+    groups.map(g=>el('div',{key:g.id},
+      el('div',{className:'cat-header',style:{background:g.light,color:g.text}},
+        el('div',{onClick:()=>setColl(c=>({...c,[g.id]:!c[g.id]})),style:{display:'flex',alignItems:'center',gap:8,flex:1,cursor:'pointer'}},
+          el('i',{className:'ti '+(coll[g.id]?'ti-chevron-right':'ti-chevron-down'),style:{fontSize:12}}),
+          el('span',null,g.label),
+          el('span',{style:{fontSize:11,marginLeft:4,opacity:.6}},g.items.length+' tasks · '+g.items.filter(t=>t.status==='Done').length+' done',
+            g.items.some(t=>isOverdue(t))&&el('span',{style:{color:'var(--err)',marginLeft:6,fontWeight:700}},'⚠ overdue')
+          )
+        ),
+        !coll[g.id]&&el('div',{style:{display:'flex',gap:4,marginLeft:'auto'}},
+          el('span',{style:{fontSize:10,color:g.text,opacity:.7,alignSelf:'center',marginRight:4},'aria-label':'Bulk set status'},'Set all:'),
+          ['Done','In Progress','Not Started'].map(s=>el('button',{key:s,onClick:e=>{e.stopPropagation();bulkStatus(g.id,s);},style:{background:'rgba(0,0,0,.08)',border:'none',borderRadius:4,cursor:'pointer',padding:'2px 7px',fontSize:10,color:g.text,fontWeight:500}},s))
+        )
+      ),
+      !coll[g.id]&&el('div',null,
+        el('table',{className:'task-tbl'},
+          el('thead',null,el('tr',null,el('th',{style:{width:'24%'}},'Task'),el('th',{style:{width:'12%'}},'Owner'),el('th',{style:{width:'13%'}},'Status'),el('th',{style:{width:'10%'}},'Start'),el('th',{style:{width:'10%'}},'End'),el('th',{},'Notes'),el('th',{style:{width:28}}))),
+          el('tbody',null,g.items.map(t=>{const od=isOverdue(t);return el('tr',{key:t.id,style:{background:od?'var(--err-bg)':''}},
+            el('td',null,el('span',{style:{display:'flex',alignItems:'center',gap:5}},
+              (t.atRisk||od)&&el('i',{className:'ti ti-alert-triangle',style:{fontSize:11,color:'var(--err)',flexShrink:0}}),
+              el(Editable,{value:t.name,onChange:v=>upd(t.id,'name',v),style:{color:od?'var(--err)':'inherit'}})
+            )),
+            el('td',null,el(Editable,{value:t.owner,onChange:v=>upd(t.id,'owner',v),placeholder:'—'})),
+            el('td',null,el(ESelect,{value:t.status,options:STATUS_OPTS,onChange:v=>upd(t.id,'status',v)})),
+            el('td',null,el('input',{type:'date',className:'ei',style:{fontSize:11},value:t.start,onChange:ev=>upd(t.id,'start',ev.target.value)})),
+            el('td',null,el('input',{type:'date',className:'ei',style:{fontSize:11,borderColor:od?'var(--err)':''},value:t.end,onChange:ev=>upd(t.id,'end',ev.target.value)})),
+            el('td',null,el(Editable,{value:t.notes,onChange:v=>upd(t.id,'notes',v),style:{fontSize:12,color:'var(--text2)'},placeholder:'—'})),
+            el('td',null,el('button',{className:'icon-btn',onClick:()=>onDel(t.id)},el('i',{className:'ti ti-trash',style:{fontSize:13}})))
+          );}))
+        ),
+        el('button',{className:'add-row',onClick:()=>onAdd(g.id)},el('i',{className:'ti ti-plus',style:{fontSize:12}}),' Add task to ',g.label)
+      )
+    ))
+  );
+}
+
+/* ── Image Field ── */
+function ImageField({value,onChange,label}){
+  const fileRef=useRef();
+  const hasImg=value&&value.startsWith('data:');
+  const upload=e=>{
+    const file=e.target.files[0];if(!file)return;
+    if(file.size>4*1024*1024){alert('Image must be under 4 MB.');return;}
+    const r=new FileReader();
+    r.onload=ev=>onChange(ev.target.result);
+    r.readAsDataURL(file);
+    e.target.value='';
+  };
+  return el('div',{style:{display:'flex',alignItems:'flex-start',gap:10,flex:1}},
+    hasImg
+      ? el('div',{style:{position:'relative',flexShrink:0}},
+          el('img',{src:value,alt:label,style:{width:'100%',maxWidth:200,height:160,objectFit:'contain',borderRadius:8,border:'0.5px solid var(--bdr2)',background:'var(--bg3)',display:'block'}}),
+          el('button',{onClick:()=>onChange(''),title:'Remove image',style:{position:'absolute',top:-6,right:-6,background:'var(--err)',border:'none',borderRadius:'50%',width:18,height:18,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontSize:10}},el('i',{className:'ti ti-x'}))
+        )
+      : el('button',{onClick:()=>fileRef.current.click(),style:{width:'100%',maxWidth:200,height:160,background:'var(--bg2)',border:'1.5px dashed var(--bdr2)',borderRadius:8,cursor:'pointer',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:6,color:'var(--text3)'}},
+          el('i',{className:'ti ti-photo-plus',style:{fontSize:22}}),
+          el('span',{style:{fontSize:10}}),'Upload'
+        ),
+    el('input',{ref:fileRef,type:'file',accept:'image/*',style:{display:'none'},onChange:upload})
+  );
+}
+
+/* ── Specs ── */
+function SpecsPanel({specs,onChange}){
+  const [coll,setColl]=useState({});
+  const upd=(k,v)=>onChange({...specs,[k]:v});
+  return el('div',{className:'specs-wrap'},
+    SPEC_SECTIONS.map(sec=>el('div',{key:sec.key,className:'spec-section'},
+      el('div',{className:'spec-sec-hd',onClick:()=>setColl(c=>({...c,[sec.key]:!c[sec.key]}))},
+        el('i',{className:'ti '+sec.icon,style:{fontSize:14}}),sec.label,
+        el('i',{className:'ti '+(coll[sec.key]?'ti-chevron-right':'ti-chevron-down'),style:{fontSize:12,marginLeft:'auto'}})
+      ),
+      !coll[sec.key]&&(sec.key==='notes'
+        ? el('div',null,sec.fields.map(f=>el('div',{key:f,className:'spec-field full'},
+            el('span',{className:'spec-key'},f),
+            el(Editable,{value:specs[f]||'',onChange:v=>upd(f,v),multiline:true,style:{width:'100%'},placeholder:'Add notes…'})
+          )))
+        : el('div',null,
+            el('div',{className:'spec-img-row'},
+              IMAGE_FIELDS.filter(f=>sec.fields.includes(f)).map(f=>
+                el('div',{key:f,style:{flex:1}},
+                  el('div',{style:{fontSize:11,color:'var(--text2)',marginBottom:6,fontWeight:500}},f),
+                  el(ImageField,{value:specs[f]||'',onChange:v=>upd(f,v),label:f})
+                )
+              )
+            ),
+            el('div',{className:'spec-grid'},
+              sec.fields.filter(f=>!IMAGE_FIELDS.includes(f)).map(f=>
+                el('div',{key:f,className:'spec-field'},
+                  el('span',{className:'spec-key'},f),
+                  el(Editable,{value:specs[f]||'',onChange:v=>upd(f,v),placeholder:'—'})
+                )
+              )
+            )
+          )
+      )
+    ))
+  );
+}
+
+/* ── Product Detail ── */
+function ProductDetail({prod,onChange,onKbNav}){
+  const [sec,setSec]=useState('tasks');
+  useEffect(()=>{
+    const h=e=>{
+      if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA'||e.target.tagName==='SELECT')return;
+      if(e.key==='t'||e.key==='T')setSec('tasks');
+      else if(e.key==='g'||e.key==='G')setSec('gantt');
+      else if(e.key==='s'||e.key==='S')setSec('specs');
+      else if(e.key==='ArrowLeft')onKbNav(-1);
+      else if(e.key==='ArrowRight')onKbNav(1);
+    };
+    window.addEventListener('keydown',h);return()=>window.removeEventListener('keydown',h);
+  },[onKbNav]);
+  const upT=ts=>onChange({...prod,tasks:ts});
+  const addT=cat=>upT([...prod.tasks,{id:uid(),name:'New task',owner:'',status:'Not Started',start:'',end:'',notes:'',cat,atRisk:false}]);
+  const delT=id=>upT(prod.tasks.filter(t=>t.id!==id));
+  const overdue=prod.tasks.filter(t=>isOverdue(t)).length;
+  return el('div',{className:'main'},
+    el('div',{className:'prod-header'},
+      overdue>0&&el('div',{style:{background:'var(--err-bg)',border:'0.5px solid var(--err)',borderRadius:6,padding:'6px 12px',marginBottom:12,fontSize:12,color:'var(--err)',display:'flex',alignItems:'center',gap:8}},
+        el('i',{className:'ti ti-alert-triangle',style:{flexShrink:0}}),overdue+' overdue task'+(overdue>1?'s':'')+' — see Tasks tab'
+      ),
+      el('div',{style:{display:'flex',alignItems:'flex-start',gap:12,flexWrap:'wrap'}},
+        el('div',{style:{flex:1,minWidth:0}},
+          el('div',{style:{fontSize:11,color:BRAND_COL[prod.brand]||'var(--info)',fontWeight:700,textTransform:'uppercase',letterSpacing:'.08em',marginBottom:5}},
+            el(Editable,{value:prod.brand,onChange:v=>onChange({...prod,brand:v}),style:{color:'inherit'}})
+          ),
+          el(Editable,{value:prod.name,onChange:v=>onChange({...prod,name:v,shortName:v.length>30?v.slice(0,30)+'…':v}),style:{fontSize:16,fontWeight:700,display:'block',marginBottom:8,lineHeight:1.3}}),
+          el(TagEditor,{tags:prod.tags||[],onChange:tags=>onChange({...prod,tags})})
+        ),
+        el('div',{style:{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:6,flexShrink:0}},
+          el('label',{style:{fontSize:11,color:'var(--text2)',display:'flex',alignItems:'center',gap:6}},
+            'Launch date:',
+            el('input',{type:'date',style:{font:'inherit',fontSize:12,background:'var(--bg2)',border:'0.5px solid var(--bdr2)',borderRadius:5,padding:'3px 8px',color:'var(--text)'},value:prod.launchDate||'',onChange:ev=>onChange({...prod,launchDate:ev.target.value})})
+          ),
+          el('div',{style:{fontSize:11,color:'var(--text3)'}},el('i',{className:'ti ti-keyboard',style:{fontSize:11}}),' T/G/S tabs · ←→ products')
+        )
+      )
+    ),
+    el(NotesRow,{notes:prod.notes||{updates:'',blockers:''},onChange:n=>onChange({...prod,notes:n}),launchDate:prod.launchDate,tasks:prod.tasks}),
+    el('div',{className:'sectabs'},
+      [['tasks','Tasks'],['gantt','Gantt'],['specs','Specs']].map(([id,lbl])=>el('button',{key:id,className:'stab '+(sec===id?'on':''),onClick:()=>setSec(id)},lbl))
+    ),
+    sec==='tasks'&&el(TasksPanel,{tasks:prod.tasks,onChange:upT,onAdd:addT,onDel:delT}),
+    sec==='gantt'&&el(GanttChart,{tasks:prod.tasks,launchDate:prod.launchDate}),
+    sec==='specs'&&el(SpecsPanel,{specs:prod.specs,onChange:sp=>onChange({...prod,specs:sp})})
+  );
+}
+
+/* ═══════════════════════════════════════
+   /* ═══════════════════════════════════════
+   POST LAUNCH ANALYSIS — v2
+   3 products, weekly chart, top stores,
+   removable products via state
+═══════════════════════════════════════ */
+
+const SALES_DATA_DEFAULT = {
+  "Berry Blaze Liquid Diamonds All-in-One":{
+    brand:"LITTI.",units:1428,orders:112,storeCount:66,launchDate:"2026-04-14",
+    storeMetrics:{
+      weekMetrics:{"2026-W16":{active:28,new:28,repeat:0,prevActive:0},"2026-W17":{active:22,new:16,repeat:6,prevActive:28},"2026-W18":{active:5,new:2,repeat:2,prevActive:22},"2026-W19":{active:13,new:9,repeat:2,prevActive:5},"2026-W20":{active:26,new:9,repeat:5,prevActive:13},"2026-W21":{active:5,new:2,repeat:0,prevActive:26}},
+      totalStores:66,opportunity:1629
+    },
+    ocs:{velocity:0.21934,skuClass:"New Product",lwUnits:72,twoWkUnits:372,threeWkUnits:168,avgLast3:204,storesL4W:44,penPct4W:2.6,penPct8W:4.96,penPct12W:4.96,onHand:null,onOrder:240,weeksOfSupply:null,firstReceipt:"2026-04-14",lifeOfSku:38,fillRate:1.0},
+    cities:{"Scarborough":132,"Timmins":72,"Hawkesbury":60,"Toronto":60,"Thunder Bay":60,"Kitchener":48,"Dryden":48,"Petersburg":36,"Oshawa":36,"Windsor":36,"North Bay":36,"North York":24,"Brampton":24,"Ottawa":24,"Fonthill":24,"Brantford":24,"Niagara Falls":24,"Peterborough":24,"Etobicoke":24,"Midland":24,"Pickering":24},
+    stores:{"Happy Life":96,"HOLLAND DAZE":84,"Grand Cannabis":72,"ShinyBud":48,"Casa Bliss Cannabis":48,"The Cannabis Guys":48,"VIP Cannabis Co":36,"Your Local Cannabis":36,"True North Cannabis Co":36,"Toke House":36,"Baker and Blazer Cannabis Co.":24,"THE CANNABIST SHOP":24,"Cannabis Street":24,"Canna North Cannabis Store":24,"The Oz Store":24,"Greentown Cannabis Discount":24,"Miss Jones":24,"Dream Cannabis":24,"Stok'd Cannabis":24,"Lolly":24},
+    regions:{"East Region":324,"West Region":420,"Toronto":240,"North Region":288,"GTA Region (Excludes Toronto)":156},
+    weekly:{"2026-W16":372,"2026-W17":360,"2026-W18":84,"2026-W19":168,"2026-W20":372,"2026-W21":72},
+    monthly:{"2026-04":780,"2026-05":648},
+    daily:{"2026-04-14":36,"2026-04-15":72,"2026-04-16":84,"2026-04-17":180,"2026-04-20":324,"2026-04-22":12,"2026-04-24":24,"2026-04-27":24,"2026-04-28":24,"2026-05-01":36,"2026-05-04":96,"2026-05-06":24,"2026-05-08":48,"2026-05-11":132,"2026-05-12":36,"2026-05-13":48,"2026-05-14":72,"2026-05-15":84,"2026-05-19":24,"2026-05-20":12,"2026-05-21":12,"2026-05-22":24}
+  },
+  "Cherry Chonk Liquid Diamonds All-in-One":{
+    brand:"LITTI.",units:1200,orders:96,storeCount:57,launchDate:"2026-04-22",
+    storeMetrics:{weekMetrics:{"2026-W16":{active:25,new:25,repeat:0,prevActive:0},"2026-W17":{active:18,new:16,repeat:2,prevActive:25},"2026-W18":{active:7,new:4,repeat:2,prevActive:18},"2026-W19":{active:13,new:6,repeat:2,prevActive:7},"2026-W20":{active:19,new:4,repeat:3,prevActive:13},"2026-W21":{active:5,new:2,repeat:2,prevActive:19}},totalStores:57,opportunity:1638},
+    ocs:{velocity:0.141509,skuClass:"New Product",lwUnits:240,twoWkUnits:180,threeWkUnits:96,avgLast3:172,storesL4W:40,penPct4W:2.36,penPct8W:4.31,penPct12W:4.31,onHand:null,onOrder:156,weeksOfSupply:null,firstReceipt:"2026-04-22",lifeOfSku:32,fillRate:1.0},
+    cities:{"Hawkesbury":84,"Scarborough":72,"North York":48,"Windsor":48,"Oshawa":36,"Toronto":36,"Niagara Falls":36,"Etobicoke":36,"North Bay":36,"Sudbury":24,"Belleville":24,"Kitchener":24,"Aurora":24,"Timmins":24,"Peterborough":24,"Orillia":24},
+    stores:{"Happy Life":96,"Holland Daze":72,"ShinyBud":60,"Canna North Cannabis Store":36,"Lolly":36,"Greentown Cannabis Discount":36,"Grand Cannabis":36,"Your Local Cannabis":36,"MaryJane's Cannabis":36,"Baker and Blazer Cannabis Co.":24,"CASA BLISS":24,"Cannabis Street":24,"True North Cannabis Co":24,"The Oz Store":24,"Off the Stem":24,"Sparq Retail":24,"Ideal Buds":24,"The Cannabis Guys":24,"Aces Cannabis 389 Co.":24,"Discounted Cannabis":24},
+    regions:{"North Region":156,"East Region":384,"Toronto":192,"GTA Region (Excludes Toronto)":156,"West Region":312},
+    weekly:{"2026-W16":348,"2026-W17":276,"2026-W18":96,"2026-W19":180,"2026-W20":240,"2026-W21":60},
+    monthly:{"2026-04":672,"2026-05":528},
+    daily:{"2026-04-14":48,"2026-04-15":120,"2026-04-16":192,"2026-04-17":336,"2026-04-20":456,"2026-04-22":24,"2026-04-24":72,"2026-04-27":24,"2026-04-28":48,"2026-04-29":24,"2026-05-01":96,"2026-05-04":192,"2026-05-06":24,"2026-05-07":48,"2026-05-08":96,"2026-05-11":168,"2026-05-12":24,"2026-05-13":120,"2026-05-14":96,"2026-05-15":72,"2026-05-19":24,"2026-05-20":24,"2026-05-21":48,"2026-05-22":24}
+  },
+  "Northern Lights 60+ Diamonds & Shatter Infused Pre-Roll":{
+    brand:"Shatterizer",units:1116,orders:75,storeCount:52,launchDate:"2026-04-29",
+    storeMetrics:{weekMetrics:{"2026-W17":{active:6,new:6,repeat:0,prevActive:0},"2026-W18":{active:23,new:22,repeat:1,prevActive:6},"2026-W19":{active:19,new:13,repeat:5,prevActive:23},"2026-W20":{active:10,new:9,repeat:1,prevActive:19},"2026-W21":{active:7,new:2,repeat:0,prevActive:10}},totalStores:52,opportunity:1643},
+    ocs:{velocity:0.07783,skuClass:"New Product",lwUnits:132,twoWkUnits:408,threeWkUnits:396,avgLast3:312,storesL4W:57,penPct4W:3.36,penPct8W:3.78,penPct12W:3.78,onHand:null,onOrder:108,weeksOfSupply:null,firstReceipt:"2026-04-29",lifeOfSku:25,fillRate:0.35},
+    cities:{"Hawkesbury":132,"Toronto":48,"Lakeshore":48,"Ottawa":48,"Oshawa":36,"Windsor":36,"Scarborough":36,"North Bay":36,"Sudbury":24,"Kenora":24,"Thunder Bay":24,"Kitchener":24,"Hamilton":24,"Niagara Falls":24,"Mississauga":24,"Pembroke":24},
+    stores:{"ShinyBud":120,"Regulators Cannabis":72,"Miss Jones":72,"Happy Life":60,"Cannabis Street":36,"Toke Cannabis":36,"The Oz Store":36,"Aroma Cannabis Emporium":24,"The Reef Store":24,"BUDSSMOKE":24,"PEACE BY THE GRAM":24,"Gather & Grow Recreational Cannabis":24,"High Society Cannabis Co.":24,"Holland Daze":24,"Calyx and Trichomes":24,"PARADISE CANNABIS":24,"Weed B Blazn":24,"TOKE":24,"Neku Cannabis":24},
+    regions:{"GTA Region (Excludes Toronto)":132,"East Region":408,"North Region":192,"Toronto":120,"West Region":264},
+    weekly:{"2026-W17":96,"2026-W18":396,"2026-W19":396,"2026-W20":132,"2026-W21":96},
+    monthly:{"2026-04":432,"2026-05":684},
+    daily:{"2026-04-21":36,"2026-04-22":12,"2026-04-23":12,"2026-04-24":36,"2026-04-27":204,"2026-04-28":48,"2026-04-29":12,"2026-04-30":72,"2026-05-01":60,"2026-05-04":240,"2026-05-05":12,"2026-05-06":72,"2026-05-07":36,"2026-05-08":36,"2026-05-11":24,"2026-05-12":24,"2026-05-13":12,"2026-05-14":48,"2026-05-15":24,"2026-05-19":12,"2026-05-21":48,"2026-05-22":36}
+  },
+  "10th Planet Pre-Rolls":{
+    brand:"Buddy Blooms",units:34956,orders:2689,storeCount:292,launchDate:"2025-11-25",
+    storeMetrics:{weekMetrics:{"2026-W14":{active:72,new:4,repeat:29,prevActive:81},"2026-W15":{active:87,new:6,repeat:28,prevActive:72},"2026-W16":{active:80,new:5,repeat:36,prevActive:87},"2026-W17":{active:71,new:1,repeat:32,prevActive:80},"2026-W18":{active:73,new:2,repeat:30,prevActive:71},"2026-W19":{active:91,new:5,repeat:37,prevActive:73},"2026-W20":{active:91,new:2,repeat:42,prevActive:91},"2026-W21":{active:64,new:3,repeat:24,prevActive:91}},totalStores:292,opportunity:1403},
+    ocs:{velocity:0.962264,skuClass:"D",lwUnits:1632,twoWkUnits:1728,threeWkUnits:1260,avgLast3:1540,storesL4W:265,penPct4W:15.63,penPct8W:22.06,penPct12W:25.55,onHand:2940,onOrder:4704,weeksOfSupply:2.12,firstReceipt:"2026-03-15",lifeOfSku:1531,fillRate:1.0},
+    cities:{"Toronto":2880,"Ottawa":2052,"Scarborough":2016,"Mississauga":1896,"Windsor":1380,"North York":1332,"Hamilton":1260,"London":1032,"Etobicoke":972,"Peterborough":948,"St Catharines":756,"Burlington":756,"Sudbury":624,"Brampton":576,"Pickering":528,"Kitchener":516,"Barrie":516,"Niagara Falls":492,"Brantford":456,"Oshawa":444,"Orleans":396,"Chatham":372,"Kingston":348,"Guelph":324,"Midland":276,"North Bay":264,"Wasaga Beach":252,"Thunder Bay":252,"Kapuskasing":228,"Aurora":216,"Cambridge":216,"Cornwall":180,"Sarnia":180,"Orillia":192,"Orangeville":180,"Milton":168,"Hawkesbury":144,"Kenora":132,"Nepean":132,"Stoney Creek":132,"Alliston":132,"Ancaster":156},
+    stores:{"Discounted Cannabis":2424,"Holland Daze":1404,"Buzzed Buds":1008,"THE HUNNY POT CANNABIS CO.":876,"The Hunny Pot Cannabis Co":864,"Pop's Cannabis Co.":780,"Grand Cannabis":636,"Fogtown Flower":636,"Lolly":588,"Canna Cabana":564,"Happy Life":540,"High Society Cannabis Co.":516,"Cannabis Corner":480,"Your Local Cannabis":480,"MaryJane's Cannabis":456,"Cannabis Street":444,"ShinyBud":432,"Greentown Cannabis Discount":408,"True North Cannabis Co":396,"Baker and Blazer Cannabis Co.":384,"Off the Stem":360,"The Oz Store":348,"Sparq Retail":336,"Canna North Cannabis Store":324,"TOKE":312,"Aces Cannabis 389 Co.":300,"Casa Bliss Cannabis":288,"Ideal Buds":276,"Groove Cannabis Co":264,"The Cannabis Guys":252},
+    regions:{"Toronto":7416,"GTA Region (Excludes Toronto)":5580,"West Region":10680,"East Region":8376,"North Region":2772},
+    weekly:{"2025-W48":1260,"2025-W49":1380,"2025-W50":1332,"2025-W51":1356,"2025-W52":1464,"2026-W01":324,"2026-W02":1500,"2026-W03":1392,"2026-W04":1296,"2026-W05":1380,"2026-W06":1308,"2026-W07":1284,"2026-W08":852,"2026-W09":1260,"2026-W10":1212,"2026-W11":1188,"2026-W12":1164,"2026-W13":1476,"2026-W14":1224,"2026-W15":1572,"2026-W16":1308,"2026-W17":1356,"2026-W18":1260,"2026-W19":1728,"2026-W20":1632,"2026-W21":1284},
+    monthly:{"2025-11":1260,"2025-12":6696,"2026-01":5892,"2026-02":4704,"2026-03":5604,"2026-04":5868,"2026-05":4932},
+    daily:{"2025-11-24":324,"2025-11-25":228,"2025-11-26":180,"2025-11-27":240,"2025-11-28":288,"2025-12-01":300,"2025-12-02":300,"2025-12-03":264,"2025-12-04":228,"2025-12-05":288,"2025-12-08":324,"2025-12-09":216,"2025-12-10":180,"2025-12-11":384,"2025-12-12":228,"2025-12-15":300,"2025-12-16":192,"2025-12-17":300,"2025-12-18":360,"2025-12-19":204,"2025-12-22":252,"2025-12-23":504,"2025-12-24":708,"2025-12-29":276,"2025-12-30":444,"2025-12-31":444,"2026-01-02":324,"2026-01-05":432,"2026-01-06":204,"2026-01-07":228,"2026-01-08":288,"2026-01-09":348,"2026-01-12":252,"2026-01-13":204,"2026-01-14":276,"2026-01-15":384,"2026-01-16":276,"2026-01-19":312,"2026-01-20":216,"2026-01-21":264,"2026-01-22":240,"2026-01-23":264,"2026-01-26":252,"2026-01-27":300,"2026-01-28":216,"2026-01-29":312,"2026-01-30":300,"2026-02-02":360,"2026-02-03":156,"2026-02-04":276,"2026-02-05":252,"2026-02-06":264,"2026-02-09":324,"2026-02-10":144,"2026-02-11":360,"2026-02-12":180,"2026-02-13":276,"2026-02-17":264,"2026-02-18":132,"2026-02-19":252,"2026-02-20":204,"2026-02-23":264,"2026-02-24":264,"2026-02-25":180,"2026-02-26":360,"2026-02-27":192,"2026-03-02":300,"2026-03-03":204,"2026-03-04":216,"2026-03-05":216,"2026-03-06":276,"2026-03-09":252,"2026-03-10":192,"2026-03-11":108,"2026-03-12":300,"2026-03-13":336,"2026-03-16":252,"2026-03-17":216,"2026-03-18":216,"2026-03-19":192,"2026-03-20":288,"2026-03-23":408,"2026-03-24":228,"2026-03-25":216,"2026-03-26":360,"2026-03-27":264,"2026-03-30":312,"2026-03-31":252,"2026-04-01":288,"2026-04-02":372,"2026-04-06":408,"2026-04-07":204,"2026-04-08":276,"2026-04-09":396,"2026-04-10":288,"2026-04-13":348,"2026-04-14":216,"2026-04-15":144,"2026-04-16":408,"2026-04-17":192,"2026-04-20":384,"2026-04-21":156,"2026-04-22":192,"2026-04-23":360,"2026-04-24":264,"2026-04-27":228,"2026-04-28":264,"2026-04-29":192,"2026-04-30":288,"2026-05-01":288,"2026-05-04":396,"2026-05-05":216,"2026-05-06":288,"2026-05-07":396,"2026-05-08":432,"2026-05-11":348,"2026-05-12":288,"2026-05-13":396,"2026-05-14":300,"2026-05-15":300,"2026-05-19":336,"2026-05-20":228,"2026-05-21":432,"2026-05-22":288}
+  },
+  "Grape Diamonds Pre-Roll":{
+    brand:"Countryside Cannabis Harvest Reserve",
+    units:46968,orders:1700,storeCount:205,launchDate:"2025-11-25",
+    storeMetrics:{
+      weekMetrics:{"2025-W01":{active:33,new:33,repeat:0,prevActive:0},"2025-W48":{active:46,new:27,repeat:19,prevActive:33},"2025-W49":{active:42,new:24,repeat:12,prevActive:46},"2025-W50":{active:47,new:20,repeat:14,prevActive:42},"2025-W51":{active:52,new:15,repeat:20,prevActive:47},"2025-W52":{active:41,new:6,repeat:17,prevActive:52},"2026-W01":{active:10,new:2,repeat:2,prevActive:41},"2026-W02":{active:38,new:8,repeat:2,prevActive:10},"2026-W03":{active:51,new:6,repeat:14,prevActive:38},"2026-W04":{active:50,new:3,repeat:21,prevActive:51},"2026-W05":{active:44,new:5,repeat:20,prevActive:50},"2026-W06":{active:36,new:3,repeat:14,prevActive:44},"2026-W07":{active:54,new:5,repeat:20,prevActive:36},"2026-W08":{active:39,new:5,repeat:14,prevActive:54},"2026-W09":{active:42,new:3,repeat:10,prevActive:39},"2026-W10":{active:42,new:3,repeat:16,prevActive:42},"2026-W11":{active:52,new:6,repeat:16,prevActive:42},"2026-W12":{active:54,new:5,repeat:21,prevActive:52},"2026-W13":{active:50,new:3,repeat:19,prevActive:54},"2026-W14":{active:49,new:5,repeat:18,prevActive:50},"2026-W15":{active:52,new:1,repeat:20,prevActive:49},"2026-W16":{active:64,new:6,repeat:25,prevActive:52},"2026-W17":{active:62,new:3,repeat:24,prevActive:64},"2026-W18":{active:54,new:2,repeat:21,prevActive:62},"2026-W19":{active:54,new:3,repeat:22,prevActive:54},"2026-W20":{active:55,new:2,repeat:22,prevActive:54},"2026-W21":{active:36,new:1,repeat:17,prevActive:55}},
+      totalStores:205,opportunity:1490
+    },
+    ocs:{velocity:null,skuClass:"C",lwUnits:1272,twoWkUnits:2544,threeWkUnits:2088,avgLast3:1968,storesL4W:55,penPct4W:3.24,penPct8W:9.44,penPct12W:14.75,onHand:null,onOrder:null,weeksOfSupply:null,fillRate:null,lifeOfSku:177,firstReceipt:"2025-11-25"},
+    cities:{"Toronto":8136,"Scarborough":6192,"Mississauga":3888,"Ottawa":3336,"North York":2352,"Brampton":2088,"Kitchener":1776,"Hamilton":1488,"Oshawa":1152,"Niagara Falls":1056,"Etobicoke":1056,"Guelph":840,"Waterloo":816,"Brantford":744,"Barrie":720,"St Catharines":696,"Windsor":696,"Stouffville":552,"London":504,"Sarnia":456,"Nepean":384,"Orleans":384,"Stoney Creek":384,"Burlington":360,"Chatham":408,"Milton":336,"Stratford":336,"York":288,"Cambridge":240,"Peterborough":240,"Pickering":240,"Thorold":240,"Owen Sound":216,"Sudbury":216,"Woodstock":216,"Ajax":192,"Aurora":168,"Thunder Bay":144,"North Bay":144,"Kingston":96,"Sault Ste Marie":96,"Trenton":96,"East York":96,"Welland":72,"Cornwall":72,"Timmins":24,"Midland":24,"Georgetown":24,"Orangeville":24},
+    stores:{"The Hunny Pot Cannabis Co":7368,"HOLLAND DAZE":2328,"FIKA Cannabis":2136,"THE CANNABIST SHOP":1920,"Growers Retail":1656,"Discounted Cannabis":1344,"Cannabis Hut Ltd":1152,"Your Local Cannabis":1128,"Good Cookie":720,"Fika":672,"Buds House":648,"Fogtown Flower":648,"Spiritleaf":648,"One Tree Cannabis":624,"Growers Retail Thomson Park":528,"Ciao Canna":528,"Highties Cannabis Store":456,"Best Budz":432,"Eighth Cannabis":432,"HONEYPOT SMOKE SHOP":432,"The Herbary":408,"Ganjika House":408,"Ashario":408,"Day N Night Cannabis":384,"Purple Meadow Cannabis":384,"Potherb Cannabis":360,"Divine Flower":336,"Highlife Cannabis":336},
+    regions:{"Toronto":18120,"GTA Region (Excludes Toronto)":9336,"West Region":11688,"East Region":6888,"North Region":816},
+    weekly:{"2025-W01":1080,"2025-W48":1752,"2025-W49":1488,"2025-W50":2112,"2025-W51":1704,"2025-W52":1728,"2026-W01":312,"2026-W02":1320,"2026-W03":1824,"2026-W04":1896,"2026-W05":1488,"2026-W06":1320,"2026-W07":2040,"2026-W08":1344,"2026-W09":1632,"2026-W10":1416,"2026-W11":1680,"2026-W12":2184,"2026-W13":1752,"2026-W14":2088,"2026-W15":2088,"2026-W16":2376,"2026-W17":2472,"2026-W18":1968,"2026-W19":2088,"2026-W20":2544,"2026-W21":1272},
+    monthly:{"2025-11":1752,"2025-12":8112,"2026-01":6840,"2026-02":6336,"2026-03":7968,"2026-04":9696,"2026-05":6264},
+    daily:{"2025-11-25":672,"2025-11-26":456,"2025-11-27":360,"2025-11-28":264,"2025-12-01":336,"2025-12-02":360,"2025-12-03":336,"2025-12-04":168,"2025-12-05":288,"2025-12-08":504,"2025-12-09":432,"2025-12-10":408,"2025-12-11":456,"2025-12-12":312,"2025-12-15":312,"2025-12-16":456,"2025-12-17":360,"2025-12-18":288,"2025-12-19":288,"2025-12-22":456,"2025-12-23":888,"2025-12-24":384,"2025-12-29":144,"2025-12-30":672,"2025-12-31":264,"2026-01-02":312,"2026-01-05":288,"2026-01-06":336,"2026-01-07":312,"2026-01-08":240,"2026-01-09":144,"2026-01-12":384,"2026-01-13":456,"2026-01-14":312,"2026-01-15":456,"2026-01-16":216,"2026-01-19":240,"2026-01-20":456,"2026-01-21":576,"2026-01-22":288,"2026-01-23":336,"2026-01-26":264,"2026-01-27":264,"2026-01-28":480,"2026-01-29":168,"2026-01-30":312,"2026-02-02":312,"2026-02-03":408,"2026-02-04":168,"2026-02-05":312,"2026-02-06":120,"2026-02-09":336,"2026-02-10":336,"2026-02-11":624,"2026-02-12":336,"2026-02-13":408,"2026-02-17":336,"2026-02-18":360,"2026-02-19":432,"2026-02-20":216,"2026-02-23":336,"2026-02-24":384,"2026-02-25":432,"2026-02-26":192,"2026-02-27":288,"2026-03-02":144,"2026-03-03":336,"2026-03-04":168,"2026-03-05":504,"2026-03-06":264,"2026-03-09":192,"2026-03-10":432,"2026-03-11":360,"2026-03-12":408,"2026-03-13":288,"2026-03-16":456,"2026-03-17":624,"2026-03-18":456,"2026-03-19":408,"2026-03-20":240,"2026-03-23":288,"2026-03-24":384,"2026-03-25":360,"2026-03-26":360,"2026-03-27":360,"2026-03-30":384,"2026-03-31":552,"2026-04-01":648,"2026-04-02":504,"2026-04-06":504,"2026-04-07":360,"2026-04-08":480,"2026-04-09":552,"2026-04-10":192,"2026-04-13":552,"2026-04-14":528,"2026-04-15":528,"2026-04-16":312,"2026-04-17":456,"2026-04-20":552,"2026-04-21":552,"2026-04-22":504,"2026-04-23":528,"2026-04-24":336,"2026-04-27":432,"2026-04-28":384,"2026-04-29":432,"2026-04-30":360,"2026-05-01":360,"2026-05-04":384,"2026-05-05":432,"2026-05-06":576,"2026-05-07":408,"2026-05-08":288,"2026-05-11":264,"2026-05-12":816,"2026-05-13":648,"2026-05-14":408,"2026-05-15":408,"2026-05-19":264,"2026-05-20":312,"2026-05-21":360,"2026-05-22":336}
+  }
+};
+
+const CITY_COORDS = {
+  "Toronto":[43.651,-79.347],"North York":[43.767,-79.415],"Scarborough":[43.773,-79.233],
+  "Etobicoke":[43.649,-79.566],"Mississauga":[43.589,-79.644],"Brampton":[43.731,-79.762],
+  "Vaughan":[43.837,-79.508],"Markham":[43.856,-79.337],"Richmond Hill":[43.882,-79.440],
+  "Newmarket":[44.059,-79.461],"Ajax":[43.850,-79.020],"Whitby":[43.897,-78.942],
+  "Oshawa":[43.900,-78.860],"Pickering":[43.839,-79.089],"Hamilton":[43.256,-79.869],
+  "Burlington":[43.315,-79.799],"Oakville":[43.467,-79.683],"Barrie":[44.390,-79.690],
+  "Guelph":[43.545,-80.248],"Kitchener":[43.451,-80.492],"London":[42.984,-81.245],
+  "Windsor":[42.317,-83.047],"St. Catharines":[43.159,-79.247],"St Catharines":[43.159,-79.247],
+  "Niagara Falls":[43.090,-79.079],"Brantford":[43.139,-80.264],"Kingston":[44.230,-76.481],
+  "Ottawa":[45.424,-75.695],"Hawkesbury":[45.601,-74.604],"Cornwall":[45.020,-74.730],
+  "Brockville":[44.590,-75.690],"Pembroke":[45.826,-77.107],"Sudbury":[46.490,-80.993],
+  "North Bay":[46.317,-79.461],"Sault Ste. Marie":[46.519,-84.348],"Sault Ste Marie":[46.519,-84.348],
+  "Timmins":[48.477,-81.330],"Thunder Bay":[48.382,-89.246],"Kenora":[49.767,-94.490],
+  "Peterborough":[44.300,-78.320],"Belleville":[44.160,-77.383],"Cobourg":[43.959,-78.165],
+  "Dryden":[49.783,-92.833],"Aurora":[44.007,-79.451],"Orillia":[44.600,-79.417],
+  "Midland":[44.750,-79.883],"Collingwood":[44.500,-80.217],"Orangeville":[43.919,-80.094],
+  "Milton":[43.516,-79.883],"Fonthill":[43.033,-79.267],"Caledonia":[43.067,-79.950],
+  "Stoney Creek":[43.210,-79.750],"Nepean":[45.340,-75.752],"Espanola":[46.250,-81.767],
+  "Fort Frances":[48.608,-93.396],"Lakeshore":[42.233,-82.650],"North York":[43.767,-79.415],
+  "Listowel":[43.733,-80.950],"Petersburg":[43.417,-80.517],"Dunnville":[42.900,-79.617],
+  "East York":[43.700,-79.325],"Welland":[42.992,-79.248],"York":[43.697,-79.453],
+  "Vankleek Hill":[45.517,-74.650],"Matheson":[48.533,-80.467],"Elliot Lake":[46.383,-82.650],
+  "Red Lake":[51.067,-93.800],"Rama":[44.617,-79.333],"Alliston":[44.150,-79.867],
+  "Georgetown":[43.650,-79.917],"Huntsville":[45.333,-79.217],
+  "Chatham":[42.405,-82.188],"Orleans":[45.457,-75.515],"Sarnia":[42.974,-82.406],
+  "Waterloo":[43.467,-80.517],"Cambridge":[43.360,-80.313],"Stratford":[43.370,-80.982],
+  "Owen Sound":[44.567,-80.933],"Wasaga Beach":[44.517,-80.017],"Innisfil":[44.300,-79.583],
+  "Bradford":[44.117,-79.567],"Georgina":[44.317,-79.433],"Bowmanville":[43.917,-78.683],
+  "Trenton":[44.100,-77.583],"Belleville":[44.160,-77.383],"Napanee":[44.250,-76.950],
+  "Perth":[44.900,-76.250],"Arnprior":[45.433,-76.350],"Renfrew":[45.467,-76.683],
+  "Gloucester":[45.350,-75.617],"Kanata":[45.300,-75.900],"Stittsville":[45.250,-75.917],
+  "Kemptville":[45.017,-75.633],"Casselman":[45.317,-75.083],"Embrun":[45.267,-75.283],
+  "Rockland":[45.550,-75.300],"Chelmsford":[46.567,-81.183],"Hanmer":[46.533,-80.933],
+  "Lively":[46.433,-81.150],"Val Caron":[46.550,-81.017],"Sturgeon Falls":[46.367,-79.933],
+  "Kirkland Lake":[48.150,-80.033],"Iroquois Falls":[48.767,-80.683],"Cochrane":[49.067,-81.017],
+  "Kapuskasing":[49.417,-82.433],"Dunnville":[42.900,-79.617],"Welland":[42.992,-79.248],
+  "Thorold":[43.117,-79.200],"Fonthill":[43.033,-79.267],"Beamsville":[43.167,-79.467],
+  "Caledonia":[43.067,-79.950],"Simcoe":[42.833,-80.300],"Port Dover":[42.783,-80.200],
+  "Tillsonburg":[42.860,-80.730],"Woodstock":[43.130,-80.747],"Paris":[43.200,-80.383],
+  "Listowel":[43.733,-80.950],"Goderich":[43.733,-81.717],"Wingham":[43.883,-81.317],
+  "Amherstburg":[42.100,-83.100],"Kingsville":[42.033,-82.733],"Leamington":[42.050,-82.600],
+  "Tecumseh":[42.317,-82.933],"Belle River":[42.300,-82.717],"Wallaceburg":[42.600,-82.383],
+  "Tilbury":[42.267,-82.433],"Ancaster":[43.217,-79.983],"Dundas":[43.267,-79.950],
+  "Waterdown":[43.333,-79.900],"East York":[43.700,-79.325],"York":[43.697,-79.453],
+  "Lindsay":[44.350,-78.733],"Minden":[44.917,-78.717],"Port Hope":[43.950,-78.300],
+  "Cobourg":[43.959,-78.165],"Bracebridge":[45.033,-79.300],"Penetanguishene":[44.767,-79.933],
+  "Collingwood":[44.500,-80.217],"Gravenhurst":[44.917,-79.367],"Midland":[44.750,-79.883],
+  "Stoney Creek":[43.210,-79.750],"Orangeville":[43.919,-80.094],"Milton":[43.516,-79.883],
+  "Stouffville":[43.967,-79.250],"Uxbridge":[44.100,-79.117],"Keswick":[44.250,-79.450]
+};
+
+const MAP_BOUNDS={w:-84.5,e:-74.0,s:41.4,n:47.5};
+const toSVG=(lat,lng,W=460,H=320)=>{
+  const x=((lng-MAP_BOUNDS.w)/(MAP_BOUNDS.e-MAP_BOUNDS.w))*W;
+  const y=((MAP_BOUNDS.n-lat)/(MAP_BOUNDS.n-MAP_BOUNDS.s))*H;
+  return [Math.round(x*10)/10,Math.round(y*10)/10];
+};
+
+// Format ISO week → readable label
+const fmtWeek=w=>{
+  // ISO week to a readable date label (Monday of that week)
+  const[y,wn]=w.split('-W');
+  const jan4=new Date(parseInt(y),0,4); // Jan 4 is always in week 1
+  const monday=new Date(jan4);
+  monday.setDate(jan4.getDate()-(jan4.getDay()||7)+1+(parseInt(wn)-1)*7);
+  return monday.toLocaleString('en-CA',{month:'short',day:'numeric'});
+};
+
+/* ── ROS Classes ── */
+const STORE_COUNT_KEY='au_store_count_v1';
+const getStoreCount=()=>{try{const v=localStorage.getItem(STORE_COUNT_KEY);return v?parseInt(v):1695;}catch{return 1695;}};
+const saveStoreCount=v=>{try{localStorage.setItem(STORE_COUNT_KEY,String(v));}catch{}};
+let ONTARIO_STORES=getStoreCount();
+
+const ROS_CLASSES=[
+  {cls:'A',label:'Ultra Fast',min:8,   max:null, col:'#f0c030',bg:'#2a2200',tx:'#f0c030'},
+  {cls:'B',label:'Fast',      min:3,   max:8,    col:'#4dbb6a',bg:'#0d2a14',tx:'#6dda7a'},
+  {cls:'C',label:'Moderate',  min:0.8, max:3,    col:'#5b9bd5',bg:'#0d1f3c',tx:'#7ab8f0'},
+  {cls:'D',label:'Slow',      min:0.2, max:0.8,  col:'#e09b3d',bg:'#2a1800',tx:'#e8a84a'},
+  {cls:'E',label:'Ultra Slow',min:0,   max:0.2,  col:'#e07878',bg:'#2a0d0d',tx:'#f09090'},
+];
+const getROS=v=>ROS_CLASSES.find(r=>v>=r.min&&(r.max===null||v<r.max))||ROS_CLASSES[4];
+const nextROS=v=>{const i=ROS_CLASSES.findIndex(r=>v>=r.min&&(r.max===null||v<r.max));return i>0?ROS_CLASSES[i-1]:null;};
+
+/* ── Velocity Card ── */
+function VelocityCard({ocs,weekly}){
+  if(!ocs||!weekly)return null;
+  const CLS={
+    A:{col:'#f0c030',bg:'#2a2200',tx:'#f0c030',label:'Ultra Fast'},
+    B:{col:'#4dbb6a',bg:'#0d2a14',tx:'#6dda7a',label:'Fast'},
+    C:{col:'#5b9bd5',bg:'#0d1f3c',tx:'#7ab8f0',label:'Moderate'},
+    D:{col:'#e09b3d',bg:'#2a1800',tx:'#e8a84a',label:'Slow'},
+    E:{col:'#e07878',bg:'#2a0d0d',tx:'#f09090',label:'Ultra Slow'},
+  };
+
+  const sorted=Object.entries(weekly).sort(([a],[b])=>a.localeCompare(b));
+  const n=sorted.length;
+  const lw=n>=1?sorted[n-1][1]:0;
+  const tw=n>=2?sorted[n-2][1]:0;
+  const tr=n>=3?sorted[n-3][1]:0;
+  const vel=lw/ONTARIO_STORES;
+  const clsKey=vel>=8?'A':vel>=3?'B':vel>=0.8?'C':vel>=0.2?'D':'E';
+  const cls=CLS[clsKey];
+  const next=nextROS(vel);
+  const unitsNeeded=next?Math.max(0,Math.ceil(next.min*ONTARIO_STORES-lw)):0;
+  const avg3=Math.round([lw,tw,tr].slice(0,Math.min(3,n)).reduce((a,b)=>a+b,0)/Math.min(3,n));
+
+  const bars=[
+    {lbl:n>=3?fmtWeek(sorted[n-3][0]):'—', v:tr},
+    {lbl:n>=2?fmtWeek(sorted[n-2][0]):'—', v:tw},
+    {lbl:n>=1?fmtWeek(sorted[n-1][0]):'LW', v:lw, hi:true},
+  ].filter((_,i)=>i>=3-Math.min(3,n));
+  const bMax=Math.max(...bars.map(b=>b.v),1);
+
+  return el('div',{style:{background:'var(--bg)',border:'0.5px solid var(--bdr)',borderRadius:10,padding:'20px',marginBottom:16}},
+    /* ── Header ── */
+    el('div',{style:{fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:'.08em',color:'var(--text3)',marginBottom:16}},
+      'OCS Velocity  ·  ',
+      el('span',{style:{fontWeight:400,color:'var(--text2)'}},'Last Week SO ÷ '+ONTARIO_STORES.toLocaleString()+' stores  ·  '+n+' weeks of data')
+    ),
+
+    /* ── Top row: class badge | velocity + bars | next class ── */
+    el('div',{style:{display:'flex',gap:16,alignItems:'stretch',marginBottom:16}},
+
+      /* Class badge */
+      el('div',{style:{flexShrink:0,width:110,background:cls.bg,border:'2px solid '+cls.col,borderRadius:10,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'14px 0'}},
+        el('div',{style:{fontSize:44,fontWeight:900,color:cls.tx,lineHeight:1}},clsKey),
+        el('div',{style:{fontSize:11,color:cls.tx,fontWeight:700,marginTop:5}},cls.label),
+        el('div',{style:{fontSize:9,color:cls.tx,opacity:.6,marginTop:3}},'SKU Class')
+      ),
+
+      /* Velocity number + 3-week mini bars */
+      el('div',{style:{flex:1,display:'flex',flexDirection:'column',justifyContent:'space-between'}},
+        /* Velocity number row */
+        el('div',{style:{display:'flex',alignItems:'baseline',gap:10,marginBottom:12}},
+          el('span',{style:{fontSize:36,fontWeight:900,color:cls.tx,lineHeight:1}},vel.toFixed(4)),
+          el('span',{style:{fontSize:12,color:'var(--text2)'}},
+            'velocity  ·  LW ',
+            el('strong',{style:{color:'var(--text)',fontSize:14}},lw.toLocaleString()),
+            ' units ÷ '+ONTARIO_STORES.toLocaleString())
+        ),
+        /* 3-week bars — anchored at baseline */
+        el('div',null,
+          el('div',{style:{display:'flex',gap:10,alignItems:'flex-end',borderBottom:'2px solid var(--bdr2)',paddingBottom:0}},
+            bars.map((b,i)=>el('div',{key:i,style:{flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:3}},
+              el('div',{style:{fontSize:11,fontWeight:700,color:b.hi?cls.tx:'var(--text2)'}},b.v.toLocaleString()),
+              el('div',{style:{
+                width:'100%',
+                height:Math.max(6,Math.round(b.v/bMax*64))+'px',
+                background:b.hi?cls.col:'var(--bg2)',
+                border:'0.5px solid '+(b.hi?cls.col:'var(--bdr2)'),
+                borderRadius:'4px 4px 0 0',
+              }})
+            ))
+          ),
+          el('div',{style:{display:'flex',gap:10,marginTop:5}},
+            bars.map((b,i)=>el('div',{key:i,style:{flex:1,textAlign:'center',fontSize:10,color:b.hi?'var(--text2)':'var(--text3)',fontWeight:b.hi?600:'normal'}},b.lbl))
+          ),
+          el('div',{style:{fontSize:10,color:'var(--text3)',marginTop:8}},
+            'Avg last ',Math.min(3,n),' wks: ',
+            el('strong',{style:{color:'var(--text2)'}},avg3.toLocaleString()),
+            '  ·  avg velocity: ',el('strong',{style:{color:'var(--text2)'}},(avg3/ONTARIO_STORES).toFixed(4))
+          )
+        )
+      ),
+
+      /* Next class target */
+      el('div',{style:{flexShrink:0,width:148}},
+        next
+          ? el('div',{style:{background:CLS[next.cls]?.bg,border:'1.5px dashed '+CLS[next.cls]?.col,borderRadius:10,padding:'14px',textAlign:'center',height:'100%',display:'flex',flexDirection:'column',justifyContent:'center'}},
+              el('div',{style:{fontSize:11,color:CLS[next.cls]?.tx,fontWeight:700,marginBottom:6}},'Next: Class '+next.cls),
+              el('div',{style:{fontSize:30,fontWeight:900,color:CLS[next.cls]?.tx,lineHeight:1}},'+'+unitsNeeded.toLocaleString()),
+              el('div',{style:{fontSize:10,color:CLS[next.cls]?.tx,opacity:.8,marginTop:6}},'units/wk needed'),
+              el('div',{style:{fontSize:9,color:CLS[next.cls]?.tx,opacity:.55,marginTop:3}},'>'+next.min+' vel threshold')
+            )
+          : el('div',{style:{background:'#2a2200',border:'1.5px solid #f0c030',borderRadius:10,padding:'14px',textAlign:'center',height:'100%',display:'flex',flexDirection:'column',justifyContent:'center'}},
+              el('div',{style:{fontSize:24,color:'#f0c030'}},'🏆'),
+              el('div',{style:{fontSize:12,fontWeight:700,color:'#f0c030',marginTop:6}},'Class A — Top Tier')
+            )
+      )
+    ),
+
+    /* ── Bottom row: store penetration | inventory strip ── */
+    el('div',{style:{display:'grid',gridTemplateColumns:'220px 1fr',gap:12,paddingTop:14,borderTop:'0.5px solid var(--bdr)'}},
+
+      /* Store penetration */
+      el('div',{style:{background:'var(--bg2)',borderRadius:8,padding:'12px 14px'}},
+        el('div',{style:{fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:'.07em',color:'var(--text3)',marginBottom:8}},'Store Penetration'),
+        [['4W',ocs.penPct4W],['8W',ocs.penPct8W],['12W',ocs.penPct12W]].map(([label,pct])=>
+          el('div',{key:label,style:{display:'flex',alignItems:'center',gap:8,marginBottom:6}},
+            el('span',{style:{fontSize:11,color:'var(--text3)',width:24,flexShrink:0}},label),
+            el('div',{style:{flex:1,height:6,background:'var(--bg3)',borderRadius:3,overflow:'hidden'}},
+              el('div',{style:{height:'100%',width:Math.min(100,pct*4)+'%',background:cls.col,borderRadius:3}})
+            ),
+            el('span',{style:{fontSize:11,fontWeight:700,color:'var(--text)',minWidth:38,textAlign:'right'}},pct+'%')
+          )
+        ),
+        el('div',{style:{fontSize:10,color:'var(--text3)',marginTop:4}},ocs.storesL4W+' stores ordered L4W')
+      ),
+
+      /* Inventory + metadata chips */
+      el('div',{style:{display:'flex',gap:8,flexWrap:'wrap',alignContent:'flex-start'}},
+        [['On Hand',     ocs.onHand!=null?ocs.onHand.toLocaleString():'—',          'ti-warehouse'],
+         ['On Order',    ocs.onOrder!=null?ocs.onOrder.toLocaleString():'—',         'ti-truck-delivery'],
+         ['Wks of Supply',ocs.weeksOfSupply!=null?ocs.weeksOfSupply.toFixed(1)+'w':'—','ti-calendar-week'],
+         ['Fill Rate',   ocs.fillRate!=null?Math.round(ocs.fillRate*100)+'%':'—',    'ti-check'],
+         ['Life of SKU', ocs.lifeOfSku+' days',                                      'ti-clock'],
+         ['First Receipt',ocs.firstReceipt,                                           'ti-calendar-event'],
+        ].map(([label,val,icon])=>el('div',{key:label,style:{background:'var(--bg2)',borderRadius:7,padding:'8px 12px',flex:'0 0 auto'}},
+          el('div',{style:{fontSize:9,color:'var(--text3)',display:'flex',alignItems:'center',gap:3,marginBottom:3}},
+            el('i',{className:'ti '+icon,style:{fontSize:10}}),label),
+          el('div',{style:{fontSize:13,fontWeight:700,color:'var(--text)'}},val)
+        ))
+      )
+    )
+  );
+}
+
+/* ── Weekly Bar Chart (ROS-aware) ── */
+function WeeklyChart({weekly,monthly}){
+  const [mode,setMode]=React.useState('weekly');
+  const raw=mode==='weekly'?weekly:monthly;
+  const entries=Object.entries(raw).sort(([a],[b])=>a.localeCompare(b));
+  if(!entries.length)return null;
+
+  // Official thresholds — based on current Ontario store count
+  const sc=ONTARIO_STORES;
+  const ALL_T=mode==='weekly'?[
+    {label:'A',units:Math.round(8*sc),   col:'#f0c030'},
+    {label:'B',units:Math.round(3*sc),   col:'#4dbb6a'},
+    {label:'C',units:Math.round(0.8*sc), col:'#5b9bd5'},
+    {label:'D',units:Math.round(0.2*sc), col:'#e09b3d'},
+  ]:[];
+
+  const maxV=Math.max(...entries.map(([,v])=>v),1);
+  // Only draw lines that fall within 0–2× of actual data (no point showing A at 13k if max is 400)
+  const thresholds=ALL_T.filter(t=>t.units<=maxV*2);
+  // Scale chart high enough to show the lowest threshold above the data
+  const topThresh=thresholds.length?Math.max(...thresholds.map(t=>t.units)):0;
+  const chartMax=Math.max(maxV,topThresh)*1.14;
+
+  const BAR_H=108;
+  const fmtMo=k=>{const[y,m]=k.split('-');return['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][parseInt(m)]+"'"+y.slice(2);};
+  const lbl=k=>mode==='weekly'?fmtWeek(k):fmtMo(k);
+
+  return el('div',null,
+    el('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:12}},
+      el('div',{style:{fontSize:12,fontWeight:700,display:'flex',alignItems:'center',gap:6}},
+        el('i',{className:'ti ti-chart-bar',style:{color:'var(--info)'}}), 'Weekly Sales & ROS Class'
+      ),
+      el('div',{style:{display:'flex',gap:4}},
+        ['weekly','monthly'].map(m=>el('button',{key:m,onClick:()=>setMode(m),style:{
+          background:mode===m?'var(--info-bg)':'var(--bg2)',
+          border:'0.5px solid '+(mode===m?'var(--info)':'var(--bdr)'),
+          borderRadius:5,cursor:'pointer',padding:'3px 10px',fontSize:11,
+          color:mode===m?'var(--info)':'var(--text2)',fontFamily:'inherit'
+        }},m.charAt(0).toUpperCase()+m.slice(1)))
+      )
+    ),
+    el('div',{style:{position:'relative',marginBottom:6}},
+      /* bars */
+      el('div',{style:{display:'flex',alignItems:'flex-end',gap:3,height:BAR_H}},
+        entries.map(([k,v])=>{
+          const ros=v/ONTARIO_STORES;
+          const rc=getROS(ros);
+          const h=Math.max(4,Math.round((v/chartMax)*BAR_H));
+          return el('div',{key:k,style:{flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:2}},
+            el('div',{style:{fontSize:9,color:'var(--text2)',fontWeight:600,lineHeight:1}},v),
+            el('div',{style:{fontSize:9,fontWeight:800,color:rc.tx,lineHeight:1}},rc.cls),
+            el('div',{title:lbl(k)+' | '+v+' units | vel:'+ros.toFixed(4)+' | Class '+rc.cls,style:{
+              width:'100%',height:h+'px',background:rc.col,
+              borderRadius:'3px 3px 0 0',minHeight:4,opacity:0.88
+            }})
+          );
+        })
+      ),
+      /* threshold lines — absolutely on top of bars */
+      el('div',{style:{position:'absolute',inset:0,pointerEvents:'none',zIndex:10}},
+        thresholds.map(t=>{
+          const pxFromBottom=Math.round(t.units/chartMax*BAR_H);
+          return el('div',{key:t.label,style:{
+            position:'absolute',left:0,right:0,
+            bottom:pxFromBottom+'px',
+            borderTop:'1.5px dashed '+t.col,
+          }},
+            el('span',{style:{
+              position:'absolute',right:2,top:-14,
+              fontSize:9,fontWeight:700,color:t.col,
+              background:'var(--bg)',padding:'1px 5px',
+              borderRadius:3,border:'0.5px solid '+t.col,
+              whiteSpace:'nowrap',
+            }},t.label+' — '+t.units.toLocaleString()+' units')
+          );
+        })
+      )
+    ),
+    /* week labels */
+    el('div',{style:{display:'flex',gap:3}},
+      entries.map(([k])=>el('div',{key:k,style:{flex:1,textAlign:'center',fontSize:9,color:'var(--text3)',whiteSpace:'nowrap',overflow:'hidden'}},lbl(k)))
+    ),
+    mode==='weekly'&&el('div',{style:{display:'flex',gap:8,marginTop:10,flexWrap:'wrap',alignItems:'center'}},
+      ROS_CLASSES.map(r=>el('div',{key:r.cls,style:{display:'flex',alignItems:'center',gap:4,fontSize:10}},
+        el('div',{style:{width:10,height:10,borderRadius:2,background:r.col}}),
+        el('span',{style:{color:'var(--text2)'}},r.cls+' '+r.label)
+      )),
+      el('div',{style:{fontSize:9,color:'var(--text3)',marginLeft:'auto'}},'÷ '+ONTARIO_STORES.toLocaleString()+' Ontario stores')
+    )
+  );
+}
+
+/* ── Top Stores ── */
+function TopStores({stores}){
+  const [showAll,setShowAll]=React.useState(false);
+  const entries=Object.entries(stores).sort(([,a],[,b])=>b-a);
+  const shown=showAll?entries:entries.slice(0,8);
+  const max=entries[0]?.[1]||1;
+  return el('div',null,
+    el('div',{style:{fontSize:12,fontWeight:700,marginBottom:12,display:'flex',alignItems:'center',gap:6}},
+      el('i',{className:'ti ti-building-store',style:{color:'var(--ok)'}}), 'Top Stores'
+    ),
+    shown.map(([store,units],i)=>el('div',{key:store,style:{marginBottom:7}},
+      el('div',{style:{display:'flex',justifyContent:'space-between',marginBottom:3,gap:8}},
+        el('span',{style:{fontSize:11,color:'var(--text)',display:'flex',alignItems:'center',gap:5,minWidth:0}},
+          el('span',{style:{fontSize:10,color:'var(--text3)',width:16,textAlign:'right',flexShrink:0}},i+1+'.'),
+          el('span',{style:{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},store)
+        ),
+        el('span',{style:{fontSize:11,fontWeight:700,color:'var(--text)',flexShrink:0}},units)
+      ),
+      el('div',{style:{height:3,background:'var(--bg2)',borderRadius:2,overflow:'hidden'}},
+        el('div',{style:{height:'100%',width:(units/max*100)+'%',background:'var(--ok)',borderRadius:2}})
+      )
+    )),
+    entries.length>8&&el('button',{onClick:()=>setShowAll(s=>!s),style:{background:'transparent',border:'none',cursor:'pointer',color:'var(--info)',fontSize:11,padding:'4px 0',fontFamily:'inherit'}},
+      showAll?'Show less ↑':'Show all '+entries.length+' stores ↓'
+    )
+  );
+}
+
+/* ── Top Cities ── */
+function TopCities({cities}){
+  const [showAll,setShowAll]=React.useState(false);
+  const entries=Object.entries(cities).sort(([,a],[,b])=>b-a);
+  const shown=showAll?entries:entries.slice(0,10);
+  const max=entries[0]?.[1]||1;
+  return el('div',null,
+    el('div',{style:{fontSize:12,fontWeight:700,marginBottom:12,display:'flex',alignItems:'center',gap:6}},
+      el('i',{className:'ti ti-map-pin',style:{color:'var(--info)'}}), 'Top Cities'
+    ),
+    shown.map(([city,units],i)=>el('div',{key:city,style:{marginBottom:7}},
+      el('div',{style:{display:'flex',justifyContent:'space-between',marginBottom:3,gap:8}},
+        el('span',{style:{fontSize:11,color:'var(--text)',display:'flex',alignItems:'center',gap:5,minWidth:0}},
+          el('span',{style:{fontSize:10,color:'var(--text3)',width:16,textAlign:'right',flexShrink:0}},i+1+'.'),
+          el('span',{style:{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},city)
+        ),
+        el('span',{style:{fontSize:11,fontWeight:700,color:'var(--text)',flexShrink:0}},units)
+      ),
+      el('div',{style:{height:3,background:'var(--bg2)',borderRadius:2,overflow:'hidden'}},
+        el('div',{style:{height:'100%',width:(units/max*100)+'%',background:'var(--info)',borderRadius:2}})
+      )
+    )),
+    entries.length>10&&el('button',{onClick:()=>setShowAll(s=>!s),style:{background:'transparent',border:'none',cursor:'pointer',color:'var(--info)',fontSize:11,padding:'4px 0',fontFamily:'inherit'}},
+      showAll?'Show less ↑':'Show all '+entries.length+' cities ↓'
+    )
+  );
+}
+
+/* ── Region Bar ── */
+function RegionBar({regions}){
+  const total=Object.values(regions).reduce((a,b)=>a+b,0)||1;
+  const RCOLS={'Toronto':'var(--info)','GTA Region (Excludes Toronto)':'var(--ok)','West Region':'var(--warn)','East Region':'#a78bfa','North Region':'var(--err)'};
+  const entries=Object.entries(regions).sort(([,a],[,b])=>b-a);
+  return el('div',null,
+    el('div',{style:{display:'flex',height:12,borderRadius:4,overflow:'hidden',marginBottom:10}},
+      entries.map(([r,v])=>el('div',{key:r,style:{width:(v/total*100)+'%',background:RCOLS[r]||'var(--text3)'},title:r+': '+v}))
+    ),
+    el('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6}},
+      entries.map(([r,v])=>el('div',{key:r,style:{background:'var(--bg2)',borderRadius:6,padding:'7px 10px'}},
+        el('div',{style:{display:'flex',alignItems:'center',gap:5,marginBottom:2}},
+          el('div',{style:{width:7,height:7,borderRadius:2,background:RCOLS[r]||'var(--text3)',flexShrink:0}}),
+          el('div',{style:{fontSize:10,color:'var(--text3)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},r)
+        ),
+        el('div',{style:{fontSize:13,fontWeight:700,color:'var(--text)'}},v+' units'),
+        el('div',{style:{fontSize:10,color:'var(--text3)'}},Math.round(v/total*100)+'%')
+      ))
+    )
+  );
+}
+
+
+/* ── Ontario Map (Leaflet) ── */
+function OntarioMap({cityData}){
+  const containerRef = React.useRef(null);
+  const mapRef       = React.useRef(null);
+  const markersRef   = React.useRef([]);
+
+  // Init Leaflet once when the div mounts
+  React.useEffect(()=>{
+    if(!containerRef.current || mapRef.current) return;
+    const L = window.L;
+    if(!L){ console.warn('Leaflet not loaded'); return; }
+
+    const map = L.map(containerRef.current,{
+      center:[48.5,-84.0], zoom:5,
+      zoomControl:true, scrollWheelZoom:false, attributionControl:true,
+    });
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+      attribution:'&copy; <a href="https://openstreetmap.org">OpenStreetMap</a>',
+      maxZoom:18,
+    }).addTo(map);
+
+    mapRef.current = map;
+    return ()=>{ map.remove(); mapRef.current=null; };
+  },[]);
+
+  // Sync markers whenever cityData changes (after map is ready)
+  React.useEffect(()=>{
+    const L = window.L;
+    const map = mapRef.current;
+    if(!L || !map) return;
+
+    markersRef.current.forEach(m=>m.remove());
+    markersRef.current = [];
+
+    const entries = Object.entries(cityData)
+      .filter(([c])=>CITY_COORDS[c])
+      .sort(([,a],[,b])=>a-b);
+    if(!entries.length) return;
+
+    const maxU = Math.max(...entries.map(([,v])=>v), 1);
+    entries.forEach(([city,units])=>{
+      const [lat,lng] = CITY_COORDS[city];
+      const r   = Math.max(5, Math.min(26, 5+(units/maxU)*21));
+      const pct = units/maxU;
+      const col = pct>0.6?'#f0c030':pct>0.3?'#5b9bd5':'#3a7abf';
+      const m = L.circleMarker([lat,lng],{
+        radius:r, fillColor:col,
+        color:'rgba(255,255,255,0.5)', weight:1, fillOpacity:0.85,
+      })
+      .bindTooltip(
+        '<b style="color:'+col+'">'+city+'</b><br>'+units.toLocaleString()+' units',
+        {direction:'top', offset:[0,-2]}
+      )
+      .addTo(map);
+      markersRef.current.push(m);
+    });
+  });   // no dep array — runs after every render, safe because we clear first
+
+  return el('div',null,
+    el('div',{
+      ref:containerRef,
+      style:{height:340,borderRadius:8,overflow:'hidden',border:'0.5px solid var(--bdr)'}
+    }),
+    el('div',{style:{fontSize:10,color:'var(--text3)',textAlign:'center',marginTop:4}},
+      'Hover a city  ·  Bubble size & colour = units sold'
+    )
+  );
+}
+
+/* ── Daily Line Chart ── */
+function DailyLineChart({daily,brand,skuClass,launchDate}){
+  if(!daily||!Object.keys(daily).length)return null;
+
+  const CLS_COL={A:'#f0c030',B:'#4dbb6a',C:'#5b9bd5',D:'#e09b3d',E:'#e07878','New Product':'#a78bfa'};
+  const lineCol=CLS_COL[skuClass]||'#5b9bd5';
+
+  // Fill every calendar day between first and last order date with 0 if no orders
+  const rawEntries=Object.entries(daily).sort(([a],[b])=>a.localeCompare(b));
+  const firstDate=new Date(rawEntries[0][0]+'T00:00:00');
+  const lastDate=new Date(rawEntries[rawEntries.length-1][0]+'T00:00:00');
+  const dailyMap=Object.fromEntries(rawEntries);
+  const allEntries=[];
+  const cur=new Date(firstDate);
+  while(cur<=lastDate){
+    const ds=cur.toISOString().slice(0,10);
+    allEntries.push([ds, dailyMap[ds]||0]);
+    cur.setDate(cur.getDate()+1);
+  }
+  const entries=allEntries;
+  const vals=entries.map(([,v])=>v);
+  const maxV=Math.max(...vals,1);
+  const W=880, H=120, PL=44, PR=12, PT=12, PB=28;
+  const cW=W-PL-PR, cH=H-PT-PB;
+  const n=entries.length;
+  const xPos=i=>(i/(n-1||1))*cW;
+  const yPos=v=>cH-(v/maxV)*cH;
+
+  // Build SVG polyline points
+  const points=entries.map(([,v],i)=>`${PL+xPos(i)},${PT+yPos(v)}`).join(' ');
+
+  // Month labels — show first day of each month
+  const monthLabels=[];
+  let lastMonth='';
+  entries.forEach(([date],i)=>{
+    const mo=date.slice(0,7);
+    if(mo!==lastMonth){
+      lastMonth=mo;
+      const[y,m]=mo.split('-');
+      const lbl=['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][parseInt(m)]+"'"+y.slice(2);
+      monthLabels.push({lbl,x:PL+xPos(i)});
+    }
+  });
+
+  // Y-axis labels
+  const yTicks=[0,Math.round(maxV*0.5),maxV];
+
+  // Tooltip state
+  const [tip,setTip]=React.useState(null);
+
+  // Milestone lines: 30, 60, 90 days from launchDate
+  const milestones=launchDate?[30,60,90].map(days=>{
+    const d=new Date(launchDate+'T00:00:00');
+    d.setDate(d.getDate()+days);
+    const ds=d.toISOString().slice(0,10);
+    const mIdx=entries.findIndex(([date])=>date>=ds);
+    if(mIdx<0)return null;
+    const mx=PL+xPos(mIdx);
+    return{days,x:mx,date:ds};
+  }).filter(Boolean):[];
+
+  // Area fill points (close the polygon)
+  const areaPoints=`${PL+xPos(0)},${PT+cH} ${points} ${PL+xPos(n-1)},${PT+cH}`;
+
+  return el('div',{style:{background:'var(--bg)',border:'0.5px solid var(--bdr)',borderRadius:10,padding:'16px',marginTop:16}},
+    el('div',{style:{fontSize:12,fontWeight:700,marginBottom:12,display:'flex',alignItems:'center',gap:6}},
+      el('i',{className:'ti ti-chart-line',style:{color:lineCol}}),
+      'Daily Orders — Full Life of SKU',
+      el('span',{style:{fontSize:10,color:'var(--text3)',marginLeft:6,fontWeight:400}},
+        entries[0]?.[0]+' → '+entries[entries.length-1]?.[0],
+        '  ·  '+n+' order days'
+      )
+    ),
+    el('div',{style:{position:'relative',overflowX:'auto'},
+      onMouseLeave:()=>setTip(null)},
+      el('svg',{
+        viewBox:`0 0 ${W} ${H}`,
+        style:{width:'100%',minWidth:500,display:'block'},
+        onMouseMove:e=>{
+          const rect=e.currentTarget.getBoundingClientRect();
+          const svgX=(e.clientX-rect.left)*(W/rect.width);
+          const relX=svgX-PL;
+          const i=Math.round((relX/cW)*(n-1));
+          if(i>=0&&i<n) setTip({i,x:PL+xPos(i),y:PT+yPos(vals[i]),date:entries[i][0],units:vals[i]});
+        }
+      },
+        // Grid lines
+        yTicks.map((v,i)=>el('g',{key:i},
+          el('line',{x1:PL,y1:PT+yPos(v),x2:PL+cW,y2:PT+yPos(v),stroke:'var(--bdr)',strokeWidth:0.5,strokeDasharray:v===0?'none':'3 4'}),
+          el('text',{x:PL-4,y:PT+yPos(v)+4,textAnchor:'end',fontSize:9,fill:'var(--text3)',fontFamily:'inherit'},v)
+        )),
+        // Area fill
+        el('polygon',{points:areaPoints,fill:lineCol,opacity:0.08}),
+        // Milestone day lines
+        ...milestones.map(m=>el('g',{key:m.days},
+          el('line',{x1:m.x,y1:PT,x2:m.x,y2:PT+cH,stroke:'rgba(248,196,48,0.7)',strokeWidth:1.5,strokeDasharray:'4 3'}),
+          el('rect',{x:m.x+2,y:PT+2,width:28,height:14,rx:3,fill:'#2a2200',stroke:'#f0c030',strokeWidth:0.5}),
+          el('text',{x:m.x+7,y:PT+12,fontSize:9,fill:'#f0c030',fontWeight:700,fontFamily:'inherit'},m.days+'d')
+        )),
+        // Line
+        el('polyline',{points,fill:'none',stroke:lineCol,strokeWidth:1.5,strokeLinejoin:'round',strokeLinecap:'round'}),
+        // Month labels
+        monthLabels.map((m,i)=>el('g',{key:i},
+          el('line',{x1:m.x,y1:PT+cH,x2:m.x,y2:PT+cH+3,stroke:'var(--text3)',strokeWidth:0.5}),
+          el('text',{x:m.x,y:H-4,textAnchor:'middle',fontSize:9,fill:'var(--text3)',fontFamily:'inherit'},m.lbl)
+        )),
+        // Tooltip dot + line
+        tip&&el('g',null,
+          el('line',{x1:tip.x,y1:PT,x2:tip.x,y2:PT+cH,stroke:'var(--bdr2)',strokeWidth:1,strokeDasharray:'3 3'}),
+          el('circle',{cx:tip.x,cy:tip.y,r:4,fill:lineCol,stroke:'var(--bg)',strokeWidth:1.5}),
+          el('rect',{
+            x:tip.x+(tip.x>W*0.7?-96:10),y:tip.y-18,
+            width:88,height:32,rx:5,
+            fill:'var(--bg)',stroke:lineCol,strokeWidth:0.5
+          }),
+          el('text',{x:tip.x+(tip.x>W*0.7?-92:14),y:tip.y-4,fontSize:10,fontWeight:700,fill:lineCol,fontFamily:'inherit'},tip.units+' units'),
+          el('text',{x:tip.x+(tip.x>W*0.7?-92:14),y:tip.y+9,fontSize:9,fill:'var(--text2)',fontFamily:'inherit'},tip.date)
+        )
+      )
+    )
+  );
+}
+
+/* ── Store Distribution Card ── */
+function StoreDistributionCard({storeMetrics,vel,prevVel,clsCol}){
+  if(!storeMetrics)return null;
+  const wkEntries=Object.entries(storeMetrics.weekMetrics).sort(([a],[b])=>a.localeCompare(b));
+  const lw=wkEntries[wkEntries.length-1]?.[1]||{};
+  const repeatRate=lw.prevActive>0?Math.round(lw.repeat/lw.prevActive*100):null;
+  const distPct=Math.round(storeMetrics.totalStores/ONTARIO_STORES*100);
+  const velDelta=prevVel!=null?vel-prevVel:null;
+  const velDeltaPct=prevVel>0?((vel-prevVel)/prevVel*100):null;
+
+  return el('div',{style:{background:'var(--bg)',border:'0.5px solid var(--bdr)',borderRadius:10,padding:'16px',marginBottom:16}},
+    el('div',{style:{fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:'.07em',color:'var(--text3)',marginBottom:14}},'Store Distribution & Growth'),
+    el('div',{style:{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:10,marginBottom:14}},
+
+      /* W/W Velocity Delta */
+      el('div',{style:{background:'var(--bg2)',borderRadius:8,padding:'12px 14px'}},
+        el('div',{style:{fontSize:10,color:'var(--text3)',marginBottom:6,fontWeight:600}},'W/W Velocity'),
+        velDelta!=null?el('div',null,
+          el('div',{style:{display:'flex',alignItems:'baseline',gap:6}},
+            el('span',{style:{fontSize:22,fontWeight:900,color:velDelta>=0?'var(--ok)':'var(--err)',lineHeight:1}},
+              (velDelta>=0?'+':'')+velDelta.toFixed(4)),
+            el('i',{className:'ti '+(velDelta>=0?'ti-arrow-up-right':'ti-arrow-down-right'),style:{fontSize:16,color:velDelta>=0?'var(--ok)':'var(--err)'}})
+          ),
+          velDeltaPct!=null&&el('div',{style:{fontSize:11,color:velDelta>=0?'var(--ok)':'var(--err)',marginTop:3}},
+            (velDeltaPct>=0?'+':'')+velDeltaPct.toFixed(1)+'% vs last week')
+        ):el('div',{style:{fontSize:13,color:'var(--text3)'}},'No prior week')
+      ),
+
+      /* New Stores This Week */
+      el('div',{style:{background:'var(--bg2)',borderRadius:8,padding:'12px 14px'}},
+        el('div',{style:{fontSize:10,color:'var(--text3)',marginBottom:6,fontWeight:600}},'New Stores LW'),
+        el('div',{style:{fontSize:22,fontWeight:900,color:lw.new>0?'var(--ok)':'var(--text3)',lineHeight:1}},lw.new||0),
+        el('div',{style:{fontSize:11,color:'var(--text2)',marginTop:3}},'first-ever orders'),
+        lw.new>0&&el('div',{style:{fontSize:10,color:'var(--ok)',marginTop:2}},'↑ new distribution')
+      ),
+
+      /* Repeat Store Rate */
+      el('div',{style:{background:'var(--bg2)',borderRadius:8,padding:'12px 14px'}},
+        el('div',{style:{fontSize:10,color:'var(--text3)',marginBottom:6,fontWeight:600}},'Repeat Rate'),
+        repeatRate!=null?el('div',null,
+          el('div',{style:{fontSize:22,fontWeight:900,lineHeight:1,color:repeatRate>=50?'var(--ok)':repeatRate>=25?'var(--warn)':'var(--err)'}},repeatRate+'%'),
+          el('div',{style:{fontSize:11,color:'var(--text2)',marginTop:3}},lw.repeat+' of '+lw.prevActive+' stores'),
+          el('div',{style:{fontSize:10,color:'var(--text3)',marginTop:2}},'reordered this week')
+        ):el('div',{style:{fontSize:13,color:'var(--text3)'}},'—')
+      ),
+
+      /* Distribution Opportunity */
+      el('div',{style:{background:'var(--bg2)',borderRadius:8,padding:'12px 14px'}},
+        el('div',{style:{fontSize:10,color:'var(--text3)',marginBottom:6,fontWeight:600}},'Distribution'),
+        el('div',{style:{fontSize:22,fontWeight:900,lineHeight:1,color:'var(--info)'}},storeMetrics.totalStores),
+        el('div',{style:{height:4,background:'var(--bg3)',borderRadius:2,overflow:'hidden',margin:'6px 0 4px'}},
+          el('div',{style:{height:'100%',width:distPct+'%',background:'var(--info)',borderRadius:2}})
+        ),
+        el('div',{style:{fontSize:10,color:'var(--text3)'}},distPct+'% of '+ONTARIO_STORES.toLocaleString()+'  ·  ',
+          el('span',{style:{color:'var(--warn)',fontWeight:600}},storeMetrics.opportunity,' untapped'))
+      )
+    ),
+
+    /* ── Weekly store activity table ── */
+    el('div',{style:{borderTop:'0.5px solid var(--bdr)',paddingTop:14}},
+      el('div',{style:{fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:'.07em',color:'var(--text3)',marginBottom:12}},'Weekly Store Activity'),
+      el('div',{style:{overflowX:'auto'}},
+        el('table',{style:{width:'100%',borderCollapse:'collapse',fontSize:12}},
+          /* Header */
+          el('thead',null,
+            el('tr',null,
+              el('th',{style:{padding:'7px 12px',textAlign:'left',fontSize:11,fontWeight:600,color:'var(--text3)',background:'var(--bg2)',borderBottom:'0.5px solid var(--bdr)',whiteSpace:'nowrap'}},'Week'),
+              el('th',{style:{padding:'7px 12px',textAlign:'center',fontSize:11,fontWeight:600,color:'var(--text3)',background:'var(--bg2)',borderBottom:'0.5px solid var(--bdr)'}},'Active'),
+              el('th',{style:{padding:'7px 12px',textAlign:'center',fontSize:11,fontWeight:600,color:'var(--ok)',background:'var(--bg2)',borderBottom:'0.5px solid var(--bdr)'}},'New ✦'),
+              el('th',{style:{padding:'7px 12px',textAlign:'center',fontSize:11,fontWeight:600,color:'var(--info)',background:'var(--bg2)',borderBottom:'0.5px solid var(--bdr)'}},'Repeat'),
+              el('th',{style:{padding:'7px 12px',textAlign:'center',fontSize:11,fontWeight:600,color:'var(--text3)',background:'var(--bg2)',borderBottom:'0.5px solid var(--bdr)'}},'Repeat %'),
+              el('th',{style:{padding:'7px 12px',textAlign:'left',fontSize:11,fontWeight:600,color:'var(--text3)',background:'var(--bg2)',borderBottom:'0.5px solid var(--bdr)',minWidth:120}},'Trend')
+            )
+          ),
+          /* Rows */
+          el('tbody',null,
+            wkEntries.map(([wk,m],i)=>{
+              const isLw=i===wkEntries.length-1;
+              const rrPct=m.prevActive>0?Math.round(m.repeat/m.prevActive*100):null;
+              const rrCol=rrPct==null?'var(--text3)':rrPct>=50?'var(--ok)':rrPct>=25?'var(--warn)':'var(--err)';
+              const maxA=Math.max(...wkEntries.map(([,x])=>x.active),1);
+              const barW=Math.round(m.active/maxA*100);
+              return el('tr',{key:wk,style:{background:isLw?'rgba(91,155,213,0.06)':'transparent'}},
+                /* Week */
+                el('td',{style:{padding:'9px 12px',borderBottom:'0.5px solid var(--bdr)',whiteSpace:'nowrap'}},
+                  el('span',{style:{fontSize:12,fontWeight:isLw?700:400,color:isLw?'var(--info)':'var(--text2)'}},fmtWeek(wk)),
+                  isLw&&el('span',{style:{marginLeft:6,fontSize:9,background:'var(--info-bg)',color:'var(--info)',border:'0.5px solid var(--info)',borderRadius:4,padding:'1px 5px',fontWeight:700}},'LW')
+                ),
+                /* Active */
+                el('td',{style:{padding:'9px 12px',textAlign:'center',borderBottom:'0.5px solid var(--bdr)'}},
+                  el('span',{style:{fontSize:14,fontWeight:700,color:'var(--text)'}},m.active)
+                ),
+                /* New */
+                el('td',{style:{padding:'9px 12px',textAlign:'center',borderBottom:'0.5px solid var(--bdr)'}},
+                  m.new>0
+                    ? el('span',{style:{fontSize:13,fontWeight:700,color:'var(--ok)'}},'+'+m.new)
+                    : el('span',{style:{fontSize:12,color:'var(--text3)'}},'—')
+                ),
+                /* Repeat */
+                el('td',{style:{padding:'9px 12px',textAlign:'center',borderBottom:'0.5px solid var(--bdr)'}},
+                  m.prevActive>0
+                    ? el('span',{style:{fontSize:13,fontWeight:600,color:'var(--info)'}},m.repeat)
+                    : el('span',{style:{fontSize:12,color:'var(--text3)'}},'—')
+                ),
+                /* Repeat % */
+                el('td',{style:{padding:'9px 12px',textAlign:'center',borderBottom:'0.5px solid var(--bdr)'}},
+                  rrPct!=null
+                    ? el('span',{style:{fontSize:13,fontWeight:700,color:rrCol}},rrPct+'%')
+                    : el('span',{style:{fontSize:12,color:'var(--text3)'}},'—')
+                ),
+                /* Trend bar */
+                el('td',{style:{padding:'9px 12px',borderBottom:'0.5px solid var(--bdr)'}},
+                  el('div',{style:{position:'relative',height:8,background:'var(--bg2)',borderRadius:4,overflow:'hidden',minWidth:80}},
+                    el('div',{style:{position:'absolute',left:0,top:0,height:'100%',width:barW+'%',background:'var(--info)',opacity:0.6,borderRadius:4}}),
+                    m.new>0&&el('div',{style:{position:'absolute',left:0,top:0,height:'100%',width:Math.round(m.new/maxA*100)+'%',background:'var(--ok)',borderRadius:4}})
+                  )
+                )
+              );
+            })
+          )
+        )
+      ),
+      /* Legend */
+      el('div',{style:{display:'flex',gap:20,marginTop:12,flexWrap:'wrap'}},
+        [['var(--ok)','New — first-ever order from that store'],
+         ['var(--info)','Repeat — reordered from previous week'],
+         ['var(--warn)','Repeat % — of prior week active stores']
+        ].map(([col,lbl])=>el('div',{key:lbl,style:{display:'flex',alignItems:'center',gap:5,fontSize:10}},
+          el('div',{style:{width:8,height:8,borderRadius:'50%',background:col,flexShrink:0}}),
+          el('span',{style:{color:'var(--text3)'}},lbl)
+        ))
+      )
+    )
+  );
+}
+
+
+/* ── Post Launch View ── */
+function PostLaunchView(){
+  const [salesData,setSalesData]=React.useState(()=>{
+    try{const s=localStorage.getItem('au_pl_data');return s?JSON.parse(s):SALES_DATA_DEFAULT;}
+    catch{return SALES_DATA_DEFAULT;}
+  });
+  const [hidden,setHidden]=React.useState(()=>{
+    try{const s=localStorage.getItem('au_pl_hidden');return s?JSON.parse(s):[];}
+    catch{return [];}
+  });
+  const [sel,setSel]=React.useState(Object.keys(salesData)[0]||'');
+
+  const saveHidden=h=>{setHidden(h);try{localStorage.setItem('au_pl_hidden',JSON.stringify(h));}catch{}};
+  const removeProduct=name=>saveHidden([...hidden,name]);
+  const restoreProduct=name=>saveHidden(hidden.filter(h=>h!==name));
+
+  const visible=Object.keys(salesData).filter(k=>!hidden.includes(k));
+  const current=salesData[sel];
+
+  // If selected product is hidden, auto-select first visible
+  React.useEffect(()=>{if(hidden.includes(sel)&&visible.length>0)setSel(visible[0]);},[hidden,sel,visible]);
+
+  if(!current&&visible.length===0)return el('div',{style:{padding:40,textAlign:'center',color:'var(--text2)'}},
+    el('i',{className:'ti ti-chart-off',style:{fontSize:36,display:'block',marginBottom:12,opacity:.4}}),
+    'All products hidden. Restore them below.',el('br',null),
+    el('div',{style:{marginTop:16,display:'flex',gap:8,justifyContent:'center',flexWrap:'wrap'}},
+      hidden.map(name=>el('button',{key:name,onClick:()=>restoreProduct(name),className:'btn',style:{fontSize:11}},el('i',{className:'ti ti-eye'}),' Restore: '+name.slice(0,30)+'…'))
+    )
+  );
+
+  return el('div',{style:{padding:'20px'}},
+    // Product cards
+    el('div',{style:{marginBottom:20}},
+      el('div',{style:{fontSize:11,fontWeight:700,textTransform:'uppercase',letterSpacing:'.07em',color:'var(--text3)',marginBottom:10}},'Select Product'),
+      el('div',{style:{display:'flex',gap:10,flexWrap:'wrap'}},
+        visible.map(name=>{
+          const d=salesData[name];const isOn=sel===name;
+          return el('div',{key:name,style:{position:'relative',display:'inline-block'}},
+            el('div',{onClick:()=>setSel(name),style:{
+              background:isOn?'var(--info-bg)':'var(--bg)',
+              border:'0.5px solid '+(isOn?'var(--info)':'var(--bdr)'),
+              borderRadius:10,padding:'12px 16px',cursor:'pointer',minWidth:200,
+              boxShadow:isOn?'0 0 0 1px var(--info)':'none',transition:'all .12s'
+            }},
+              el('div',{style:{fontSize:10,color:isOn?'var(--info)':'var(--text3)',fontWeight:700,textTransform:'uppercase',letterSpacing:'.07em',marginBottom:4}},d.brand),
+              el('div',{style:{fontSize:13,fontWeight:700,color:isOn?'var(--info)':'var(--text)',marginBottom:6,lineHeight:1.3}},name),
+              el('div',{style:{display:'flex',gap:10,fontSize:11,color:isOn?'var(--info)':'var(--text2)'}},
+                el('span',null,d.units.toLocaleString()+' units'),
+                el('span',null,d.storeCount+' stores')
+              )
+            ),
+            el('button',{onClick:e=>{e.stopPropagation();if(confirm('Remove "'+name+'" from Post Launch? You can restore it anytime.'))removeProduct(name);},
+              title:'Remove product',
+              style:{position:'absolute',top:-6,right:-6,background:'var(--bg2)',border:'0.5px solid var(--bdr2)',borderRadius:'50%',width:20,height:20,cursor:'pointer',display:'none',alignItems:'center',justifyContent:'center',color:'var(--text3)',fontSize:11,padding:0},
+              className:'rm-btn'
+            },el('i',{className:'ti ti-x'}))
+          );
+        }),
+        // Restore hidden products
+        hidden.length>0&&el('div',{style:{display:'flex',flexDirection:'column',justifyContent:'center',gap:4,padding:'0 8px'}},
+          el('div',{style:{fontSize:10,color:'var(--text3)',marginBottom:4}},'Hidden:'),
+          hidden.map(name=>el('button',{key:name,onClick:()=>restoreProduct(name),style:{
+            background:'var(--bg2)',border:'0.5px dashed var(--bdr2)',borderRadius:6,
+            cursor:'pointer',padding:'4px 10px',fontSize:11,color:'var(--text2)',
+            fontFamily:'inherit',display:'flex',alignItems:'center',gap:5,whiteSpace:'nowrap'
+          }},el('i',{className:'ti ti-eye',style:{fontSize:11}}),name.slice(0,22)+'…'))
+        )
+      )
+    ),
+
+    !current?null:el('div',null,
+      // Daily orders line chart first
+      el(DailyLineChart,{daily:current.daily,brand:current.brand,skuClass:current.ocs?.skuClass,launchDate:current.launchDate}),
+      // Velocity & Selling Class
+      el(VelocityCard,{ocs:current.ocs,weekly:current.weekly}),
+      el(StoreDistributionCard,{
+        storeMetrics:current.storeMetrics,
+        vel:(()=>{const s=Object.entries(current.weekly).sort(([a],[b])=>a.localeCompare(b));return s.length>=1?s[s.length-1][1]/ONTARIO_STORES:0;})(),
+        prevVel:(()=>{const s=Object.entries(current.weekly).sort(([a],[b])=>a.localeCompare(b));return s.length>=2?s[s.length-2][1]/ONTARIO_STORES:null;})(),
+        clsCol:'var(--info)'
+      }),
+      // Metric cards
+      el('div',{style:{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:10,marginBottom:16}},
+        [{l:'Total Units Sold',v:current.units.toLocaleString(),s:'all orders',c:'var(--ok)'},
+         {l:'Stores Reached',v:current.storeCount,s:'retail locations',c:'var(--info)'},
+         {l:'Total Orders',v:current.orders,s:'from OCS',c:'var(--warn)'},
+         {l:'Avg Units / Order',v:Math.round(current.units/current.orders),s:'per order',c:'var(--text)'},
+        ].map((m,i)=>el('div',{key:i,style:{background:'var(--bg)',border:'0.5px solid var(--bdr)',borderRadius:10,padding:'14px 16px'}},
+          el('div',{style:{fontSize:11,color:'var(--text2)',marginBottom:6,fontWeight:500}},m.l),
+          el('div',{style:{fontSize:26,fontWeight:800,color:m.c,lineHeight:1}},m.v),
+          el('div',{style:{fontSize:10,color:'var(--text3)',marginTop:4}},m.s)
+        ))
+      ),
+
+      // Weekly chart + Regions
+      el('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16,marginBottom:16}},
+        el('div',{style:{background:'var(--bg)',border:'0.5px solid var(--bdr)',borderRadius:10,padding:'16px'}},
+          el(WeeklyChart,{weekly:current.weekly,monthly:current.monthly})
+        ),
+        el('div',{style:{background:'var(--bg)',border:'0.5px solid var(--bdr)',borderRadius:10,padding:'16px'}},
+          el('div',{style:{fontSize:12,fontWeight:700,marginBottom:14,display:'flex',alignItems:'center',gap:6}},
+            el('i',{className:'ti ti-map-2',style:{color:'var(--warn)'}}), 'Sales by Region'
+          ),
+          el(RegionBar,{regions:current.regions})
+        )
+      ),
+
+      // Ontario map + top stores
+      el('div',{style:{display:'grid',gridTemplateColumns:'1.4fr 1fr',gap:16}},
+        el('div',{style:{background:'var(--bg)',border:'0.5px solid var(--bdr)',borderRadius:10,padding:'16px'}},
+          el('div',{style:{fontSize:12,fontWeight:700,marginBottom:10,display:'flex',alignItems:'center',gap:6}},
+            el('i',{className:'ti ti-map-pin',style:{color:'#a78bfa'}}), 'Ontario Distribution'
+          ),
+          el(OntarioMap,{cityData:current.cities})
+        ),
+        el('div',{style:{background:'var(--bg)',border:'0.5px solid var(--bdr)',borderRadius:10,padding:'16px',overflowY:'auto',maxHeight:520}},
+          el(TopStores,{stores:current.stores}),
+          el('div',{style:{borderTop:'0.5px solid var(--bdr)',marginTop:16,paddingTop:16}}),
+          el(TopCities,{cities:current.cities})
+        )
+      )
+    )
+  );
+}
+
+
+
+/* ══════════════════════════════════════════
+   SHAREPOINT SYNC
+   ─ Store data in a SharePoint JSON file
+   ─ All viewers read from the same source
+   ─ Auto-refreshes every 30s for viewers
+══════════════════════════════════════════ */
+
+const SP_CONF_KEY = 'au_sp_config_v1';
+const getSPConf = ()=>{ try{ return JSON.parse(localStorage.getItem(SP_CONF_KEY))||{}; }catch{ return {}; } };
+const setSPConf = c=>{ try{ localStorage.setItem(SP_CONF_KEY,JSON.stringify(c)); }catch{} };
+
+async function spDigest(siteUrl){
+  const r = await fetch(siteUrl+'/_api/contextinfo',{
+    method:'POST', credentials:'include',
+    headers:{'Accept':'application/json;odata=verbose','Content-Type':'application/json'}
+  });
+  if(!r.ok) throw new Error('Auth failed — are you logged into SharePoint?');
+  const d = await r.json();
+  return d.d.GetContextWebInformation.FormDigestValue;
+}
+
+async function spRead(siteUrl, filePath){
+  const r = await fetch(siteUrl+'/_api/web/GetFileByServerRelativeUrl(\''+filePath+'\')/$value',{
+    credentials:'include', headers:{'Accept':'application/json'}
+  });
+  if(r.status===404) return null;
+  if(!r.ok) throw new Error('Read failed: '+r.status);
+  return await r.json();
+}
+
+async function spWrite(siteUrl, folderPath, fileName, data){
+  const digest = await spDigest(siteUrl);
+  const r = await fetch(
+    siteUrl+'/_api/web/GetFolderByServerRelativeUrl(\''+folderPath+'\')/Files/add(url=\''+fileName+'\',overwrite=true)',
+    { method:'POST', credentials:'include',
+      headers:{'X-RequestDigest':digest,'Accept':'application/json;odata=verbose','Content-Type':'application/octet-stream'},
+      body: JSON.stringify({...data, _spLastSaved: new Date().toISOString()})
+    }
+  );
+  if(!r.ok) throw new Error('Save failed: '+r.status);
+  return true;
+}
+
+/* ── SharePoint Panel ── */
+function SharePointPanel({data,setData,onClose}){
+  const conf = getSPConf();
+  const [siteUrl,setSiteUrl]   = React.useState(conf.siteUrl||'');
+  const [folderPath,setFolderPath] = React.useState(conf.folderPath||'');
+  const [fileName,setFileName] = React.useState(conf.fileName||'au_dashboard_data.json');
+  const [autoRefresh,setAutoRefresh] = React.useState(conf.autoRefresh||false);
+  const [status,setStatus]     = React.useState(null);
+  const [busy,setBusy]         = React.useState(false);
+
+  // Derived full file path
+  const filePath = folderPath && fileName ? folderPath.replace(/\/$/,'')+'/'+fileName : '';
+
+  const save = ()=>{ setSPConf({siteUrl,folderPath,fileName,autoRefresh}); };
+
+  const handleLoad = async()=>{
+    if(!siteUrl||!filePath){ setStatus({ok:false,msg:'Fill in Site URL and folder path first.'}); return; }
+    setBusy(true); setStatus(null);
+    try{
+      const d = await spRead(siteUrl, filePath);
+      if(!d){ setStatus({ok:false,msg:'File not found — use Push to create it first.'}); }
+      else{
+        setData(d);
+        save();
+        setStatus({ok:true,msg:'Loaded! Dashboard updated from SharePoint.'});
+      }
+    }catch(e){ setStatus({ok:false,msg:e.message}); }
+    finally{ setBusy(false); }
+  };
+
+  const handlePush = async()=>{
+    if(!siteUrl||!filePath){ setStatus({ok:false,msg:'Fill in Site URL and folder path first.'}); return; }
+    setBusy(true); setStatus(null);
+    try{
+      await spWrite(siteUrl, folderPath, fileName, data);
+      save();
+      setStatus({ok:true,msg:'Saved to SharePoint! Viewers will see this on next refresh.'});
+    }catch(e){ setStatus({ok:false,msg:e.message}); }
+    finally{ setBusy(false); }
+  };
+
+  const handleAutoRefresh = (val)=>{
+    setAutoRefresh(val);
+    setSPConf({...getSPConf(),autoRefresh:val});
+  };
+
+  return el('div',{style:{
+    position:'fixed',inset:0,background:'rgba(0,0,0,0.55)',zIndex:500,
+    display:'flex',alignItems:'center',justifyContent:'center',padding:20
+  },onClick:e=>e.target===e.currentTarget&&onClose()},
+    el('div',{style:{
+      background:'var(--bg)',border:'0.5px solid var(--bdr2)',borderRadius:14,
+      width:'100%',maxWidth:520,boxShadow:'0 8px 40px rgba(0,0,0,0.4)'
+    }},
+      /* Header */
+      el('div',{style:{padding:'16px 20px',borderBottom:'0.5px solid var(--bdr)',display:'flex',alignItems:'center',justifyContent:'space-between'}},
+        el('div',null,
+          el('div',{style:{fontSize:15,fontWeight:800,display:'flex',alignItems:'center',gap:8}},
+            el('i',{className:'ti ti-brand-sharepoint',style:{color:'#0078d4',fontSize:18}}),'SharePoint Sync'
+          ),
+          el('div',{style:{fontSize:11,color:'var(--text3)',marginTop:3}},'Share live data with your team — everyone reads from the same file')
+        ),
+        el('button',{onClick:onClose,style:{background:'none',border:'none',cursor:'pointer',color:'var(--text3)',fontSize:18}},el('i',{className:'ti ti-x'}))
+      ),
+
+      el('div',{style:{padding:'20px'}},
+        /* How it works */
+        el('div',{style:{background:'var(--info-bg)',border:'0.5px solid var(--info)',borderRadius:8,padding:'10px 14px',marginBottom:18,fontSize:12,color:'var(--info)'}},
+          el('i',{className:'ti ti-info-circle',style:{marginRight:6}}),
+          el('strong',null,'How it works:'),' Upload this HTML file to SharePoint. Enter your site details below. ',
+          el('strong',null,'Push'),' saves your edits. Viewers click ',el('strong',null,'Pull'),' or enable ',el('strong',null,'Auto-refresh'),' to see updates.'
+        ),
+
+        /* Site URL */
+        el('div',{style:{marginBottom:12}},
+          el('label',{style:{fontSize:11,fontWeight:600,color:'var(--text2)',display:'block',marginBottom:5}},'SharePoint Site URL'),
+          el('input',{className:'ei',placeholder:'https://yourcompany.sharepoint.com/sites/YourSite',value:siteUrl,onChange:e=>setSiteUrl(e.target.value.replace(/\/$/,'')),style:{fontSize:12}}),
+          el('div',{style:{fontSize:10,color:'var(--text3)',marginTop:3}},'Your SharePoint site root — no trailing slash')
+        ),
+
+        /* Folder path */
+        el('div',{style:{marginBottom:12}},
+          el('label',{style:{fontSize:11,fontWeight:600,color:'var(--text2)',display:'block',marginBottom:5}},'Folder Path (Server-Relative)'),
+          el('input',{className:'ei',placeholder:'/sites/YourSite/Shared Documents/Dashboard',value:folderPath,onChange:e=>setFolderPath(e.target.value),style:{fontSize:12}}),
+          el('div',{style:{fontSize:10,color:'var(--text3)',marginTop:3}},'Right-click the folder in SharePoint → Copy link → extract the path')
+        ),
+
+        /* File name */
+        el('div',{style:{marginBottom:18}},
+          el('label',{style:{fontSize:11,fontWeight:600,color:'var(--text2)',display:'block',marginBottom:5}},'Data File Name'),
+          el('input',{className:'ei',value:fileName,onChange:e=>setFileName(e.target.value),style:{fontSize:12,maxWidth:260}})
+        ),
+
+        /* Action buttons */
+        el('div',{style:{display:'flex',gap:10,marginBottom:14,flexWrap:'wrap'}},
+          el('button',{onClick:handleLoad,disabled:busy,style:{
+            background:'var(--bg2)',border:'0.5px solid var(--bdr2)',borderRadius:7,
+            cursor:'pointer',padding:'8px 16px',fontSize:12,fontFamily:'inherit',
+            color:'var(--text)',display:'flex',alignItems:'center',gap:6,opacity:busy?0.5:1
+          }},el('i',{className:'ti ti-cloud-download'}),' Pull from SharePoint'),
+          el('button',{onClick:handlePush,disabled:busy,style:{
+            background:'#0078d4',border:'none',borderRadius:7,
+            cursor:'pointer',padding:'8px 18px',fontSize:12,fontFamily:'inherit',
+            color:'#fff',fontWeight:600,display:'flex',alignItems:'center',gap:6,opacity:busy?0.5:1
+          }},busy?el('span',null,el('i',{className:'ti ti-loader-2',style:{animation:'spin 1s linear infinite',fontSize:13}}),' Saving…'):el('span',null,el('i',{className:'ti ti-cloud-upload'}),' Push to SharePoint'))
+        ),
+
+        /* Auto-refresh toggle */
+        el('div',{style:{display:'flex',alignItems:'center',gap:10,padding:'10px 14px',background:'var(--bg2)',borderRadius:8,marginBottom:14}},
+          el('div',{style:{flex:1}},
+            el('div',{style:{fontSize:12,fontWeight:600,color:'var(--text)'}},'Auto-refresh (Viewer Mode)'),
+            el('div',{style:{fontSize:10,color:'var(--text3)',marginTop:2}},'Pulls latest data from SharePoint every 30 seconds')
+          ),
+          el('button',{onClick:()=>handleAutoRefresh(!autoRefresh),style:{
+            width:44,height:24,borderRadius:12,border:'none',cursor:'pointer',
+            background:autoRefresh?'#0078d4':'var(--bg3)',
+            position:'relative',transition:'background .2s',flexShrink:0
+          }},
+            el('div',{style:{
+              width:18,height:18,borderRadius:9,background:'#fff',
+              position:'absolute',top:3,left:autoRefresh?23:3,
+              transition:'left .2s',boxShadow:'0 1px 3px rgba(0,0,0,.3)'
+            }})
+          )
+        ),
+
+        /* Status */
+        status&&el('div',{style:{
+          padding:'9px 12px',borderRadius:7,fontSize:12,
+          background:status.ok?'var(--ok-bg)':'var(--err-bg)',
+          color:status.ok?'var(--ok)':'var(--err)',
+          display:'flex',alignItems:'center',gap:7
+        }},el('i',{className:'ti '+(status.ok?'ti-check':'ti-alert-circle')}),status.msg)
+      )
+    )
+  );
+}
+
+/* ── App ── */
+function App(){
+  const init=loadState()||INITIAL;
+  const [data,setData]=useState(()=>({...INITIAL,...init,pcTabs:init.pcTabs||INITIAL.pcTabs}));
+  const [view,setView]=useState(()=>data.pcTabs[0]?.id||'pc1');
+  const [sels,setSels]=useState({pc1:'bb',pc2:'bcp',pc3:'pp'});
+  const [prodView,setProdView]=useState('summary'); // 'summary' | 'detail'
+  const [fullscreen,setFullscreen]=useState(false);
+  const [saved,setSaved]=useState(false);
+  const [lastSaved,setLastSaved]=useState(null);
+  const [showSP,setShowSP]=useState(false);
+  const [renamingTab,setRenamingTab]=useState(null);
+  const [storeCountVer,setStoreCountVer]=useState(0); // bumped when store count changes to force re-render
+  const importRef=useRef();
+
+  useEffect(()=>{saveState(data);setSaved(true);setLastSaved(Date.now());const t=setTimeout(()=>setSaved(false),1800);return()=>clearTimeout(t);},[data]);
+
+  // Auto-refresh from SharePoint for viewers
+  useEffect(()=>{
+    const conf=getSPConf();
+    if(!conf.autoRefresh||!conf.siteUrl||!conf.folderPath||!conf.fileName)return;
+    const filePath=conf.folderPath.replace(/\/$/,'')+'/'+conf.fileName;
+    const interval=setInterval(async()=>{
+      try{
+        const d=await spRead(conf.siteUrl,filePath);
+        if(d)setData(d);
+      }catch(e){ /* silent fail */ }
+    },30000);
+    return()=>clearInterval(interval);
+  },[]);
+
+  useEffect(()=>{
+    const h=e=>{
+      if(e.key==='Escape'&&fullscreen)setFullscreen(false);
+      if(e.key==='F'&&!e.target.matches('input,textarea,select'))setFullscreen(f=>!f);
+    };
+    window.addEventListener('keydown',h);return()=>window.removeEventListener('keydown',h);
+  },[fullscreen]);
+
+  const prods=data[view]||[];
+  const selId=sels[view]||prods[0]?.id;
+  const prod=prods.find(p=>p.id===selId)||prods[0];
+  const setSelId=id=>{setSels(s=>({...s,[view]:id}));setProdView('detail');};
+
+  const updProd=(pc,id,upd)=>setData(d=>({...d,[pc]:d[pc].map(p=>p.id===id?upd:p)}));
+  const addProd=()=>{
+    const tab=data.pcTabs.find(t=>t.id===view);
+    const np=BLANK_PROD(tab?tab.label:'New PC');
+    setData(d=>({...d,[view]:[...(d[view]||[]),np]}));
+    setSels(s=>({...s,[view]:np.id}));
+    setProdView('detail');
+  };
+  const removeProd=id=>{
+    setData(d=>{const next=(d[view]||[]).filter(p=>p.id!==id);return {...d,[view]:next};});
+    const remaining=(data[view]||[]).filter(p=>p.id!==id);
+    setSels(s=>({...s,[view]:remaining.length>0?remaining[0].id:''}));
+    if(remaining.length===0)setProdView('summary');
+  };
+  const kbNav=dir=>{const idx=prods.findIndex(p=>p.id===selId);const next=prods[idx+dir];if(next)setSelId(next.id);};
+
+  const addProductCall=()=>{
+    const nums=data.pcTabs.map(t=>{const m=t.id.match(/pc(\d+)/);return m?parseInt(m[1]):0;});
+    const next=Math.max(0,...nums)+1,newId='pc'+next,newLabel='PC#'+next+' 2026';
+    setData(d=>({...d,pcTabs:[...d.pcTabs,{id:newId,label:newLabel}],[newId]:[]}));
+    setView(newId);setProdView('summary');
+  };
+  const removeTab=id=>{
+    if(data.pcTabs.length<=1){alert('Cannot remove the last product call.');return;}
+    if(!confirm('Remove this product call and all its products?'))return;
+    const newTabs=data.pcTabs.filter(t=>t.id!==id);
+    setData(d=>{const nd={...d,pcTabs:newTabs};delete nd[id];return nd;});
+    if(view===id){setView(newTabs[0].id);setProdView('summary');}
+  };
+  const renameTab=(id,label)=>{setData(d=>({...d,pcTabs:d.pcTabs.map(t=>t.id===id?{...t,label}:t)}));setRenamingTab(null);};
+
+  const importJSON=e=>{
+    const file=e.target.files[0];if(!file)return;
+    const r=new FileReader();
+    r.onload=ev=>{try{const d=JSON.parse(ev.target.result);setData(d);setView(d.pcTabs?.[0]?.id||'pc1');alert('Backup imported successfully!');e.target.value='';}catch{alert('Invalid JSON file.');}};
+    r.readAsText(file);
+  };
+
+  const shell=el('div',{className:'shell'+(fullscreen?' fullscreen-shell':'')},
+    el('div',{className:'topbar',style:{gap:0}},
+      data.pcTabs.map(tab=>el('div',{key:tab.id,style:{display:'flex',alignItems:'center',borderBottom:view===tab.id?'2px solid var(--bdr2)':'2px solid transparent',marginBottom:-1}},
+        renamingTab===tab.id
+          ?el('input',{autoFocus:true,className:'ei',style:{fontSize:13,padding:'6px 10px',width:120},defaultValue:tab.label,onBlur:e=>renameTab(tab.id,e.target.value||tab.label),onKeyDown:e=>{if(e.key==='Enter')renameTab(tab.id,e.target.value||tab.label);if(e.key==='Escape')setRenamingTab(null);}})
+          :el('button',{className:'ptab '+(view===tab.id?'on':''),style:{borderBottom:'none'},onClick:()=>{setView(tab.id);setProdView('summary');},onDoubleClick:()=>setRenamingTab(tab.id),title:'Double-click to rename'},tab.label),
+        data.pcTabs.length>1&&el('button',{onClick:()=>removeTab(tab.id),style:{background:'transparent',border:'none',cursor:'pointer',color:'var(--text3)',padding:'0 6px 0 0',fontSize:11,display:'flex',alignItems:'center'}},el('i',{className:'ti ti-x',style:{fontSize:10}}))
+      )),
+      el('button',{onClick:addProductCall,style:{background:'transparent',border:'none',borderBottom:'2px solid transparent',cursor:'pointer',padding:'9px 14px',fontSize:12,color:'var(--text2)',display:'flex',alignItems:'center',gap:4},title:'Add new product call'},el('i',{className:'ti ti-plus'}),' New PC'),
+      el('button',{className:'ptab '+(view==='postlaunch'?'on':''),style:{borderBottom:view==='postlaunch'?'2px solid var(--bdr2)':'2px solid transparent',marginLeft:8,paddingLeft:16,borderLeft:'0.5px solid var(--bdr)',color:view==='postlaunch'?'var(--text)':'var(--text2)'},onClick:()=>setView('postlaunch')},
+        el('i',{className:'ti ti-chart-line',style:{fontSize:13,marginRight:5}}),'Post Launch'
+      ),
+      el('div',{style:{marginLeft:'auto',display:'flex',alignItems:'center',gap:6,paddingRight:8}},
+        el('button',{onClick:()=>setProdView(v=>v==='summary'?'detail':'summary'),className:'gantt-btn',title:'Toggle summary / detail view'},
+          el('i',{className:'ti '+(prodView==='summary'?'ti-layout-cards':'ti-layout-list')}),prodView==='summary'?' Summary':' Detail'
+        ),
+        el('button',{onClick:()=>setFullscreen(f=>!f),className:'gantt-btn',title:'Fullscreen (F)'},el('i',{className:'ti '+(fullscreen?'ti-minimize':'ti-maximize')}))
+      )
+    ),
+    view==='postlaunch'
+      ? el(PostLaunchView,null)
+      : el('div',null,
+          el(ProductPanels,{prods,selId:prod?.id||'',setSelId,onAdd:addProd,onRemove:removeProd}),
+          prodView==='summary'
+            ? el(SummaryView,{prods,onSelect:id=>{setSelId(id);}})
+            : prod
+              ? el(ProductDetail,{key:prod.id,prod,onChange:upd=>updProd(view,prod.id,upd),onKbNav:kbNav})
+              : el('div',{style:{padding:'40px',textAlign:'center',color:'var(--text2)'}},
+                  el('i',{className:'ti ti-package',style:{fontSize:36,display:'block',marginBottom:12,opacity:.4}}),
+                  'No products yet.',el('br'),
+                  el('button',{className:'btn',style:{marginTop:12},onClick:addProd},el('i',{className:'ti ti-plus'}),' Add First Product')
+                )
+        )
+  );
+
+  if(fullscreen)return el('div',{style:{position:'fixed',inset:0,background:'var(--bg3)',zIndex:1000,overflow:'auto',padding:'20px'}},
+    el('div',{style:{maxWidth:1200,margin:'0 auto'}},
+      el('div',{style:{display:'flex',justifyContent:'flex-end',marginBottom:12}},
+        el('button',{className:'btn',onClick:()=>setFullscreen(false)},el('i',{className:'ti ti-minimize'}),' Exit (Esc)')
+      ),
+      shell
+    )
+  );
+
+  return el('div',null,
+    el('div',{className:'page-hd'},
+      el('div',null,
+        el('h1',null,'Adult Rec — Product Launch Dashboard'),
+        el('div',{style:{display:'flex',alignItems:'center',gap:12,flexWrap:'wrap',marginTop:2}},
+          el('small',{style:{color:'var(--text2)'}},'Ontario · 2026  ·  Last saved: ',fmtTs(lastSaved)),
+          el('div',{style:{display:'flex',alignItems:'center',gap:6,background:'var(--bg2)',border:'0.5px solid var(--bdr2)',borderRadius:7,padding:'3px 10px'}},
+            el('i',{className:'ti ti-building-store',style:{fontSize:12,color:'var(--text3)'}}),
+            el('span',{style:{fontSize:11,color:'var(--text2)'}},'Stores:'),
+            el('input',{
+              type:'number',
+              key:'sc-'+storeCountVer,
+              defaultValue:ONTARIO_STORES,
+              min:1,max:99999,
+              title:'Active Ontario store count — updates all velocity & threshold calculations',
+              style:{width:56,background:'transparent',border:'none',outline:'none',fontSize:12,fontWeight:700,color:'var(--info)',fontFamily:'inherit',textAlign:'center',MozAppearance:'textfield'},
+              onChange:ev=>{
+                const v=parseInt(ev.target.value);
+                if(v>0){ONTARIO_STORES=v;saveStoreCount(v);setStoreCountVer(n=>n+1);}
+              }
+            }),
+            el('span',{style:{fontSize:10,color:'var(--text3)'}},'/ Ontario')
+          )
+        )
+      ),
+      el('div',{style:{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}},
+        saved&&el('span',{className:'save-ind'},el('i',{className:'ti ti-check'}),' Saved'),
+        el('button',{className:'btn',onClick:()=>{if(confirm('Reset all data to defaults?')){localStorage.removeItem(LS_KEY);setData({...INITIAL});setView(INITIAL.pcTabs[0].id);setSels({pc1:'bb',pc2:'bcp',pc3:'pp'});setProdView('summary');}}},el('i',{className:'ti ti-rotate'}),' Reset'),
+        el('button',{className:'btn',onClick:()=>{const b=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='au_dashboard_'+new Date().toISOString().slice(0,10)+'.json';a.click();}},el('i',{className:'ti ti-download'}),' Backup'),
+        el('button',{className:'btn',onClick:()=>importRef.current.click()},el('i',{className:'ti ti-upload'}),' Import'),
+        el('button',{className:'btn',onClick:()=>setShowSP(true),style:{background:getSPConf().siteUrl?'var(--info-bg)':'',border:getSPConf().siteUrl?'0.5px solid var(--info)':'',color:getSPConf().siteUrl?'var(--info)':''}},el('i',{className:'ti ti-brand-sharepoint'}),' SharePoint'),
+        el('input',{ref:importRef,type:'file',accept:'.json',style:{display:'none'},onChange:importJSON}),
+        el('button',{className:'btn',onClick:()=>window.print()},el('i',{className:'ti ti-printer'}),' Print')
+      )
+    ),
+    showSP&&el(SharePointPanel,{data,setData,onClose:()=>setShowSP(false)}),
+    shell,
+    el('p',{style:{fontSize:11,color:'var(--text3)',textAlign:'center',marginTop:12}},'Generated '+new Date().toLocaleDateString('en-CA',{year:'numeric',month:'long',day:'numeric'})+' · Keyboard: T Tasks · G Gantt · S Specs · ← → switch products · F fullscreen  ·  Built by Kyle Naujokaitis')
+  );
+}
+ReactDOM.createRoot(document.getElementById('root')).render(el(App));
+
+</script>
+</body>
+</html>
