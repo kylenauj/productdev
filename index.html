@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Adult Rec — Product Launch Dashboard 2026</title>
+<title>Adult Rec — Product Launch Dashboard 2026  ·  v1.14</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <style>
@@ -573,7 +573,7 @@ function ProductDetail({prod,onChange,onKbNav}){
 
 const SALES_DATA_DEFAULT = {
   "Berry Blaze Liquid Diamonds All-in-One":{
-    brand:"LITTI.",units:1428,orders:112,storeCount:66,launchDate:"2026-04-14",
+    pc:"pc1",brand:"LITTI.",units:1428,orders:112,storeCount:66,launchDate:"2026-04-14",
     storeMetrics:{
       weekMetrics:{"2026-W16":{active:28,new:28,repeat:0,prevActive:0},"2026-W17":{active:22,new:16,repeat:6,prevActive:28},"2026-W18":{active:5,new:2,repeat:2,prevActive:22},"2026-W19":{active:13,new:9,repeat:2,prevActive:5},"2026-W20":{active:26,new:9,repeat:5,prevActive:13},"2026-W21":{active:5,new:2,repeat:0,prevActive:26}},
       totalStores:66,opportunity:1629
@@ -587,20 +587,26 @@ const SALES_DATA_DEFAULT = {
     daily:{"2026-04-14":36,"2026-04-15":72,"2026-04-16":84,"2026-04-17":180,"2026-04-20":324,"2026-04-22":12,"2026-04-24":24,"2026-04-27":24,"2026-04-28":24,"2026-05-01":36,"2026-05-04":96,"2026-05-06":24,"2026-05-08":48,"2026-05-11":132,"2026-05-12":36,"2026-05-13":48,"2026-05-14":72,"2026-05-15":84,"2026-05-19":24,"2026-05-20":12,"2026-05-21":12,"2026-05-22":24}
   },
   "Cherry Chonk Liquid Diamonds All-in-One":{
-    brand:"LITTI.",units:1200,orders:96,storeCount:57,launchDate:"2026-04-22",
-    storeMetrics:{weekMetrics:{"2026-W16":{active:25,new:25,repeat:0,prevActive:0},"2026-W17":{active:18,new:16,repeat:2,prevActive:25},"2026-W18":{active:7,new:4,repeat:2,prevActive:18},"2026-W19":{active:13,new:6,repeat:2,prevActive:7},"2026-W20":{active:19,new:4,repeat:3,prevActive:13},"2026-W21":{active:5,new:2,repeat:2,prevActive:19}},totalStores:57,opportunity:1638},
-    ocs:{velocity:0.141509,skuClass:"New Product",lwUnits:240,twoWkUnits:180,threeWkUnits:96,avgLast3:172,storesL4W:40,penPct4W:2.36,penPct8W:4.31,penPct12W:4.31,onHand:null,onOrder:156,weeksOfSupply:null,firstReceipt:"2026-04-22",lifeOfSku:32,fillRate:1.0},
+    pc:"pc1",brand:"LITTI.",units:1200,orders:96,storeCount:57,launchDate:"2026-04-14",
+    storeMetrics:{
+      weekMetrics:{"2026-W16":{active:25,new:25,repeat:0,prevActive:0},"2026-W17":{active:18,new:16,repeat:2,prevActive:25},"2026-W18":{active:7,new:4,repeat:2,prevActive:18},"2026-W19":{active:13,new:6,repeat:2,prevActive:7},"2026-W20":{active:19,new:4,repeat:3,prevActive:13},"2026-W21":{active:5,new:2,repeat:2,prevActive:19}},
+      totalStores:57,opportunity:1638
+    },
+    ocs:{velocity:0.141509,skuClass:"New Product",lwUnits:60,twoWkUnits:240,threeWkUnits:180,avgLast3:160,storesL4W:40,penPct4W:2.36,penPct8W:4.31,penPct12W:4.31,onHand:null,onOrder:156,weeksOfSupply:null,firstReceipt:"2026-04-14",lifeOfSku:38,fillRate:1.0},
     cities:{"Hawkesbury":84,"Scarborough":72,"North York":48,"Windsor":48,"Oshawa":36,"Toronto":36,"Niagara Falls":36,"Etobicoke":36,"North Bay":36,"Sudbury":24,"Belleville":24,"Kitchener":24,"Aurora":24,"Timmins":24,"Peterborough":24,"Orillia":24},
     stores:{"Happy Life":96,"Holland Daze":72,"ShinyBud":60,"Canna North Cannabis Store":36,"Lolly":36,"Greentown Cannabis Discount":36,"Grand Cannabis":36,"Your Local Cannabis":36,"MaryJane's Cannabis":36,"Baker and Blazer Cannabis Co.":24,"CASA BLISS":24,"Cannabis Street":24,"True North Cannabis Co":24,"The Oz Store":24,"Off the Stem":24,"Sparq Retail":24,"Ideal Buds":24,"The Cannabis Guys":24,"Aces Cannabis 389 Co.":24,"Discounted Cannabis":24},
     regions:{"North Region":156,"East Region":384,"Toronto":192,"GTA Region (Excludes Toronto)":156,"West Region":312},
     weekly:{"2026-W16":348,"2026-W17":276,"2026-W18":96,"2026-W19":180,"2026-W20":240,"2026-W21":60},
     monthly:{"2026-04":672,"2026-05":528},
-    daily:{"2026-04-14":48,"2026-04-15":120,"2026-04-16":192,"2026-04-17":336,"2026-04-20":456,"2026-04-22":24,"2026-04-24":72,"2026-04-27":24,"2026-04-28":48,"2026-04-29":24,"2026-05-01":96,"2026-05-04":192,"2026-05-06":24,"2026-05-07":48,"2026-05-08":96,"2026-05-11":168,"2026-05-12":24,"2026-05-13":120,"2026-05-14":96,"2026-05-15":72,"2026-05-19":24,"2026-05-20":24,"2026-05-21":48,"2026-05-22":24}
+    daily:{"2026-04-14":24,"2026-04-15":60,"2026-04-16":96,"2026-04-17":168,"2026-04-20":228,"2026-04-22":12,"2026-04-24":36,"2026-04-27":12,"2026-04-28":24,"2026-04-29":12,"2026-05-01":48,"2026-05-04":96,"2026-05-06":12,"2026-05-07":24,"2026-05-08":48,"2026-05-11":84,"2026-05-12":12,"2026-05-13":60,"2026-05-14":48,"2026-05-15":36,"2026-05-19":12,"2026-05-20":12,"2026-05-21":24,"2026-05-22":12}
   },
   "Northern Lights 60+ Diamonds & Shatter Infused Pre-Roll":{
-    brand:"Shatterizer",units:1116,orders:75,storeCount:52,launchDate:"2026-04-29",
-    storeMetrics:{weekMetrics:{"2026-W17":{active:6,new:6,repeat:0,prevActive:0},"2026-W18":{active:23,new:22,repeat:1,prevActive:6},"2026-W19":{active:19,new:13,repeat:5,prevActive:23},"2026-W20":{active:10,new:9,repeat:1,prevActive:19},"2026-W21":{active:7,new:2,repeat:0,prevActive:10}},totalStores:52,opportunity:1643},
-    ocs:{velocity:0.07783,skuClass:"New Product",lwUnits:132,twoWkUnits:408,threeWkUnits:396,avgLast3:312,storesL4W:57,penPct4W:3.36,penPct8W:3.78,penPct12W:3.78,onHand:null,onOrder:108,weeksOfSupply:null,firstReceipt:"2026-04-29",lifeOfSku:25,fillRate:0.35},
+    pc:"pc1",brand:"Shatterizer",units:1116,orders:75,storeCount:52,launchDate:"2026-04-21",
+    storeMetrics:{
+      weekMetrics:{"2026-W17":{active:6,new:6,repeat:0,prevActive:0},"2026-W18":{active:23,new:22,repeat:1,prevActive:6},"2026-W19":{active:19,new:13,repeat:5,prevActive:23},"2026-W20":{active:10,new:9,repeat:1,prevActive:19},"2026-W21":{active:7,new:2,repeat:0,prevActive:10}},
+      totalStores:52,opportunity:1643
+    },
+    ocs:{velocity:0.07783,skuClass:"New Product",lwUnits:96,twoWkUnits:132,threeWkUnits:396,avgLast3:208,storesL4W:57,penPct4W:3.36,penPct8W:3.78,penPct12W:3.78,onHand:null,onOrder:108,weeksOfSupply:null,firstReceipt:"2026-04-21",lifeOfSku:31,fillRate:0.35},
     cities:{"Hawkesbury":132,"Toronto":48,"Lakeshore":48,"Ottawa":48,"Oshawa":36,"Windsor":36,"Scarborough":36,"North Bay":36,"Sudbury":24,"Kenora":24,"Thunder Bay":24,"Kitchener":24,"Hamilton":24,"Niagara Falls":24,"Mississauga":24,"Pembroke":24},
     stores:{"ShinyBud":120,"Regulators Cannabis":72,"Miss Jones":72,"Happy Life":60,"Cannabis Street":36,"Toke Cannabis":36,"The Oz Store":36,"Aroma Cannabis Emporium":24,"The Reef Store":24,"BUDSSMOKE":24,"PEACE BY THE GRAM":24,"Gather & Grow Recreational Cannabis":24,"High Society Cannabis Co.":24,"Holland Daze":24,"Calyx and Trichomes":24,"PARADISE CANNABIS":24,"Weed B Blazn":24,"TOKE":24,"Neku Cannabis":24},
     regions:{"GTA Region (Excludes Toronto)":132,"East Region":408,"North Region":192,"Toronto":120,"West Region":264},
@@ -609,7 +615,7 @@ const SALES_DATA_DEFAULT = {
     daily:{"2026-04-21":36,"2026-04-22":12,"2026-04-23":12,"2026-04-24":36,"2026-04-27":204,"2026-04-28":48,"2026-04-29":12,"2026-04-30":72,"2026-05-01":60,"2026-05-04":240,"2026-05-05":12,"2026-05-06":72,"2026-05-07":36,"2026-05-08":36,"2026-05-11":24,"2026-05-12":24,"2026-05-13":12,"2026-05-14":48,"2026-05-15":24,"2026-05-19":12,"2026-05-21":48,"2026-05-22":36}
   },
   "10th Planet Pre-Rolls":{
-    brand:"Buddy Blooms",units:34956,orders:2689,storeCount:292,launchDate:"2025-11-25",
+    pc:"other",brand:"Buddy Blooms",units:34956,orders:2689,storeCount:292,launchDate:"2025-11-25",
     storeMetrics:{weekMetrics:{"2026-W14":{active:72,new:4,repeat:29,prevActive:81},"2026-W15":{active:87,new:6,repeat:28,prevActive:72},"2026-W16":{active:80,new:5,repeat:36,prevActive:87},"2026-W17":{active:71,new:1,repeat:32,prevActive:80},"2026-W18":{active:73,new:2,repeat:30,prevActive:71},"2026-W19":{active:91,new:5,repeat:37,prevActive:73},"2026-W20":{active:91,new:2,repeat:42,prevActive:91},"2026-W21":{active:64,new:3,repeat:24,prevActive:91}},totalStores:292,opportunity:1403},
     ocs:{velocity:0.962264,skuClass:"D",lwUnits:1632,twoWkUnits:1728,threeWkUnits:1260,avgLast3:1540,storesL4W:265,penPct4W:15.63,penPct8W:22.06,penPct12W:25.55,onHand:2940,onOrder:4704,weeksOfSupply:2.12,firstReceipt:"2026-03-15",lifeOfSku:1531,fillRate:1.0},
     cities:{"Toronto":2880,"Ottawa":2052,"Scarborough":2016,"Mississauga":1896,"Windsor":1380,"North York":1332,"Hamilton":1260,"London":1032,"Etobicoke":972,"Peterborough":948,"St Catharines":756,"Burlington":756,"Sudbury":624,"Brampton":576,"Pickering":528,"Kitchener":516,"Barrie":516,"Niagara Falls":492,"Brantford":456,"Oshawa":444,"Orleans":396,"Chatham":372,"Kingston":348,"Guelph":324,"Midland":276,"North Bay":264,"Wasaga Beach":252,"Thunder Bay":252,"Kapuskasing":228,"Aurora":216,"Cambridge":216,"Cornwall":180,"Sarnia":180,"Orillia":192,"Orangeville":180,"Milton":168,"Hawkesbury":144,"Kenora":132,"Nepean":132,"Stoney Creek":132,"Alliston":132,"Ancaster":156},
@@ -620,7 +626,7 @@ const SALES_DATA_DEFAULT = {
     daily:{"2025-11-24":324,"2025-11-25":228,"2025-11-26":180,"2025-11-27":240,"2025-11-28":288,"2025-12-01":300,"2025-12-02":300,"2025-12-03":264,"2025-12-04":228,"2025-12-05":288,"2025-12-08":324,"2025-12-09":216,"2025-12-10":180,"2025-12-11":384,"2025-12-12":228,"2025-12-15":300,"2025-12-16":192,"2025-12-17":300,"2025-12-18":360,"2025-12-19":204,"2025-12-22":252,"2025-12-23":504,"2025-12-24":708,"2025-12-29":276,"2025-12-30":444,"2025-12-31":444,"2026-01-02":324,"2026-01-05":432,"2026-01-06":204,"2026-01-07":228,"2026-01-08":288,"2026-01-09":348,"2026-01-12":252,"2026-01-13":204,"2026-01-14":276,"2026-01-15":384,"2026-01-16":276,"2026-01-19":312,"2026-01-20":216,"2026-01-21":264,"2026-01-22":240,"2026-01-23":264,"2026-01-26":252,"2026-01-27":300,"2026-01-28":216,"2026-01-29":312,"2026-01-30":300,"2026-02-02":360,"2026-02-03":156,"2026-02-04":276,"2026-02-05":252,"2026-02-06":264,"2026-02-09":324,"2026-02-10":144,"2026-02-11":360,"2026-02-12":180,"2026-02-13":276,"2026-02-17":264,"2026-02-18":132,"2026-02-19":252,"2026-02-20":204,"2026-02-23":264,"2026-02-24":264,"2026-02-25":180,"2026-02-26":360,"2026-02-27":192,"2026-03-02":300,"2026-03-03":204,"2026-03-04":216,"2026-03-05":216,"2026-03-06":276,"2026-03-09":252,"2026-03-10":192,"2026-03-11":108,"2026-03-12":300,"2026-03-13":336,"2026-03-16":252,"2026-03-17":216,"2026-03-18":216,"2026-03-19":192,"2026-03-20":288,"2026-03-23":408,"2026-03-24":228,"2026-03-25":216,"2026-03-26":360,"2026-03-27":264,"2026-03-30":312,"2026-03-31":252,"2026-04-01":288,"2026-04-02":372,"2026-04-06":408,"2026-04-07":204,"2026-04-08":276,"2026-04-09":396,"2026-04-10":288,"2026-04-13":348,"2026-04-14":216,"2026-04-15":144,"2026-04-16":408,"2026-04-17":192,"2026-04-20":384,"2026-04-21":156,"2026-04-22":192,"2026-04-23":360,"2026-04-24":264,"2026-04-27":228,"2026-04-28":264,"2026-04-29":192,"2026-04-30":288,"2026-05-01":288,"2026-05-04":396,"2026-05-05":216,"2026-05-06":288,"2026-05-07":396,"2026-05-08":432,"2026-05-11":348,"2026-05-12":288,"2026-05-13":396,"2026-05-14":300,"2026-05-15":300,"2026-05-19":336,"2026-05-20":228,"2026-05-21":432,"2026-05-22":288}
   },
   "Grape Diamonds Pre-Roll":{
-    brand:"Countryside Cannabis Harvest Reserve",
+    pc:"other",brand:"Countryside Cannabis Harvest Reserve",
     units:46968,orders:1700,storeCount:205,launchDate:"2025-11-25",
     storeMetrics:{
       weekMetrics:{"2025-W01":{active:33,new:33,repeat:0,prevActive:0},"2025-W48":{active:46,new:27,repeat:19,prevActive:33},"2025-W49":{active:42,new:24,repeat:12,prevActive:46},"2025-W50":{active:47,new:20,repeat:14,prevActive:42},"2025-W51":{active:52,new:15,repeat:20,prevActive:47},"2025-W52":{active:41,new:6,repeat:17,prevActive:52},"2026-W01":{active:10,new:2,repeat:2,prevActive:41},"2026-W02":{active:38,new:8,repeat:2,prevActive:10},"2026-W03":{active:51,new:6,repeat:14,prevActive:38},"2026-W04":{active:50,new:3,repeat:21,prevActive:51},"2026-W05":{active:44,new:5,repeat:20,prevActive:50},"2026-W06":{active:36,new:3,repeat:14,prevActive:44},"2026-W07":{active:54,new:5,repeat:20,prevActive:36},"2026-W08":{active:39,new:5,repeat:14,prevActive:54},"2026-W09":{active:42,new:3,repeat:10,prevActive:39},"2026-W10":{active:42,new:3,repeat:16,prevActive:42},"2026-W11":{active:52,new:6,repeat:16,prevActive:42},"2026-W12":{active:54,new:5,repeat:21,prevActive:52},"2026-W13":{active:50,new:3,repeat:19,prevActive:54},"2026-W14":{active:49,new:5,repeat:18,prevActive:50},"2026-W15":{active:52,new:1,repeat:20,prevActive:49},"2026-W16":{active:64,new:6,repeat:25,prevActive:52},"2026-W17":{active:62,new:3,repeat:24,prevActive:64},"2026-W18":{active:54,new:2,repeat:21,prevActive:62},"2026-W19":{active:54,new:3,repeat:22,prevActive:54},"2026-W20":{active:55,new:2,repeat:22,prevActive:54},"2026-W21":{active:36,new:1,repeat:17,prevActive:55}},
@@ -1146,16 +1152,29 @@ function DailyLineChart({daily,brand,skuClass,launchDate}){
   // Tooltip state
   const [tip,setTip]=React.useState(null);
 
-  // Milestone lines: 30, 60, 90 days from launchDate
-  const milestones=launchDate?[30,60,90].map(days=>{
+  // Milestone lines: 15, 30, 60, 90 days from launchDate
+  const milestones=launchDate?[15,30,60,90].map(days=>{
     const d=new Date(launchDate+'T00:00:00');
     d.setDate(d.getDate()+days);
     const ds=d.toISOString().slice(0,10);
-    const mIdx=entries.findIndex(([date])=>date>=ds);
-    if(mIdx<0)return null;
+    // Find the closest entry index by date
+    let mIdx=entries.findIndex(([date])=>date>=ds);
+    if(mIdx<0){
+      // Past the end of data — place at the end
+      mIdx=entries.length-1;
+    }
+    // Snap to exact position if date matches, else interpolate
     const mx=PL+xPos(mIdx);
-    return{days,x:mx,date:ds};
+    return{days,x:mx,date:ds,past:ds>entries[entries.length-1][0]};
   }).filter(Boolean):[];
+
+  // Weekly separator x positions — every Monday
+  const weekSeps=[];
+  entries.forEach(([date],i)=>{
+    if(i===0)return;
+    const d=new Date(date+'T00:00:00');
+    if(d.getDay()===1) weekSeps.push(PL+xPos(i));
+  });
 
   // Area fill points (close the polygon)
   const areaPoints=`${PL+xPos(0)},${PT+cH} ${points} ${PL+xPos(n-1)},${PT+cH}`;
@@ -1189,12 +1208,23 @@ function DailyLineChart({daily,brand,skuClass,launchDate}){
         )),
         // Area fill
         el('polygon',{points:areaPoints,fill:lineCol,opacity:0.08}),
+        // Weekly separators — light vertical lines every Monday
+        ...weekSeps.map((x,i)=>el('line',{key:'ws'+i,x1:x,y1:PT,x2:x,y2:PT+cH,stroke:'var(--bdr2)',strokeWidth:0.5,opacity:0.5})),
         // Milestone day lines
-        ...milestones.map(m=>el('g',{key:m.days},
-          el('line',{x1:m.x,y1:PT,x2:m.x,y2:PT+cH,stroke:'rgba(248,196,48,0.7)',strokeWidth:1.5,strokeDasharray:'4 3'}),
-          el('rect',{x:m.x+2,y:PT+2,width:28,height:14,rx:3,fill:'#2a2200',stroke:'#f0c030',strokeWidth:0.5}),
-          el('text',{x:m.x+7,y:PT+12,fontSize:9,fill:'#f0c030',fontWeight:700,fontFamily:'inherit'},m.days+'d')
-        )),
+        ...milestones.map(m=>{
+          if(m.past)return null;
+          // Each milestone gets a slightly different colour for distinction
+          const mcols={15:'#a78bfa',30:'#5b9bd5',60:'#4dbb6a',90:'#f0c030'};
+          const mcol=mcols[m.days]||'#f0c030';
+          const mbg={15:'#1a0f3c',30:'#0d1f3c',60:'#0d2a14',90:'#2a2200'};
+          const flipLabel=m.x>W*0.82; // flip label left if near right edge
+          const lx=flipLabel?m.x-34:m.x+3;
+          return el('g',{key:m.days},
+            el('line',{x1:m.x,y1:PT,x2:m.x,y2:PT+cH,stroke:mcol,strokeWidth:1.5,strokeDasharray:'4 3',opacity:0.85}),
+            el('rect',{x:lx,y:PT+2,width:30,height:14,rx:3,fill:mbg[m.days]||'#2a2200',stroke:mcol,strokeWidth:0.5}),
+            el('text',{x:lx+5,y:PT+12,fontSize:9,fill:mcol,fontWeight:700,fontFamily:'inherit'},m.days+'d')
+          );
+        }),
         // Line
         el('polyline',{points,fill:'none',stroke:lineCol,strokeWidth:1.5,strokeLinejoin:'round',strokeLinecap:'round'}),
         // Month labels
@@ -1357,131 +1387,6 @@ function StoreDistributionCard({storeMetrics,vel,prevVel,clsCol}){
 
 
 /* ── Post Launch View ── */
-function PostLaunchView(){
-  const [salesData,setSalesData]=React.useState(()=>{
-    try{const s=localStorage.getItem('au_pl_data');return s?JSON.parse(s):SALES_DATA_DEFAULT;}
-    catch{return SALES_DATA_DEFAULT;}
-  });
-  const [hidden,setHidden]=React.useState(()=>{
-    try{const s=localStorage.getItem('au_pl_hidden');return s?JSON.parse(s):[];}
-    catch{return [];}
-  });
-  const [sel,setSel]=React.useState(Object.keys(salesData)[0]||'');
-
-  const saveHidden=h=>{setHidden(h);try{localStorage.setItem('au_pl_hidden',JSON.stringify(h));}catch{}};
-  const removeProduct=name=>saveHidden([...hidden,name]);
-  const restoreProduct=name=>saveHidden(hidden.filter(h=>h!==name));
-
-  const visible=Object.keys(salesData).filter(k=>!hidden.includes(k));
-  const current=salesData[sel];
-
-  // If selected product is hidden, auto-select first visible
-  React.useEffect(()=>{if(hidden.includes(sel)&&visible.length>0)setSel(visible[0]);},[hidden,sel,visible]);
-
-  if(!current&&visible.length===0)return el('div',{style:{padding:40,textAlign:'center',color:'var(--text2)'}},
-    el('i',{className:'ti ti-chart-off',style:{fontSize:36,display:'block',marginBottom:12,opacity:.4}}),
-    'All products hidden. Restore them below.',el('br',null),
-    el('div',{style:{marginTop:16,display:'flex',gap:8,justifyContent:'center',flexWrap:'wrap'}},
-      hidden.map(name=>el('button',{key:name,onClick:()=>restoreProduct(name),className:'btn',style:{fontSize:11}},el('i',{className:'ti ti-eye'}),' Restore: '+name.slice(0,30)+'…'))
-    )
-  );
-
-  return el('div',{style:{padding:'20px'}},
-    // Product cards
-    el('div',{style:{marginBottom:20}},
-      el('div',{style:{fontSize:11,fontWeight:700,textTransform:'uppercase',letterSpacing:'.07em',color:'var(--text3)',marginBottom:10}},'Select Product'),
-      el('div',{style:{display:'flex',gap:10,flexWrap:'wrap'}},
-        visible.map(name=>{
-          const d=salesData[name];const isOn=sel===name;
-          return el('div',{key:name,style:{position:'relative',display:'inline-block'}},
-            el('div',{onClick:()=>setSel(name),style:{
-              background:isOn?'var(--info-bg)':'var(--bg)',
-              border:'0.5px solid '+(isOn?'var(--info)':'var(--bdr)'),
-              borderRadius:10,padding:'12px 16px',cursor:'pointer',minWidth:200,
-              boxShadow:isOn?'0 0 0 1px var(--info)':'none',transition:'all .12s'
-            }},
-              el('div',{style:{fontSize:10,color:isOn?'var(--info)':'var(--text3)',fontWeight:700,textTransform:'uppercase',letterSpacing:'.07em',marginBottom:4}},d.brand),
-              el('div',{style:{fontSize:13,fontWeight:700,color:isOn?'var(--info)':'var(--text)',marginBottom:6,lineHeight:1.3}},name),
-              el('div',{style:{display:'flex',gap:10,fontSize:11,color:isOn?'var(--info)':'var(--text2)'}},
-                el('span',null,d.units.toLocaleString()+' units'),
-                el('span',null,d.storeCount+' stores')
-              )
-            ),
-            el('button',{onClick:e=>{e.stopPropagation();if(confirm('Remove "'+name+'" from Post Launch? You can restore it anytime.'))removeProduct(name);},
-              title:'Remove product',
-              style:{position:'absolute',top:-6,right:-6,background:'var(--bg2)',border:'0.5px solid var(--bdr2)',borderRadius:'50%',width:20,height:20,cursor:'pointer',display:'none',alignItems:'center',justifyContent:'center',color:'var(--text3)',fontSize:11,padding:0},
-              className:'rm-btn'
-            },el('i',{className:'ti ti-x'}))
-          );
-        }),
-        // Restore hidden products
-        hidden.length>0&&el('div',{style:{display:'flex',flexDirection:'column',justifyContent:'center',gap:4,padding:'0 8px'}},
-          el('div',{style:{fontSize:10,color:'var(--text3)',marginBottom:4}},'Hidden:'),
-          hidden.map(name=>el('button',{key:name,onClick:()=>restoreProduct(name),style:{
-            background:'var(--bg2)',border:'0.5px dashed var(--bdr2)',borderRadius:6,
-            cursor:'pointer',padding:'4px 10px',fontSize:11,color:'var(--text2)',
-            fontFamily:'inherit',display:'flex',alignItems:'center',gap:5,whiteSpace:'nowrap'
-          }},el('i',{className:'ti ti-eye',style:{fontSize:11}}),name.slice(0,22)+'…'))
-        )
-      )
-    ),
-
-    !current?null:el('div',null,
-      // Daily orders line chart first
-      el(DailyLineChart,{daily:current.daily,brand:current.brand,skuClass:current.ocs?.skuClass,launchDate:current.launchDate}),
-      // Velocity & Selling Class
-      el(VelocityCard,{ocs:current.ocs,weekly:current.weekly}),
-      el(StoreDistributionCard,{
-        storeMetrics:current.storeMetrics,
-        vel:(()=>{const s=Object.entries(current.weekly).sort(([a],[b])=>a.localeCompare(b));return s.length>=1?s[s.length-1][1]/ONTARIO_STORES:0;})(),
-        prevVel:(()=>{const s=Object.entries(current.weekly).sort(([a],[b])=>a.localeCompare(b));return s.length>=2?s[s.length-2][1]/ONTARIO_STORES:null;})(),
-        clsCol:'var(--info)'
-      }),
-      // Metric cards
-      el('div',{style:{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:10,marginBottom:16}},
-        [{l:'Total Units Sold',v:current.units.toLocaleString(),s:'all orders',c:'var(--ok)'},
-         {l:'Stores Reached',v:current.storeCount,s:'retail locations',c:'var(--info)'},
-         {l:'Total Orders',v:current.orders,s:'from OCS',c:'var(--warn)'},
-         {l:'Avg Units / Order',v:Math.round(current.units/current.orders),s:'per order',c:'var(--text)'},
-        ].map((m,i)=>el('div',{key:i,style:{background:'var(--bg)',border:'0.5px solid var(--bdr)',borderRadius:10,padding:'14px 16px'}},
-          el('div',{style:{fontSize:11,color:'var(--text2)',marginBottom:6,fontWeight:500}},m.l),
-          el('div',{style:{fontSize:26,fontWeight:800,color:m.c,lineHeight:1}},m.v),
-          el('div',{style:{fontSize:10,color:'var(--text3)',marginTop:4}},m.s)
-        ))
-      ),
-
-      // Weekly chart + Regions
-      el('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16,marginBottom:16}},
-        el('div',{style:{background:'var(--bg)',border:'0.5px solid var(--bdr)',borderRadius:10,padding:'16px'}},
-          el(WeeklyChart,{weekly:current.weekly,monthly:current.monthly})
-        ),
-        el('div',{style:{background:'var(--bg)',border:'0.5px solid var(--bdr)',borderRadius:10,padding:'16px'}},
-          el('div',{style:{fontSize:12,fontWeight:700,marginBottom:14,display:'flex',alignItems:'center',gap:6}},
-            el('i',{className:'ti ti-map-2',style:{color:'var(--warn)'}}), 'Sales by Region'
-          ),
-          el(RegionBar,{regions:current.regions})
-        )
-      ),
-
-      // Ontario map + top stores
-      el('div',{style:{display:'grid',gridTemplateColumns:'1.4fr 1fr',gap:16}},
-        el('div',{style:{background:'var(--bg)',border:'0.5px solid var(--bdr)',borderRadius:10,padding:'16px'}},
-          el('div',{style:{fontSize:12,fontWeight:700,marginBottom:10,display:'flex',alignItems:'center',gap:6}},
-            el('i',{className:'ti ti-map-pin',style:{color:'#a78bfa'}}), 'Ontario Distribution'
-          ),
-          el(OntarioMap,{cityData:current.cities})
-        ),
-        el('div',{style:{background:'var(--bg)',border:'0.5px solid var(--bdr)',borderRadius:10,padding:'16px',overflowY:'auto',maxHeight:520}},
-          el(TopStores,{stores:current.stores}),
-          el('div',{style:{borderTop:'0.5px solid var(--bdr)',marginTop:16,paddingTop:16}}),
-          el(TopCities,{cities:current.cities})
-        )
-      )
-    )
-  );
-}
-
-
 
 /* ══════════════════════════════════════════
    SHAREPOINT SYNC
@@ -1664,6 +1569,203 @@ function SharePointPanel({data,setData,onClose}){
   );
 }
 
+function PostLaunchView({data}){
+  // data = launch dashboard data (for reading launchDate from product tasks)
+  const [salesData,setSalesData]=React.useState(()=>{
+    try{const s=localStorage.getItem('au_pl_data');return s?JSON.parse(s):SALES_DATA_DEFAULT;}
+    catch{return SALES_DATA_DEFAULT;}
+  });
+  const [hidden,setHidden]=React.useState(()=>{
+    try{const s=localStorage.getItem('au_pl_hidden');return s?JSON.parse(s):[];}
+    catch{return [];}
+  });
+  const [sel,setSel]=React.useState(Object.keys(SALES_DATA_DEFAULT)[0]||'');
+  const [activePC,setActivePC]=React.useState('pc1');
+
+  const saveHidden=h=>{setHidden(h);try{localStorage.setItem('au_pl_hidden',JSON.stringify(h));}catch{}};
+  const removeProduct=name=>saveHidden([...hidden,name]);
+  const restoreProduct=name=>saveHidden(hidden.filter(h=>h!==name));
+
+  // PC groupings matching the launch dashboard tabs
+  const PC_GROUPS=[
+    {id:'pc1',label:'PC#1 2026'},
+    {id:'pc2',label:'PC#2 2026'},
+    {id:'pc3',label:'PC#3 2026'},
+    {id:'other',label:'Other SKUs'},
+  ];
+
+  // Resolve launchDate: prefer the launch dashboard product's launchDate, fallback to SALES_DATA
+  const getEffectiveLaunchDate=(name,sdProd)=>{
+    // 1. Try to find matching product in launch dashboard by name similarity
+    for(const pcKey of Object.keys(data)){
+      if(!Array.isArray(data[pcKey]))continue;
+      const match=data[pcKey].find(p=>
+        p.name&&name&&(
+          name.toLowerCase().includes(p.shortName?.toLowerCase())||
+          p.name.toLowerCase().includes(name.split(' ').slice(0,3).join(' ').toLowerCase())
+        )
+      );
+      if(match&&match.launchDate)return match.launchDate;
+    }
+    // 2. Fall back to launchDate on the sales data product itself
+    if(sdProd?.launchDate)return sdProd.launchDate;
+    // 3. Fall back to OCS first receipt date
+    if(sdProd?.ocs?.firstReceipt)return sdProd.ocs.firstReceipt;
+    return '';
+  };
+
+  // Products grouped by PC
+  const allNames=Object.keys(salesData).filter(k=>!hidden.includes(k));
+  const grouped=PC_GROUPS.map(pc=>({
+    ...pc,
+    products:allNames.filter(name=>(salesData[name]?.pc||'other')===pc.id)
+  })).filter(g=>g.products.length>0||(g.id===activePC));
+
+  // If active PC has no products, auto-select first PC that does
+  React.useEffect(()=>{
+    const firstWithProducts=grouped.find(g=>g.products.length>0);
+    if(firstWithProducts&&!grouped.find(g=>g.id===activePC)?.products?.length){
+      setActivePC(firstWithProducts.id);
+    }
+  },[]);
+
+  const activeGroup=grouped.find(g=>g.id===activePC);
+  const visibleProds=activeGroup?.products||[];
+
+  // Auto-select first product in active PC if current sel not in this PC
+  React.useEffect(()=>{
+    if(visibleProds.length>0&&!visibleProds.includes(sel)){
+      setSel(visibleProds[0]);
+    }
+  },[activePC]);
+
+  const current=salesData[sel];
+  // Use SALES_DATA_DEFAULT launchDate (first order date) as priority for milestone markers
+  // Falls back to OCS firstReceipt, then dashboard launch date
+  const effectiveLaunchDate=current?(
+    SALES_DATA_DEFAULT[sel]?.launchDate ||
+    current?.launchDate ||
+    current?.ocs?.firstReceipt ||
+    getEffectiveLaunchDate(sel,current) ||
+    ''
+  ):'';
+
+  if(Object.keys(salesData).filter(k=>!hidden.includes(k)).length===0)
+    return el('div',{style:{padding:40,textAlign:'center',color:'var(--text2)'}},
+      el('i',{className:'ti ti-chart-off',style:{fontSize:36,display:'block',marginBottom:12,opacity:.4}}),
+      'All products hidden.',el('br',null),
+      el('div',{style:{marginTop:16,display:'flex',gap:8,justifyContent:'center',flexWrap:'wrap'}},
+        hidden.map(name=>el('button',{key:name,onClick:()=>restoreProduct(name),className:'btn'},el('i',{className:'ti ti-eye'}),' '+name.slice(0,30)))
+      )
+    );
+
+  return el('div',{style:{padding:'20px'}},
+    /* ── PC Tab bar ── */
+    el('div',{style:{display:'flex',gap:0,borderBottom:'0.5px solid var(--bdr)',marginBottom:16,overflowX:'auto'}},
+      PC_GROUPS.map(pc=>{
+        const count=Object.keys(salesData).filter(k=>!hidden.includes(k)&&(salesData[k]?.pc||'other')===pc.id).length;
+        if(count===0)return null;
+        const isOn=activePC===pc.id;
+        return el('button',{key:pc.id,onClick:()=>setActivePC(pc.id),style:{
+          background:'transparent',border:'none',
+          borderBottom:isOn?'2.5px solid var(--info)':'2.5px solid transparent',
+          cursor:'pointer',padding:'8px 18px',fontSize:13,fontFamily:'inherit',
+          color:isOn?'var(--info)':'var(--text2)',fontWeight:isOn?700:'normal',
+          display:'flex',alignItems:'center',gap:7,whiteSpace:'nowrap',
+          marginBottom:-1,
+        }},
+          pc.label,
+          el('span',{style:{fontSize:10,background:isOn?'var(--info-bg)':'var(--bg2)',color:isOn?'var(--info)':'var(--text3)',borderRadius:10,padding:'1px 7px',fontWeight:700}},count)
+        );
+      })
+    ),
+
+    /* ── Product cards for active PC ── */
+    el('div',{style:{marginBottom:20}},
+      el('div',{style:{display:'flex',gap:10,flexWrap:'wrap',alignItems:'flex-start'}},
+        visibleProds.map(name=>{
+          const d=salesData[name];const isOn=sel===name;
+          return el('div',{key:name,style:{position:'relative',display:'inline-block'}},
+            el('div',{onClick:()=>setSel(name),style:{
+              background:isOn?'var(--info-bg)':'var(--bg)',
+              border:'0.5px solid '+(isOn?'var(--info)':'var(--bdr)'),
+              borderRadius:10,padding:'12px 16px',cursor:'pointer',minWidth:190,
+              boxShadow:isOn?'0 0 0 1px var(--info)':'none',transition:'all .12s'
+            }},
+              el('div',{style:{fontSize:10,color:isOn?'var(--info)':'var(--text3)',fontWeight:700,textTransform:'uppercase',letterSpacing:'.07em',marginBottom:4}},d.brand),
+              el('div',{style:{fontSize:13,fontWeight:700,color:isOn?'var(--info)':'var(--text)',marginBottom:6,lineHeight:1.3}},name),
+              el('div',{style:{display:'flex',gap:10,fontSize:11,color:isOn?'var(--info)':'var(--text2)'}},
+                el('span',null,d.units.toLocaleString()+' units'),
+                el('span',null,d.storeCount+' stores')
+              )
+            ),
+            el('button',{onClick:e=>{e.stopPropagation();if(confirm('Remove "'+name+'" from Post Launch?'))removeProduct(name);},
+              title:'Remove',className:'rm-btn',
+              style:{position:'absolute',top:-6,right:-6,background:'var(--bg2)',border:'0.5px solid var(--bdr2)',borderRadius:'50%',width:20,height:20,cursor:'pointer',display:'none',alignItems:'center',justifyContent:'center',color:'var(--text3)',fontSize:11,padding:0}
+            },el('i',{className:'ti ti-x'}))
+          );
+        }),
+        /* Restore hidden products in this PC */
+        hidden.filter(name=>(salesData[name]?.pc||'other')===activePC).map(name=>
+          el('button',{key:name,onClick:()=>restoreProduct(name),style:{
+            background:'var(--bg2)',border:'0.5px dashed var(--bdr2)',borderRadius:8,
+            cursor:'pointer',padding:'8px 12px',fontSize:11,color:'var(--text2)',
+            fontFamily:'inherit',display:'flex',alignItems:'center',gap:5
+          }},el('i',{className:'ti ti-eye',style:{fontSize:11}}),name.slice(0,22)+'…')
+        )
+      )
+    ),
+
+    /* ── Product detail ── */
+    !current?el('div',{style:{color:'var(--text2)',padding:20,textAlign:'center'}},'No products in this product call yet.'):
+    el('div',null,
+      el(DailyLineChart,{daily:current.daily,brand:current.brand,skuClass:current.ocs?.skuClass,launchDate:effectiveLaunchDate}),
+      el(VelocityCard,{ocs:current.ocs,weekly:current.weekly}),
+      el(StoreDistributionCard,{
+        storeMetrics:current.storeMetrics,
+        vel:(()=>{const s=Object.entries(current.weekly).sort(([a],[b])=>a.localeCompare(b));return s.length>=1?s[s.length-1][1]/ONTARIO_STORES:0;})(),
+        prevVel:(()=>{const s=Object.entries(current.weekly).sort(([a],[b])=>a.localeCompare(b));return s.length>=2?s[s.length-2][1]/ONTARIO_STORES:null;})(),
+        clsCol:'var(--info)'
+      }),
+      el('div',{style:{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:10,marginBottom:16}},
+        [{l:'Total Units Sold',v:current.units.toLocaleString(),s:'all orders',c:'var(--ok)'},
+         {l:'Stores Reached',v:current.storeCount,s:'retail locations',c:'var(--info)'},
+         {l:'Total Orders',v:current.orders,s:'from OCS',c:'var(--warn)'},
+         {l:'Avg Units / Order',v:Math.round(current.units/current.orders),s:'per order',c:'var(--text)'},
+        ].map((m2,i)=>el('div',{key:i,style:{background:'var(--bg)',border:'0.5px solid var(--bdr)',borderRadius:10,padding:'14px 16px'}},
+          el('div',{style:{fontSize:11,color:'var(--text2)',marginBottom:6,fontWeight:500}},m2.l),
+          el('div',{style:{fontSize:26,fontWeight:800,color:m2.c,lineHeight:1}},m2.v),
+          el('div',{style:{fontSize:10,color:'var(--text3)',marginTop:4}},m2.s)
+        ))
+      ),
+      el('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16,marginBottom:16}},
+        el('div',{style:{background:'var(--bg)',border:'0.5px solid var(--bdr)',borderRadius:10,padding:'16px'}},
+          el(WeeklyChart,{weekly:current.weekly,monthly:current.monthly})
+        ),
+        el('div',{style:{background:'var(--bg)',border:'0.5px solid var(--bdr)',borderRadius:10,padding:'16px'}},
+          el('div',{style:{fontSize:12,fontWeight:700,marginBottom:14,display:'flex',alignItems:'center',gap:6}},
+            el('i',{className:'ti ti-map-2',style:{color:'var(--warn)'}}), 'Sales by Region'
+          ),
+          el(RegionBar,{regions:current.regions})
+        )
+      ),
+      el('div',{style:{display:'grid',gridTemplateColumns:'1.4fr 1fr',gap:16}},
+        el('div',{style:{background:'var(--bg)',border:'0.5px solid var(--bdr)',borderRadius:10,padding:'16px'}},
+          el('div',{style:{fontSize:12,fontWeight:700,marginBottom:10,display:'flex',alignItems:'center',gap:6}},
+            el('i',{className:'ti ti-map-pin',style:{color:'#a78bfa'}}), 'Ontario Distribution'
+          ),
+          el(OntarioMap,{cityData:current.cities})
+        ),
+        el('div',{style:{background:'var(--bg)',border:'0.5px solid var(--bdr)',borderRadius:10,padding:'16px',overflowY:'auto',maxHeight:520}},
+          el(TopStores,{stores:current.stores}),
+          el('div',{style:{borderTop:'0.5px solid var(--bdr)',marginTop:16,paddingTop:16}}),
+          el(TopCities,{cities:current.cities})
+        )
+      )
+    )
+  );
+}
+
 /* ── App ── */
 function App(){
   const init=loadState()||INITIAL;
@@ -1766,7 +1868,7 @@ function App(){
       )
     ),
     view==='postlaunch'
-      ? el(PostLaunchView,null)
+      ? el(PostLaunchView,{data})
       : el('div',null,
           el(ProductPanels,{prods,selId:prod?.id||'',setSelId,onAdd:addProd,onRemove:removeProd}),
           prodView==='summary'
@@ -1795,7 +1897,10 @@ function App(){
       el('div',null,
         el('h1',null,'Adult Rec — Product Launch Dashboard'),
         el('div',{style:{display:'flex',alignItems:'center',gap:12,flexWrap:'wrap',marginTop:2}},
-          el('small',{style:{color:'var(--text2)'}},'Ontario · 2026  ·  Last saved: ',fmtTs(lastSaved)),
+          el('div',{style:{display:'flex',alignItems:'center',gap:10}},
+            el('small',{style:{color:'var(--text2)'}},'Ontario · 2026  ·  Last saved: ',fmtTs(lastSaved)),
+            el('span',{style:{fontSize:10,background:'var(--info-bg)',color:'var(--info)',border:'0.5px solid var(--info)',borderRadius:5,padding:'1px 7px',fontWeight:700,letterSpacing:'.03em'}},'v1.14')
+          ),
           el('div',{style:{display:'flex',alignItems:'center',gap:6,background:'var(--bg2)',border:'0.5px solid var(--bdr2)',borderRadius:7,padding:'3px 10px'}},
             el('i',{className:'ti ti-building-store',style:{fontSize:12,color:'var(--text3)'}}),
             el('span',{style:{fontSize:11,color:'var(--text2)'}},'Stores:'),
@@ -1827,7 +1932,7 @@ function App(){
     ),
     showSP&&el(SharePointPanel,{data,setData,onClose:()=>setShowSP(false)}),
     shell,
-    el('p',{style:{fontSize:11,color:'var(--text3)',textAlign:'center',marginTop:12}},'Generated '+new Date().toLocaleDateString('en-CA',{year:'numeric',month:'long',day:'numeric'})+' · Keyboard: T Tasks · G Gantt · S Specs · ← → switch products · F fullscreen  ·  Built by Kyle Naujokaitis')
+    el('p',{style:{fontSize:11,color:'var(--text3)',textAlign:'center',marginTop:12}},'Generated '+new Date().toLocaleDateString('en-CA',{year:'numeric',month:'long',day:'numeric'})+' · Keyboard: T Tasks · G Gantt · S Specs · ← → switch products · F fullscreen  ·  Built by Kyle Naujokaitis  ·  v1.14')
   );
 }
 ReactDOM.createRoot(document.getElementById('root')).render(el(App));
