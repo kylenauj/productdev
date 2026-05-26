@@ -1401,10 +1401,11 @@ const GH_OWNER    = 'kylenauj';
 const GH_REPO     = 'productdev';
 const GH_FILE     = 'data.json';
 const GH_BRANCH   = 'main';
+const GH_TOKEN_DEFAULT = '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';
 
 const getGHConf = ()=>{ try{ return JSON.parse(localStorage.getItem(GH_CONF_KEY))||{}; }catch{ return {}; } };
 const saveGHConf = c=>{ try{ localStorage.setItem(GH_CONF_KEY, JSON.stringify(c)); }catch{} };
-const getToken = ()=>getGHConf().token||'';
+const getToken = ()=>getGHConf().token||GH_TOKEN_DEFAULT;
 
 const ghHeaders = token=>({
   'Authorization': 'token '+token,
@@ -1448,11 +1449,10 @@ async function ghWrite(token, data, sha){
 
 /* ── GitHub Sync Panel ── */
 function GitHubSyncPanel({data, setData, onClose}){
-  const [token,   setToken]   = React.useState(()=>getGHConf().token||'');
+  const token = GH_TOKEN_DEFAULT;
   const [autoRef, setAutoRef] = React.useState(()=>getGHConf().autoRefresh||false);
   const [status,  setStatus]  = React.useState(null);
   const [busy,    setBusy]    = React.useState(false);
-  const [show,    setShow]    = React.useState(false);
   const shaRef = React.useRef(getGHConf().sha||null);
 
   const saveConf = (t,ar,sha)=>{
@@ -1525,31 +1525,10 @@ function GitHubSyncPanel({data, setData, onClose}){
           'Code and data are separate. Pushing saves ',el('strong',null,'data.json'),' to your repo — your HTML/code is never changed. Data survives all future dashboard updates.'
         ),
 
-        /* PAT input */
-        el('div',{style:{marginBottom:18}},
-          el('label',{style:{fontSize:11,fontWeight:600,color:'var(--text2)',display:'block',marginBottom:5}},
-            'GitHub Personal Access Token (PAT)',
-            el('a',{href:'https://github.com/settings/tokens',target:'_blank',style:{fontSize:10,color:'var(--info)',marginLeft:8,textDecoration:'none'}},
-              'Get one ↗'
-            )
-          ),
-          el('div',{style:{display:'flex',gap:6}},
-            el('input',{
-              type:show?'text':'password',
-              className:'ei',
-              placeholder:'ghp_…',
-              value:token,
-              onChange:e=>setToken(e.target.value),
-              onBlur:()=>saveConf(token,autoRef),
-              style:{flex:1,fontSize:12,fontFamily:'monospace'}
-            }),
-            el('button',{onClick:()=>setShow(s=>!s),className:'icon-btn',title:show?'Hide':'Show'},
-              el('i',{className:'ti '+(show?'ti-eye-off':'ti-eye')})
-            )
-          ),
-          el('div',{style:{fontSize:10,color:'var(--text3)',marginTop:4}},
-            'Needs ',el('code',{style:{background:'var(--bg2)',padding:'1px 4px',borderRadius:3}},'repo'),' scope. Saved to this browser only — never shared.'
-          )
+        /* Connected indicator */
+        el('div',{style:{background:'var(--ok-bg)',border:'0.5px solid var(--ok)',borderRadius:8,padding:'10px 14px',marginBottom:18,fontSize:12,color:'var(--ok)',display:'flex',alignItems:'center',gap:8}},
+          el('i',{className:'ti ti-check'}),
+          el('span',null,el('strong',null,'Connected'),' — kylenauj/productdev · data.json')
         ),
 
         /* Buttons */
@@ -1815,43 +1794,48 @@ const isAuthed=()=>{try{return localStorage.getItem(AUTH_KEY)==='1';}catch{retur
 const setAuthed=()=>{try{localStorage.setItem(AUTH_KEY,'1');}catch{}};
 
 function LoginScreen({onAuth}){
-  const [pw,setPw]=React.useState('');
-  const [err,setErr]=React.useState(false);
-  const [loading,setLoading]=React.useState(false);
+  // Two stages: 1) password  2) load from GitHub (or skip to local)
+  const [stage,  setStage]  = React.useState('password'); // 'password' | 'load'
+  const [pw,     setPw]     = React.useState('');
+  const [err,    setErr]    = React.useState(false);
+  const [loading,setLoading]= React.useState(false);
   const [ghStatus,setGhStatus]=React.useState(null);
-  const pwRef=React.useRef();
-  React.useEffect(()=>{if(pwRef.current)pwRef.current.focus();},[]);
+  const pwRef = React.useRef();
+  React.useEffect(()=>{ if(stage==='password'&&pwRef.current) pwRef.current.focus(); },[stage]);
 
   const checkPw=()=>{
     if(pw===APP_PASSWORD){
       setErr(false);
-      setAuthed();
-      onAuth();
+      setStage('load');
     } else {
       setErr(true);
       setPw('');
-      if(pwRef.current)pwRef.current.focus();
+      if(pwRef.current) pwRef.current.focus();
     }
   };
 
   const loadFromGitHub=async()=>{
-    const conf=getGHConf();
-    if(!conf.token){setGhStatus({ok:false,msg:'No GitHub token saved. Enter password to access with local data.'});return;}
-    setLoading(true);setGhStatus(null);
+    setLoading(true); setGhStatus(null);
     try{
-      const result=await ghRead(conf.token);
+      const result=await ghRead(GH_TOKEN_DEFAULT);
       if(result){
         setGhStatus({ok:true,msg:'Loaded from GitHub!'});
         setAuthed();
-        setTimeout(()=>onAuth(result.data),600);
+        setTimeout(()=>onAuth(result.data),500);
       } else {
-        setGhStatus({ok:false,msg:'No data file found yet. Enter password to continue.'});
+        setGhStatus({ok:false,msg:'No data file found — loading with local data.'});
+        setAuthed();
+        setTimeout(()=>onAuth(),800);
       }
     }catch(e){
-      setGhStatus({ok:false,msg:'GitHub error: '+e.message});
+      setGhStatus({ok:false,msg:'GitHub error: '+e.message+' — loading local data.'});
+      setAuthed();
+      setTimeout(()=>onAuth(),1000);
     }
     setLoading(false);
   };
+
+  const enterLocal=()=>{ setAuthed(); onAuth(); };
 
   return el('div',{style:{
     minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',
@@ -1865,41 +1849,55 @@ function LoginScreen({onAuth}){
       el('div',{style:{fontSize:11,fontWeight:700,textTransform:'uppercase',letterSpacing:'.1em',color:'var(--text3)',marginBottom:10}},'Adult Rec'),
       el('h1',{style:{fontSize:22,fontWeight:800,letterSpacing:'-.3px',marginBottom:6}},'Product Launch Dashboard'),
       el('div',{style:{fontSize:11,color:'var(--text3)',marginBottom:32}},'Ontario · 2026 · v1.14'),
-      /* GitHub load button */
-      el('button',{onClick:loadFromGitHub,disabled:loading,style:{
-        width:'100%',background:'#24292f',border:'none',borderRadius:8,
-        padding:'11px',fontSize:13,fontFamily:'inherit',color:'#fff',fontWeight:600,
-        cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',
-        gap:8,marginBottom:16,opacity:loading?0.6:1
-      }},
-        loading
-          ? el('span',null,el('i',{className:'ti ti-loader-2',style:{animation:'spin 1s linear infinite'}}),' Loading…')
-          : el('span',null,el('i',{className:'ti ti-cloud-download'}),' Load from GitHub')
+
+      /* ── Stage 1: Password ── */
+      stage==='password'&&el('div',null,
+        el('input',{
+          ref:pwRef,type:'password',className:'ei',
+          placeholder:'Enter password',value:pw,
+          onChange:e=>{setPw(e.target.value);setErr(false);},
+          onKeyDown:e=>e.key==='Enter'&&checkPw(),
+          style:{fontSize:14,textAlign:'center',letterSpacing:'.1em',marginBottom:err?8:14}
+        }),
+        err&&el('div',{style:{fontSize:11,color:'var(--err)',marginBottom:10,display:'flex',alignItems:'center',justifyContent:'center',gap:4}},
+          el('i',{className:'ti ti-x'}), ' Incorrect password'
+        ),
+        el('button',{onClick:checkPw,style:{
+          width:'100%',background:'var(--info-bg)',border:'0.5px solid var(--info)',
+          borderRadius:8,padding:'12px',fontSize:13,fontFamily:'inherit',
+          color:'var(--info)',fontWeight:700,cursor:'pointer'
+        }},'Continue →')
       ),
-      ghStatus&&el('div',{style:{
-        padding:'8px 12px',borderRadius:7,fontSize:12,marginBottom:14,
-        background:ghStatus.ok?'var(--ok-bg)':'var(--err-bg)',
-        color:ghStatus.ok?'var(--ok)':'var(--err)',
-        display:'flex',alignItems:'center',gap:7,textAlign:'left'
-      }},el('i',{className:'ti '+(ghStatus.ok?'ti-check':'ti-alert-circle')}),ghStatus.msg),
-      el('div',{style:{display:'flex',alignItems:'center',gap:10,marginBottom:16}},
-        el('div',{style:{flex:1,height:'0.5px',background:'var(--bdr)'}}),
-        el('span',{style:{fontSize:11,color:'var(--text3)'}},'or enter password'),
-        el('div',{style:{flex:1,height:'0.5px',background:'var(--bdr)'}})
-      ),
-      el('input',{
-        ref:pwRef,type:'password',className:'ei',
-        placeholder:'Password',value:pw,
-        onChange:e=>{setPw(e.target.value);setErr(false);},
-        onKeyDown:e=>e.key==='Enter'&&checkPw(),
-        style:{fontSize:14,textAlign:'center',letterSpacing:'.1em',marginBottom:err?8:14}
-      }),
-      err&&el('div',{style:{fontSize:11,color:'var(--err)',marginBottom:10}},el('i',{className:'ti ti-x'}),' Incorrect password'),
-      el('button',{onClick:checkPw,style:{
-        width:'100%',background:'var(--info-bg)',border:'0.5px solid var(--info)',
-        borderRadius:8,padding:'11px',fontSize:13,fontFamily:'inherit',color:'var(--info)',
-        fontWeight:600,cursor:'pointer'
-      }},'Enter Dashboard')
+
+      /* ── Stage 2: Load ── */
+      stage==='load'&&el('div',null,
+        el('div',{style:{
+          background:'var(--ok-bg)',border:'0.5px solid var(--ok)',borderRadius:8,
+          padding:'10px 14px',marginBottom:20,fontSize:12,color:'var(--ok)',
+          display:'flex',alignItems:'center',gap:7
+        }},el('i',{className:'ti ti-check'}),' Password accepted'),
+        el('button',{onClick:loadFromGitHub,disabled:loading,style:{
+          width:'100%',background:'#24292f',border:'none',borderRadius:8,
+          padding:'12px',fontSize:13,fontFamily:'inherit',color:'#fff',fontWeight:700,
+          cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',
+          gap:8,marginBottom:12,opacity:loading?0.6:1
+        }},
+          loading
+            ? el('span',null,el('i',{className:'ti ti-loader-2',style:{animation:'spin 1s linear infinite',marginRight:6}}),'Loading…')
+            : el('span',null,el('i',{className:'ti ti-cloud-download'}),' Load from GitHub')
+        ),
+        ghStatus&&el('div',{style:{
+          padding:'8px 12px',borderRadius:7,fontSize:12,marginBottom:12,
+          background:ghStatus.ok?'var(--ok-bg)':'var(--warn-bg)',
+          color:ghStatus.ok?'var(--ok)':'var(--warn)',
+          display:'flex',alignItems:'center',gap:7,textAlign:'left'
+        }},el('i',{className:'ti '+(ghStatus.ok?'ti-check':'ti-alert-circle')}),ghStatus.msg),
+        !loading&&!ghStatus?.ok&&el('button',{onClick:enterLocal,style:{
+          width:'100%',background:'transparent',border:'0.5px solid var(--bdr2)',
+          borderRadius:8,padding:'10px',fontSize:12,fontFamily:'inherit',
+          color:'var(--text2)',cursor:'pointer'
+        }},'Skip — use local data')
+      )
     )
   );
 }
