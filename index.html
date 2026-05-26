@@ -1388,170 +1388,208 @@ function StoreDistributionCard({storeMetrics,vel,prevVel,clsCol}){
 
 /* ── Post Launch View ── */
 
+
 /* ══════════════════════════════════════════
-   SHAREPOINT SYNC
-   ─ Store data in a SharePoint JSON file
-   ─ All viewers read from the same source
-   ─ Auto-refreshes every 30s for viewers
+   GITHUB SYNC
+   ─ Saves/loads data.json in your repo
+   ─ Code (index.html) and data are separate
+   ─ Data survives all future code updates
 ══════════════════════════════════════════ */
 
-const SP_CONF_KEY = 'au_sp_config_v1';
-const getSPConf = ()=>{ try{ return JSON.parse(localStorage.getItem(SP_CONF_KEY))||{}; }catch{ return {}; } };
-const setSPConf = c=>{ try{ localStorage.setItem(SP_CONF_KEY,JSON.stringify(c)); }catch{} };
+const GH_CONF_KEY = 'au_gh_config_v1';
+const GH_OWNER    = 'kylenauj';
+const GH_REPO     = 'productdev';
+const GH_FILE     = 'data.json';
+const GH_BRANCH   = 'main';
 
-async function spDigest(siteUrl){
-  const r = await fetch(siteUrl+'/_api/contextinfo',{
-    method:'POST', credentials:'include',
-    headers:{'Accept':'application/json;odata=verbose','Content-Type':'application/json'}
-  });
-  if(!r.ok) throw new Error('Auth failed — are you logged into SharePoint?');
-  const d = await r.json();
-  return d.d.GetContextWebInformation.FormDigestValue;
-}
+const getGHConf = ()=>{ try{ return JSON.parse(localStorage.getItem(GH_CONF_KEY))||{}; }catch{ return {}; } };
+const saveGHConf = c=>{ try{ localStorage.setItem(GH_CONF_KEY, JSON.stringify(c)); }catch{} };
+const getToken = ()=>getGHConf().token||'';
 
-async function spRead(siteUrl, filePath){
-  const r = await fetch(siteUrl+'/_api/web/GetFileByServerRelativeUrl(\''+filePath+'\')/$value',{
-    credentials:'include', headers:{'Accept':'application/json'}
-  });
-  if(r.status===404) return null;
-  if(!r.ok) throw new Error('Read failed: '+r.status);
-  return await r.json();
-}
+const ghHeaders = token=>({
+  'Authorization': 'token '+token,
+  'Accept': 'application/vnd.github.v3+json',
+  'Content-Type': 'application/json',
+});
 
-async function spWrite(siteUrl, folderPath, fileName, data){
-  const digest = await spDigest(siteUrl);
+async function ghRead(token){
   const r = await fetch(
-    siteUrl+'/_api/web/GetFolderByServerRelativeUrl(\''+folderPath+'\')/Files/add(url=\''+fileName+'\',overwrite=true)',
-    { method:'POST', credentials:'include',
-      headers:{'X-RequestDigest':digest,'Accept':'application/json;odata=verbose','Content-Type':'application/octet-stream'},
-      body: JSON.stringify({...data, _spLastSaved: new Date().toISOString()})
-    }
+    `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${GH_FILE}?ref=${GH_BRANCH}`,
+    { headers: ghHeaders(token) }
   );
-  if(!r.ok) throw new Error('Save failed: '+r.status);
-  return true;
+  if(r.status===404) return null; // file doesn't exist yet
+  if(r.status===401||r.status===403) throw new Error('Invalid token — check your PAT has repo access.');
+  if(!r.ok) throw new Error('GitHub read failed: '+r.status);
+  const d = await r.json();
+  const content = JSON.parse(atob(d.content.replace(/\n/g,'')));
+  return { data: content, sha: d.sha };
 }
 
-/* ── SharePoint Panel ── */
-function SharePointPanel({data,setData,onClose}){
-  const conf = getSPConf();
-  const [siteUrl,setSiteUrl]   = React.useState(conf.siteUrl||'');
-  const [folderPath,setFolderPath] = React.useState(conf.folderPath||'');
-  const [fileName,setFileName] = React.useState(conf.fileName||'au_dashboard_data.json');
-  const [autoRefresh,setAutoRefresh] = React.useState(conf.autoRefresh||false);
-  const [status,setStatus]     = React.useState(null);
-  const [busy,setBusy]         = React.useState(false);
+async function ghWrite(token, data, sha){
+  const content = btoa(unescape(encodeURIComponent(JSON.stringify({...data, _ghLastSaved: new Date().toISOString()}))));
+  const body = {
+    message: 'Dashboard update '+new Date().toISOString().slice(0,16),
+    content,
+    branch: GH_BRANCH,
+    ...(sha ? { sha } : {})
+  };
+  const r = await fetch(
+    `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${GH_FILE}`,
+    { method:'PUT', headers: ghHeaders(token), body: JSON.stringify(body) }
+  );
+  if(r.status===401||r.status===403) throw new Error('Invalid token — check your PAT has repo access.');
+  if(!r.ok){
+    const e = await r.json().catch(()=>({}));
+    throw new Error(e.message||'GitHub write failed: '+r.status);
+  }
+  const d = await r.json();
+  return d.content.sha; // return new sha for next write
+}
 
-  // Derived full file path
-  const filePath = folderPath && fileName ? folderPath.replace(/\/$/,'')+'/'+fileName : '';
+/* ── GitHub Sync Panel ── */
+function GitHubSyncPanel({data, setData, onClose}){
+  const [token,   setToken]   = React.useState(()=>getGHConf().token||'');
+  const [autoRef, setAutoRef] = React.useState(()=>getGHConf().autoRefresh||false);
+  const [status,  setStatus]  = React.useState(null);
+  const [busy,    setBusy]    = React.useState(false);
+  const [show,    setShow]    = React.useState(false);
+  const shaRef = React.useRef(getGHConf().sha||null);
 
-  const save = ()=>{ setSPConf({siteUrl,folderPath,fileName,autoRefresh}); };
+  const saveConf = (t,ar,sha)=>{
+    saveGHConf({token:t,autoRefresh:ar,sha:sha||shaRef.current});
+  };
 
-  const handleLoad = async()=>{
-    if(!siteUrl||!filePath){ setStatus({ok:false,msg:'Fill in Site URL and folder path first.'}); return; }
+  const handlePull = async()=>{
+    if(!token){ setStatus({ok:false,msg:'Enter your GitHub PAT first.'}); return; }
     setBusy(true); setStatus(null);
     try{
-      const d = await spRead(siteUrl, filePath);
-      if(!d){ setStatus({ok:false,msg:'File not found — use Push to create it first.'}); }
+      const result = await ghRead(token);
+      if(!result){ setStatus({ok:false,msg:'No data.json found yet — use Push first to create it.'}); }
       else{
-        setData(d);
-        save();
-        setStatus({ok:true,msg:'Loaded! Dashboard updated from SharePoint.'});
+        shaRef.current = result.sha;
+        saveConf(token, autoRef, result.sha);
+        setData(result.data);
+        setStatus({ok:true, msg:'Pulled! Dashboard loaded from GitHub.'});
       }
     }catch(e){ setStatus({ok:false,msg:e.message}); }
     finally{ setBusy(false); }
   };
 
   const handlePush = async()=>{
-    if(!siteUrl||!filePath){ setStatus({ok:false,msg:'Fill in Site URL and folder path first.'}); return; }
+    if(!token){ setStatus({ok:false,msg:'Enter your GitHub PAT first.'}); return; }
     setBusy(true); setStatus(null);
     try{
-      await spWrite(siteUrl, folderPath, fileName, data);
-      save();
-      setStatus({ok:true,msg:'Saved to SharePoint! Viewers will see this on next refresh.'});
+      // Get latest sha before writing to avoid conflicts
+      const latest = await ghRead(token);
+      const sha = latest?.sha || shaRef.current || null;
+      const newSha = await ghWrite(token, data, sha);
+      shaRef.current = newSha;
+      saveConf(token, autoRef, newSha);
+      setStatus({ok:true, msg:'Saved to GitHub! Viewers can Pull to see your changes.'});
     }catch(e){ setStatus({ok:false,msg:e.message}); }
     finally{ setBusy(false); }
   };
 
-  const handleAutoRefresh = (val)=>{
-    setAutoRefresh(val);
-    setSPConf({...getSPConf(),autoRefresh:val});
+  const handleAutoRefresh = val=>{
+    setAutoRef(val);
+    saveConf(token, val, shaRef.current);
   };
 
   return el('div',{style:{
     position:'fixed',inset:0,background:'rgba(0,0,0,0.55)',zIndex:500,
     display:'flex',alignItems:'center',justifyContent:'center',padding:20
-  },onClick:e=>e.target===e.currentTarget&&onClose()},
+  }, onClick:e=>e.target===e.currentTarget&&onClose()},
     el('div',{style:{
       background:'var(--bg)',border:'0.5px solid var(--bdr2)',borderRadius:14,
-      width:'100%',maxWidth:520,boxShadow:'0 8px 40px rgba(0,0,0,0.4)'
+      width:'100%',maxWidth:500,boxShadow:'0 8px 40px rgba(0,0,0,0.4)'
     }},
       /* Header */
       el('div',{style:{padding:'16px 20px',borderBottom:'0.5px solid var(--bdr)',display:'flex',alignItems:'center',justifyContent:'space-between'}},
         el('div',null,
           el('div',{style:{fontSize:15,fontWeight:800,display:'flex',alignItems:'center',gap:8}},
-            el('i',{className:'ti ti-brand-sharepoint',style:{color:'#0078d4',fontSize:18}}),'SharePoint Sync'
+            el('i',{className:'ti ti-brand-github',style:{fontSize:18}}), 'GitHub Sync'
           ),
-          el('div',{style:{fontSize:11,color:'var(--text3)',marginTop:3}},'Share live data with your team — everyone reads from the same file')
+          el('div',{style:{fontSize:11,color:'var(--text3)',marginTop:3}},
+            GH_OWNER+' / '+GH_REPO+' → '+GH_FILE
+          )
         ),
-        el('button',{onClick:onClose,style:{background:'none',border:'none',cursor:'pointer',color:'var(--text3)',fontSize:18}},el('i',{className:'ti ti-x'}))
+        el('button',{onClick:onClose,style:{background:'none',border:'none',cursor:'pointer',color:'var(--text3)',fontSize:18}},
+          el('i',{className:'ti ti-x'})
+        )
       ),
 
       el('div',{style:{padding:'20px'}},
-        /* How it works */
+        /* Info banner */
         el('div',{style:{background:'var(--info-bg)',border:'0.5px solid var(--info)',borderRadius:8,padding:'10px 14px',marginBottom:18,fontSize:12,color:'var(--info)'}},
           el('i',{className:'ti ti-info-circle',style:{marginRight:6}}),
-          el('strong',null,'How it works:'),' Upload this HTML file to SharePoint. Enter your site details below. ',
-          el('strong',null,'Push'),' saves your edits. Viewers click ',el('strong',null,'Pull'),' or enable ',el('strong',null,'Auto-refresh'),' to see updates.'
+          'Code and data are separate. Pushing saves ',el('strong',null,'data.json'),' to your repo — your HTML/code is never changed. Data survives all future dashboard updates.'
         ),
 
-        /* Site URL */
-        el('div',{style:{marginBottom:12}},
-          el('label',{style:{fontSize:11,fontWeight:600,color:'var(--text2)',display:'block',marginBottom:5}},'SharePoint Site URL'),
-          el('input',{className:'ei',placeholder:'https://yourcompany.sharepoint.com/sites/YourSite',value:siteUrl,onChange:e=>setSiteUrl(e.target.value.replace(/\/$/,'')),style:{fontSize:12}}),
-          el('div',{style:{fontSize:10,color:'var(--text3)',marginTop:3}},'Your SharePoint site root — no trailing slash')
-        ),
-
-        /* Folder path */
-        el('div',{style:{marginBottom:12}},
-          el('label',{style:{fontSize:11,fontWeight:600,color:'var(--text2)',display:'block',marginBottom:5}},'Folder Path (Server-Relative)'),
-          el('input',{className:'ei',placeholder:'/sites/YourSite/Shared Documents/Dashboard',value:folderPath,onChange:e=>setFolderPath(e.target.value),style:{fontSize:12}}),
-          el('div',{style:{fontSize:10,color:'var(--text3)',marginTop:3}},'Right-click the folder in SharePoint → Copy link → extract the path')
-        ),
-
-        /* File name */
+        /* PAT input */
         el('div',{style:{marginBottom:18}},
-          el('label',{style:{fontSize:11,fontWeight:600,color:'var(--text2)',display:'block',marginBottom:5}},'Data File Name'),
-          el('input',{className:'ei',value:fileName,onChange:e=>setFileName(e.target.value),style:{fontSize:12,maxWidth:260}})
+          el('label',{style:{fontSize:11,fontWeight:600,color:'var(--text2)',display:'block',marginBottom:5}},
+            'GitHub Personal Access Token (PAT)',
+            el('a',{href:'https://github.com/settings/tokens',target:'_blank',style:{fontSize:10,color:'var(--info)',marginLeft:8,textDecoration:'none'}},
+              'Get one ↗'
+            )
+          ),
+          el('div',{style:{display:'flex',gap:6}},
+            el('input',{
+              type:show?'text':'password',
+              className:'ei',
+              placeholder:'ghp_…',
+              value:token,
+              onChange:e=>setToken(e.target.value),
+              onBlur:()=>saveConf(token,autoRef),
+              style:{flex:1,fontSize:12,fontFamily:'monospace'}
+            }),
+            el('button',{onClick:()=>setShow(s=>!s),className:'icon-btn',title:show?'Hide':'Show'},
+              el('i',{className:'ti '+(show?'ti-eye-off':'ti-eye')})
+            )
+          ),
+          el('div',{style:{fontSize:10,color:'var(--text3)',marginTop:4}},
+            'Needs ',el('code',{style:{background:'var(--bg2)',padding:'1px 4px',borderRadius:3}},'repo'),' scope. Saved to this browser only — never shared.'
+          )
         ),
 
-        /* Action buttons */
-        el('div',{style:{display:'flex',gap:10,marginBottom:14,flexWrap:'wrap'}},
-          el('button',{onClick:handleLoad,disabled:busy,style:{
-            background:'var(--bg2)',border:'0.5px solid var(--bdr2)',borderRadius:7,
-            cursor:'pointer',padding:'8px 16px',fontSize:12,fontFamily:'inherit',
-            color:'var(--text)',display:'flex',alignItems:'center',gap:6,opacity:busy?0.5:1
-          }},el('i',{className:'ti ti-cloud-download'}),' Pull from SharePoint'),
-          el('button',{onClick:handlePush,disabled:busy,style:{
-            background:'#0078d4',border:'none',borderRadius:7,
-            cursor:'pointer',padding:'8px 18px',fontSize:12,fontFamily:'inherit',
-            color:'#fff',fontWeight:600,display:'flex',alignItems:'center',gap:6,opacity:busy?0.5:1
-          }},busy?el('span',null,el('i',{className:'ti ti-loader-2',style:{animation:'spin 1s linear infinite',fontSize:13}}),' Saving…'):el('span',null,el('i',{className:'ti ti-cloud-upload'}),' Push to SharePoint'))
+        /* Buttons */
+        el('div',{style:{display:'flex',gap:10,marginBottom:14}},
+          el('button',{onClick:handlePull,disabled:busy||!token,style:{
+            flex:1,background:'var(--bg2)',border:'0.5px solid var(--bdr2)',
+            borderRadius:8,cursor:'pointer',padding:'10px',fontSize:13,
+            fontFamily:'inherit',color:'var(--text)',fontWeight:500,
+            display:'flex',alignItems:'center',justifyContent:'center',gap:7,
+            opacity:(busy||!token)?0.5:1
+          }},
+            el('i',{className:'ti ti-cloud-download',style:{fontSize:16}}), 'Pull from GitHub'
+          ),
+          el('button',{onClick:handlePush,disabled:busy||!token,style:{
+            flex:1,background:'#24292f',border:'none',
+            borderRadius:8,cursor:'pointer',padding:'10px',fontSize:13,
+            fontFamily:'inherit',color:'#fff',fontWeight:600,
+            display:'flex',alignItems:'center',justifyContent:'center',gap:7,
+            opacity:(busy||!token)?0.5:1
+          }},
+            busy
+              ? el('span',null,el('i',{className:'ti ti-loader-2',style:{animation:'spin 1s linear infinite',fontSize:14}}),' Saving…')
+              : el('span',null,el('i',{className:'ti ti-cloud-upload',style:{fontSize:16}}), ' Push to GitHub')
+          )
         ),
 
         /* Auto-refresh toggle */
         el('div',{style:{display:'flex',alignItems:'center',gap:10,padding:'10px 14px',background:'var(--bg2)',borderRadius:8,marginBottom:14}},
           el('div',{style:{flex:1}},
             el('div',{style:{fontSize:12,fontWeight:600,color:'var(--text)'}},'Auto-refresh (Viewer Mode)'),
-            el('div',{style:{fontSize:10,color:'var(--text3)',marginTop:2}},'Pulls latest data from SharePoint every 30 seconds')
+            el('div',{style:{fontSize:10,color:'var(--text3)',marginTop:2}},'Pulls latest data every 30 seconds — turn on for viewers')
           ),
-          el('button',{onClick:()=>handleAutoRefresh(!autoRefresh),style:{
+          el('button',{onClick:()=>handleAutoRefresh(!autoRef),style:{
             width:44,height:24,borderRadius:12,border:'none',cursor:'pointer',
-            background:autoRefresh?'#0078d4':'var(--bg3)',
-            position:'relative',transition:'background .2s',flexShrink:0
+            background:autoRef?'#24292f':'var(--bg3)',position:'relative',
+            transition:'background .2s',flexShrink:0
           }},
             el('div',{style:{
               width:18,height:18,borderRadius:9,background:'#fff',
-              position:'absolute',top:3,left:autoRefresh?23:3,
+              position:'absolute',top:3,left:autoRef?23:3,
               transition:'left .2s',boxShadow:'0 1px 3px rgba(0,0,0,.3)'
             }})
           )
@@ -1559,15 +1597,19 @@ function SharePointPanel({data,setData,onClose}){
 
         /* Status */
         status&&el('div',{style:{
-          padding:'9px 12px',borderRadius:7,fontSize:12,
+          padding:'10px 14px',borderRadius:8,fontSize:12,
           background:status.ok?'var(--ok-bg)':'var(--err-bg)',
           color:status.ok?'var(--ok)':'var(--err)',
-          display:'flex',alignItems:'center',gap:7
-        }},el('i',{className:'ti '+(status.ok?'ti-check':'ti-alert-circle')}),status.msg)
+          display:'flex',alignItems:'center',gap:8
+        }},
+          el('i',{className:'ti '+(status.ok?'ti-check':'ti-alert-circle')}),
+          status.msg
+        )
       )
     )
   );
 }
+
 
 function PostLaunchView({data}){
   // data = launch dashboard data (for reading launchDate from product tasks)
@@ -1767,7 +1809,103 @@ function PostLaunchView({data}){
 }
 
 /* ── App ── */
+const APP_PASSWORD='Mera2026!';
+const AUTH_KEY='au_auth_v1';
+const isAuthed=()=>{try{return localStorage.getItem(AUTH_KEY)==='1';}catch{return false;}};
+const setAuthed=()=>{try{localStorage.setItem(AUTH_KEY,'1');}catch{}};
+
+function LoginScreen({onAuth}){
+  const [pw,setPw]=React.useState('');
+  const [err,setErr]=React.useState(false);
+  const [loading,setLoading]=React.useState(false);
+  const [ghStatus,setGhStatus]=React.useState(null);
+  const pwRef=React.useRef();
+  React.useEffect(()=>{if(pwRef.current)pwRef.current.focus();},[]);
+
+  const checkPw=()=>{
+    if(pw===APP_PASSWORD){
+      setErr(false);
+      setAuthed();
+      onAuth();
+    } else {
+      setErr(true);
+      setPw('');
+      if(pwRef.current)pwRef.current.focus();
+    }
+  };
+
+  const loadFromGitHub=async()=>{
+    const conf=getGHConf();
+    if(!conf.token){setGhStatus({ok:false,msg:'No GitHub token saved. Enter password to access with local data.'});return;}
+    setLoading(true);setGhStatus(null);
+    try{
+      const result=await ghRead(conf.token);
+      if(result){
+        setGhStatus({ok:true,msg:'Loaded from GitHub!'});
+        setAuthed();
+        setTimeout(()=>onAuth(result.data),600);
+      } else {
+        setGhStatus({ok:false,msg:'No data file found yet. Enter password to continue.'});
+      }
+    }catch(e){
+      setGhStatus({ok:false,msg:'GitHub error: '+e.message});
+    }
+    setLoading(false);
+  };
+
+  return el('div',{style:{
+    minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',
+    background:'var(--bg3)',padding:20
+  }},
+    el('div',{style:{
+      background:'var(--bg)',border:'0.5px solid var(--bdr2)',borderRadius:16,
+      padding:'40px 36px',maxWidth:400,width:'100%',textAlign:'center',
+      boxShadow:'0 8px 40px rgba(0,0,0,0.35)'
+    }},
+      el('div',{style:{fontSize:11,fontWeight:700,textTransform:'uppercase',letterSpacing:'.1em',color:'var(--text3)',marginBottom:10}},'Adult Rec'),
+      el('h1',{style:{fontSize:22,fontWeight:800,letterSpacing:'-.3px',marginBottom:6}},'Product Launch Dashboard'),
+      el('div',{style:{fontSize:11,color:'var(--text3)',marginBottom:32}},'Ontario · 2026 · v1.14'),
+      /* GitHub load button */
+      el('button',{onClick:loadFromGitHub,disabled:loading,style:{
+        width:'100%',background:'#24292f',border:'none',borderRadius:8,
+        padding:'11px',fontSize:13,fontFamily:'inherit',color:'#fff',fontWeight:600,
+        cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',
+        gap:8,marginBottom:16,opacity:loading?0.6:1
+      }},
+        loading
+          ? el('span',null,el('i',{className:'ti ti-loader-2',style:{animation:'spin 1s linear infinite'}}),' Loading…')
+          : el('span',null,el('i',{className:'ti ti-cloud-download'}),' Load from GitHub')
+      ),
+      ghStatus&&el('div',{style:{
+        padding:'8px 12px',borderRadius:7,fontSize:12,marginBottom:14,
+        background:ghStatus.ok?'var(--ok-bg)':'var(--err-bg)',
+        color:ghStatus.ok?'var(--ok)':'var(--err)',
+        display:'flex',alignItems:'center',gap:7,textAlign:'left'
+      }},el('i',{className:'ti '+(ghStatus.ok?'ti-check':'ti-alert-circle')}),ghStatus.msg),
+      el('div',{style:{display:'flex',alignItems:'center',gap:10,marginBottom:16}},
+        el('div',{style:{flex:1,height:'0.5px',background:'var(--bdr)'}}),
+        el('span',{style:{fontSize:11,color:'var(--text3)'}},'or enter password'),
+        el('div',{style:{flex:1,height:'0.5px',background:'var(--bdr)'}})
+      ),
+      el('input',{
+        ref:pwRef,type:'password',className:'ei',
+        placeholder:'Password',value:pw,
+        onChange:e=>{setPw(e.target.value);setErr(false);},
+        onKeyDown:e=>e.key==='Enter'&&checkPw(),
+        style:{fontSize:14,textAlign:'center',letterSpacing:'.1em',marginBottom:err?8:14}
+      }),
+      err&&el('div',{style:{fontSize:11,color:'var(--err)',marginBottom:10}},el('i',{className:'ti ti-x'}),' Incorrect password'),
+      el('button',{onClick:checkPw,style:{
+        width:'100%',background:'var(--info-bg)',border:'0.5px solid var(--info)',
+        borderRadius:8,padding:'11px',fontSize:13,fontFamily:'inherit',color:'var(--info)',
+        fontWeight:600,cursor:'pointer'
+      }},'Enter Dashboard')
+    )
+  );
+}
+
 function App(){
+  const [authed,setAuthed_]=useState(isAuthed);
   const init=loadState()||INITIAL;
   const [data,setData]=useState(()=>({...INITIAL,...init,pcTabs:init.pcTabs||INITIAL.pcTabs}));
   const [view,setView]=useState(()=>data.pcTabs[0]?.id||'pc1');
@@ -1776,22 +1914,21 @@ function App(){
   const [fullscreen,setFullscreen]=useState(false);
   const [saved,setSaved]=useState(false);
   const [lastSaved,setLastSaved]=useState(null);
-  const [showSP,setShowSP]=useState(false);
+  const [showGH,setShowGH]=useState(false);
   const [renamingTab,setRenamingTab]=useState(null);
   const [storeCountVer,setStoreCountVer]=useState(0); // bumped when store count changes to force re-render
   const importRef=useRef();
 
   useEffect(()=>{saveState(data);setSaved(true);setLastSaved(Date.now());const t=setTimeout(()=>setSaved(false),1800);return()=>clearTimeout(t);},[data]);
 
-  // Auto-refresh from SharePoint for viewers
+  // Auto-refresh from GitHub for viewers
   useEffect(()=>{
-    const conf=getSPConf();
-    if(!conf.autoRefresh||!conf.siteUrl||!conf.folderPath||!conf.fileName)return;
-    const filePath=conf.folderPath.replace(/\/$/,'')+'/'+conf.fileName;
+    const conf=getGHConf();
+    if(!conf.autoRefresh||!conf.token)return;
     const interval=setInterval(async()=>{
       try{
-        const d=await spRead(conf.siteUrl,filePath);
-        if(d)setData(d);
+        const result=await ghRead(conf.token);
+        if(result)setData(result.data);
       }catch(e){ /* silent fail */ }
     },30000);
     return()=>clearInterval(interval);
@@ -1892,6 +2029,10 @@ function App(){
     )
   );
 
+  if(!authed) return el(LoginScreen,{onAuth:(ghData)=>{
+    if(ghData)setData(ghData);
+    setAuthed_(true);
+  }});
   return el('div',null,
     el('div',{className:'page-hd'},
       el('div',null,
@@ -1922,15 +2063,15 @@ function App(){
       ),
       el('div',{style:{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}},
         saved&&el('span',{className:'save-ind'},el('i',{className:'ti ti-check'}),' Saved'),
-        el('button',{className:'btn',onClick:()=>{if(confirm('Reset all data to defaults?')){localStorage.removeItem(LS_KEY);setData({...INITIAL});setView(INITIAL.pcTabs[0].id);setSels({pc1:'bb',pc2:'bcp',pc3:'pp'});setProdView('summary');}}},el('i',{className:'ti ti-rotate'}),' Reset'),
+        
         el('button',{className:'btn',onClick:()=>{const b=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='au_dashboard_'+new Date().toISOString().slice(0,10)+'.json';a.click();}},el('i',{className:'ti ti-download'}),' Backup'),
         el('button',{className:'btn',onClick:()=>importRef.current.click()},el('i',{className:'ti ti-upload'}),' Import'),
-        el('button',{className:'btn',onClick:()=>setShowSP(true),style:{background:getSPConf().siteUrl?'var(--info-bg)':'',border:getSPConf().siteUrl?'0.5px solid var(--info)':'',color:getSPConf().siteUrl?'var(--info)':''}},el('i',{className:'ti ti-brand-sharepoint'}),' SharePoint'),
+        el('button',{className:'btn',onClick:()=>setShowGH(true),style:{background:getToken()?'rgba(36,41,47,0.2)':'',border:getToken()?'0.5px solid rgba(255,255,255,0.3)':''}},el('i',{className:'ti ti-brand-github'}),' GitHub'),
         el('input',{ref:importRef,type:'file',accept:'.json',style:{display:'none'},onChange:importJSON}),
         el('button',{className:'btn',onClick:()=>window.print()},el('i',{className:'ti ti-printer'}),' Print')
       )
     ),
-    showSP&&el(SharePointPanel,{data,setData,onClose:()=>setShowSP(false)}),
+    showGH&&el(GitHubSyncPanel,{data,setData,onClose:()=>setShowGH(false)}),
     shell,
     el('p',{style:{fontSize:11,color:'var(--text3)',textAlign:'center',marginTop:12}},'Generated '+new Date().toLocaleDateString('en-CA',{year:'numeric',month:'long',day:'numeric'})+' · Keyboard: T Tasks · G Gantt · S Specs · ← → switch products · F fullscreen  ·  Built by Kyle Naujokaitis  ·  v1.14')
   );
