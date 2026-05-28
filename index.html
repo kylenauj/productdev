@@ -1389,47 +1389,49 @@ function StoreDistributionCard({storeMetrics,vel,prevVel,clsCol}){
 /* ââ Post Launch View ââ */
 
 
-/* ════════════════════════
-   SUPABASE SYNC
-   ═ Saves/loads data in Supabase database
-   ═ Real-time updates without GitHub commits
-   ═ Data survives all future code updates
-════════════════════════ */
+/* SUPABASE SYNC
+   - Saves/loads data in Supabase database
+   - Real-time updates without GitHub commits
+   - Data survives all future code updates
+*/
 
 const SB_URL = 'https://sxkaswnhqgatbpoeapsz.supabase.co';
 const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN4a2Fzd25ocWdhdGJwb2VhcHN6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk5Mzg3ODIsImV4cCI6MjA5NTUxNDc4Mn0.qKwK123yYWA-MRwfFR-s7q_ZAlrNWunLDrnJHa1eupA';
 const SB_TABLE = 'dashboard_data';
 const SB_ROW_KEY = 'main';
 
-const sbHeaders = {
-  'apikey': SB_KEY,
-  'Authorization': 'Bearer ' + SB_KEY,
-  'Content-Type': 'application/json',
-  'Prefer': 'return=representation'
-};
+/* Legacy GH stubs - kept so GitHubSyncPanel UI still compiles */
+const GH_OWNER = 'kylenauj';
+const GH_REPO = 'productdev';
+const GH_FILE = 'data.json';
+const GH_BRANCH = 'main';
+const GH_CONF_KEY = 'au_gh_config_v1';
+const GH_TOKEN_DEFAULT = '';
+const getGHConf = () => { try { return JSON.parse(localStorage.getItem(GH_CONF_KEY)) || {}; } catch { return {}; } };
+const saveGHConf = c => { try { localStorage.setItem(GH_CONF_KEY, JSON.stringify(c)); } catch {} };
+const getToken = () => getGHConf().token || GH_TOKEN_DEFAULT;
+const ghHeaders = token => ({'Authorization':'Bearer '+token,'Accept':'application/vnd.github.v3+json','Content-Type':'application/json'});
 
 async function ghRead(token){
   const r = await fetch(
-    SB_URL + '/rest/v1/' + SB_TABLE + '?key=eq.' + SB_ROW_KEY + '&select=value',
-    { headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY } }
+    SB_URL+'/rest/v1/'+SB_TABLE+'?key=eq.'+SB_ROW_KEY+'&select=value',
+    {headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}}
   );
-  if(!r.ok) throw new Error('Supabase read failed: ' + r.status);
+  if(!r.ok) throw new Error('Supabase read failed: '+r.status);
   const rows = await r.json();
-  if(!rows || rows.length === 0) return null;
-  return { data: rows[0].value, sha: null };
+  if(!rows||rows.length===0) return null;
+  return {data:rows[0].value,sha:null};
 }
 
-async function ghWrite(token, data, sha){
-  const payload = JSON.stringify({ key: SB_ROW_KEY, value: data, updated_at: new Date().toISOString() });
-  const r = await fetch(
-    SB_URL + '/rest/v1/' + SB_TABLE,
-    { method: 'POST', headers: { ...sbHeaders, 'Prefer': 'resolution=merge-duplicates,return=representation' }, body: payload }
-  );
-  if(!r.ok){
-    const e = await r.json().catch(() => ({}));
-    throw new Error('Supabase write failed: ' + r.status + ' ' + JSON.stringify(e));
-  }
-  return { sha: null };
+async function ghWrite(token,data,sha){
+  const payload = JSON.stringify({key:SB_ROW_KEY,value:data,updated_at:new Date().toISOString()});
+  const r = await fetch(SB_URL+'/rest/v1/'+SB_TABLE,{
+    method:'POST',
+    headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'resolution=merge-duplicates,return=representation'},
+    body:payload
+  });
+  if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error('Supabase write failed: '+r.status+' '+JSON.stringify(e));}
+  return {sha:null};
 }
 
 /* ââ GitHub Sync Panel ââ */
