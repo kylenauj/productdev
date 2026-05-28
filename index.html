@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Adult Rec — Product Launch Dashboard 2026  ·  v1.14</title>
+<title>Adult Rec â Product Launch Dashboard 2026  Â·  v1.14</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <style>
@@ -93,10 +93,10 @@ const {useState,useEffect,useRef,useCallback}=React;
 const el=React.createElement;
 const TODAY_D=new Date('2026-05-21T00:00:00');
 const parseD=s=>s?new Date(s+'T00:00:00'):null;
-const fmtD=s=>{if(!s)return'—';const d=parseD(s);return d.toLocaleDateString('en-CA',{month:'short',day:'numeric',year:'2-digit'});};
+const fmtD=s=>{if(!s)return'â';const d=parseD(s);return d.toLocaleDateString('en-CA',{month:'short',day:'numeric',year:'2-digit'});};
 const dLeft=s=>{if(!s)return null;return Math.ceil((parseD(s)-TODAY_D)/86400000);};
 const uid=()=>'t'+Math.random().toString(36).slice(2,8);
-const fmtTs=d=>d?new Date(d).toLocaleString('en-CA',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}):'—';
+const fmtTs=d=>d?new Date(d).toLocaleString('en-CA',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}):'â';
 
 const SC={'Done':{bg:'var(--ok-bg)',tx:'var(--ok)'},'In Progress':{bg:'var(--info-bg)',tx:'var(--info)'},'Not Started':{bg:'var(--bg2)',tx:'var(--text3)'},'Blocked':{bg:'var(--err-bg)',tx:'var(--err)'},'Delayed':{bg:'var(--err-bg)',tx:'var(--err)'},'High Priority':{bg:'var(--warn-bg)',tx:'var(--warn)'},'Accepted':{bg:'var(--ok-bg)',tx:'var(--ok)'},'Rejected':{bg:'var(--err-bg)',tx:'var(--err)'},'Cancelled':{bg:'var(--bg2)',tx:'var(--text3)'},'On Track':{bg:'var(--ok-bg)',tx:'var(--ok)'},'Pending':{bg:'var(--warn-bg)',tx:'var(--warn)'},'Launched':{bg:'var(--ok-bg)',tx:'var(--ok)'},'At Risk':{bg:'var(--warn-bg)',tx:'var(--warn)'}};
 const sc=s=>SC[s]||{bg:'var(--bg2)',tx:'var(--text2)'};
@@ -104,7 +104,7 @@ const ALL_TAG_OPTIONS=['Accepted','Rejected','Cancelled','Delayed','On Track','I
 const STATUS_OPTS=['Not Started','In Progress','Done','Blocked','Delayed'];
 const CAT={rd:{id:'rd',label:'R&D',light:'var(--rd-light)',text:'#9ac5f5',col:'#2468b8'},procurement:{id:'procurement',label:'Procurement',light:'var(--pr-light)',text:'#e8a84a',col:'#d4944a'},operations:{id:'operations',label:'Operations & Delivery',light:'var(--op-light)',text:'#4ecfa0',col:'#3dba8a'}};
 const CAT_ORDER=['rd','procurement','operations'];
-const TCAT={'R&D':'rd','Product Specs / Submission':'rd','Formulation Dev':'rd','Sensory':'rd','Sensory – Internal':'rd','Sensory – Customer':'rd','Formulation Finalization':'rd','NNCP/GTIN':'rd','Financial Analysis':'rd','Packaging Dev':'rd','Labels':'procurement','Input':'procurement','Internal Packaging':'procurement','External Packaging':'procurement','Materials On Site':'operations','Labour':'operations','Samples Ready':'operations','Sample Run':'operations','Base Marketing Materials':'operations','Pre-Sell / Promo':'operations','Pre-Selling':'operations','PO Received':'operations','Production Week':'operations','Bulk Production':'operations','Production/Shipment':'operations','Delivery into OCS':'operations'};
+const TCAT={'R&D':'rd','Product Specs / Submission':'rd','Formulation Dev':'rd','Sensory':'rd','Sensory â Internal':'rd','Sensory â Customer':'rd','Formulation Finalization':'rd','NNCP/GTIN':'rd','Financial Analysis':'rd','Packaging Dev':'rd','Labels':'procurement','Input':'procurement','Internal Packaging':'procurement','External Packaging':'procurement','Materials On Site':'operations','Labour':'operations','Samples Ready':'operations','Sample Run':'operations','Base Marketing Materials':'operations','Pre-Sell / Promo':'operations','Pre-Selling':'operations','PO Received':'operations','Production Week':'operations','Bulk Production':'operations','Production/Shipment':'operations','Delivery into OCS':'operations'};
 const getTC=n=>TCAT[n]||'operations';
 const BCOL={
   'Done':      {rd:'#1a5fa8',   procurement:'#d4944a',  operations:'#2da878'},
@@ -137,50 +137,50 @@ const SPEC_SECTIONS=[
 const BLANK_PROD=pcLabel=>({
   id:uid(),brand:'New Brand',name:'New Product',shortName:'New Product',launchDate:'',tags:['In Progress'],
   notes:{updates:'',blockers:''},
-  specs:{'Planned Launch Time':pcLabel,'Brand Name Internal':'','Product Name Internal':'','Manufactured by: LP Name':'Mera Cannabis Corp.','Launch Window':'TBD','Stocking Type':'Stocking > FT','Initial Case Offering (FT)':'TBD','Samples Required':'Yes','Landed Cost':'—','Wholesale Cost':'—','MSRP':'—','Margin %':'—','Category':'','Product Size':''},
+  specs:{'Planned Launch Time':pcLabel,'Brand Name Internal':'','Product Name Internal':'','Manufactured by: LP Name':'Mera Cannabis Corp.','Launch Window':'TBD','Stocking Type':'Stocking > FT','Initial Case Offering (FT)':'TBD','Samples Required':'Yes','Landed Cost':'â','Wholesale Cost':'â','MSRP':'â','Margin %':'â','Category':'','Product Size':''},
   tasks:[mk(uid(),'NNCP/GTIN','','Not Started','',''),mk(uid(),'Formulation Dev','Chi','Not Started','',''),mk(uid(),'Sensory','','Not Started','',''),mk(uid(),'Packaging Dev','','Not Started','',''),mk(uid(),'Financial Analysis','','Not Started','',''),mk(uid(),'Labels','','Not Started','',''),mk(uid(),'Input','','Not Started','',''),mk(uid(),'Internal Packaging','','Not Started','',''),mk(uid(),'External Packaging','','Not Started','',''),mk(uid(),'Materials On Site','','Not Started','',''),mk(uid(),'Sample Run','','Not Started','',''),mk(uid(),'Pre-Selling','','Not Started','',''),mk(uid(),'Bulk Production','','Not Started','',''),mk(uid(),'Production/Shipment','','Not Started','',''),mk(uid(),'Delivery into OCS','','Not Started','')]
 });
 
-/* ── DATA ── */
+/* ââ DATA ââ */
 const INITIAL={
 pcTabs:[{id:'pc1',label:'PC#1 2026'},{id:'pc2',label:'PC#2 2026'},{id:'pc3',label:'PC#3 2026'}],
 pc1:[
-  {id:'bb',brand:'Litti',name:'Berry Blaze Liquid Diamonds All-in-One',shortName:'Berry Blaze AIO',launchDate:'2026-04-30',tags:['Accepted'],notes:{updates:'Branded pouches path being evaluated.',blockers:'Pouch delivery timeline risk.'},specs:{'Planned Launch Time':'Spring 2026 - ACCEPTED','Commercial Lead':'Jim','Formulation Lead':'Chi','Ops Lead':'Ian','Brand Name Internal':'Litti','Product Name Internal':'Berry Blaze Liquid Diamonds All-in-One','Manufactured by: LP Name':'Mera Cannabis Corp.','Stocking Status':'TBD','Launch Window':'April 1, 2026','Stocking Type':'Flowthrough','Initial Case Offering (FT)':'N/A','Samples Required':'100 units','Landed Cost':'$22.00','Wholesale Cost':'$27.50','MSRP':'$38.50','Margin %':'41%','Launch PO':'2400 units','Sales Target':'4,000/month','Category':'Vape - All-in-One','Product Size':'1g','Formulated Range':'85%','Label THC Range':'95-99% (98%)','Target CBD Range':'0-5%','Other Cannabinoids, Range':'N/A','Flavouring Type':'Botanical Terpenes','Flavour Description':'Berry Blaze','Biomass Input':'N/A','Formulations':'52 wt.% Distillate + 38 wt.% Liquid Diamonds + 10 wt.% Botanical Terpene','Ingredients':'Cannabis Extract, Botanical Terpenes','Target Product Image':'TBD','Target Accessory Image':'N/A','Product Primary/Hardware':'Cilicon – Nova Deli 1','Product Package/Outer':'4×6" Branded Pouch','Packaging Labels':'3.25"×4.25" front label','Accessory':'THC sticker','Master Case GTIN':'10876936002466','Retail Pack GTIN':'876936002469','Master Case Dimensions':'6×6×4','Units per Master Shipper/Case':'12','Who is responsible for Labels Sourcing?':'Mera Cannabis Corp.','Do we need new dies for labels?':'No','Vendor providing retail labels?':'Minuteman Press','Vendor providing case labels?':'MERA In-House','Action Items':'Branded China Vendor Pouches: 2–3 wks manufacture + ~45 days delivery. Path 1: Branded & hope for April. Path 2: Unbranded → branded. Path 3: ePac/local.'},
-   tasks:[mk('a1','R&D','','In Progress','2025-10-01','2025-11-07'),mk('a2','Product Specs / Submission','Kyle N.','In Progress','2025-10-01','2025-11-07','',true),mk('a3','Formulation Dev','Wei','Done','2025-10-01','2025-11-07','',true),mk('a4','Sensory','Wei','Done','2025-10-01','2025-11-07','External Sensory Validation pending'),mk('a5','Packaging Dev','Kyle N.','Done','2025-10-01','2025-12-10','Review Branded option w/ Jim'),mk('a6','Financial Analysis','Aamir','Done','2025-10-01','2025-11-07','Margin confirmed 41%',true),mk('a7','Labels','Kyle N.','In Progress','2026-02-12','2026-03-04','Reach out to Chris'),mk('a8','Input','Chi','Done','2026-02-05','2026-03-04'),mk('a9','Internal Packaging','Kyle N.','Done','2025-12-10','2026-03-04'),mk('a10','External Packaging','Kyle N.','In Progress','2026-02-06','2026-03-04','Poke timeline – Zafeer'),mk('a11','Materials On Site','Jeremy','In Progress','2026-02-23','2026-03-06'),mk('a12','Samples Ready','Jeremy','Not Started','2026-03-09','2026-03-13','Fill carts first'),mk('a13','Base Marketing Materials','Cece','In Progress','2026-03-09','2026-03-13'),mk('a14','Pre-Sell / Promo','Sales Team','Not Started','2026-03-13','2026-04-14'),mk('a15','PO Received','Jeremy','Not Started','2026-04-20','2026-04-22')]},
-  {id:'cc',brand:'Litti',name:'Cherry Chonk Liquid Diamonds All-in-One',shortName:'Cherry Chonk AIO',launchDate:'2026-04-30',tags:['Accepted'],notes:{updates:'',blockers:''},specs:{'Planned Launch Time':'Spring 2026 - ACCEPTED','Commercial Lead':'Jim','Formulation Lead':'Chi','Ops Lead':'Ian','Brand Name Internal':'Litti','Product Name Internal':'Cherry Chonk Liquid Diamonds All-in-One','Manufactured by: LP Name':'Mera Cannabis Corp.','Stocking Status':'TBD','Launch Window':'April 1, 2026','Stocking Type':'Flowthrough','Initial Case Offering (FT)':'N/A','Samples Required':'100 units','Landed Cost':'$22.00','Wholesale Cost':'$27.50','MSRP':'$38.50','Margin %':'41%','Launch PO':'2400 units','Sales Target':'4,000/month','Category':'Vape - All-in-One','Product Size':'1g','Label THC Range':'95-99% (98%)','Flavouring Type':'Botanical Terpenes','Master Case GTIN':'10876936002497','Retail Pack GTIN':'876936002490','Master Case Dimensions':'6×6×4','Units per Master Shipper/Case':'12','Who is responsible for Labels Sourcing?':'Mera Cannabis Corp.','Do we need new dies for labels?':'No','Vendor providing retail labels?':'Minuteman Press','Vendor providing case labels?':'MERA In-House'},
+  {id:'bb',brand:'Litti',name:'Berry Blaze Liquid Diamonds All-in-One',shortName:'Berry Blaze AIO',launchDate:'2026-04-30',tags:['Accepted'],notes:{updates:'Branded pouches path being evaluated.',blockers:'Pouch delivery timeline risk.'},specs:{'Planned Launch Time':'Spring 2026 - ACCEPTED','Commercial Lead':'Jim','Formulation Lead':'Chi','Ops Lead':'Ian','Brand Name Internal':'Litti','Product Name Internal':'Berry Blaze Liquid Diamonds All-in-One','Manufactured by: LP Name':'Mera Cannabis Corp.','Stocking Status':'TBD','Launch Window':'April 1, 2026','Stocking Type':'Flowthrough','Initial Case Offering (FT)':'N/A','Samples Required':'100 units','Landed Cost':'$22.00','Wholesale Cost':'$27.50','MSRP':'$38.50','Margin %':'41%','Launch PO':'2400 units','Sales Target':'4,000/month','Category':'Vape - All-in-One','Product Size':'1g','Formulated Range':'85%','Label THC Range':'95-99% (98%)','Target CBD Range':'0-5%','Other Cannabinoids, Range':'N/A','Flavouring Type':'Botanical Terpenes','Flavour Description':'Berry Blaze','Biomass Input':'N/A','Formulations':'52 wt.% Distillate + 38 wt.% Liquid Diamonds + 10 wt.% Botanical Terpene','Ingredients':'Cannabis Extract, Botanical Terpenes','Target Product Image':'TBD','Target Accessory Image':'N/A','Product Primary/Hardware':'Cilicon â Nova Deli 1','Product Package/Outer':'4Ã6" Branded Pouch','Packaging Labels':'3.25"Ã4.25" front label','Accessory':'THC sticker','Master Case GTIN':'10876936002466','Retail Pack GTIN':'876936002469','Master Case Dimensions':'6Ã6Ã4','Units per Master Shipper/Case':'12','Who is responsible for Labels Sourcing?':'Mera Cannabis Corp.','Do we need new dies for labels?':'No','Vendor providing retail labels?':'Minuteman Press','Vendor providing case labels?':'MERA In-House','Action Items':'Branded China Vendor Pouches: 2â3 wks manufacture + ~45 days delivery. Path 1: Branded & hope for April. Path 2: Unbranded â branded. Path 3: ePac/local.'},
+   tasks:[mk('a1','R&D','','In Progress','2025-10-01','2025-11-07'),mk('a2','Product Specs / Submission','Kyle N.','In Progress','2025-10-01','2025-11-07','',true),mk('a3','Formulation Dev','Wei','Done','2025-10-01','2025-11-07','',true),mk('a4','Sensory','Wei','Done','2025-10-01','2025-11-07','External Sensory Validation pending'),mk('a5','Packaging Dev','Kyle N.','Done','2025-10-01','2025-12-10','Review Branded option w/ Jim'),mk('a6','Financial Analysis','Aamir','Done','2025-10-01','2025-11-07','Margin confirmed 41%',true),mk('a7','Labels','Kyle N.','In Progress','2026-02-12','2026-03-04','Reach out to Chris'),mk('a8','Input','Chi','Done','2026-02-05','2026-03-04'),mk('a9','Internal Packaging','Kyle N.','Done','2025-12-10','2026-03-04'),mk('a10','External Packaging','Kyle N.','In Progress','2026-02-06','2026-03-04','Poke timeline â Zafeer'),mk('a11','Materials On Site','Jeremy','In Progress','2026-02-23','2026-03-06'),mk('a12','Samples Ready','Jeremy','Not Started','2026-03-09','2026-03-13','Fill carts first'),mk('a13','Base Marketing Materials','Cece','In Progress','2026-03-09','2026-03-13'),mk('a14','Pre-Sell / Promo','Sales Team','Not Started','2026-03-13','2026-04-14'),mk('a15','PO Received','Jeremy','Not Started','2026-04-20','2026-04-22')]},
+  {id:'cc',brand:'Litti',name:'Cherry Chonk Liquid Diamonds All-in-One',shortName:'Cherry Chonk AIO',launchDate:'2026-04-30',tags:['Accepted'],notes:{updates:'',blockers:''},specs:{'Planned Launch Time':'Spring 2026 - ACCEPTED','Commercial Lead':'Jim','Formulation Lead':'Chi','Ops Lead':'Ian','Brand Name Internal':'Litti','Product Name Internal':'Cherry Chonk Liquid Diamonds All-in-One','Manufactured by: LP Name':'Mera Cannabis Corp.','Stocking Status':'TBD','Launch Window':'April 1, 2026','Stocking Type':'Flowthrough','Initial Case Offering (FT)':'N/A','Samples Required':'100 units','Landed Cost':'$22.00','Wholesale Cost':'$27.50','MSRP':'$38.50','Margin %':'41%','Launch PO':'2400 units','Sales Target':'4,000/month','Category':'Vape - All-in-One','Product Size':'1g','Label THC Range':'95-99% (98%)','Flavouring Type':'Botanical Terpenes','Master Case GTIN':'10876936002497','Retail Pack GTIN':'876936002490','Master Case Dimensions':'6Ã6Ã4','Units per Master Shipper/Case':'12','Who is responsible for Labels Sourcing?':'Mera Cannabis Corp.','Do we need new dies for labels?':'No','Vendor providing retail labels?':'Minuteman Press','Vendor providing case labels?':'MERA In-House'},
    tasks:[mk('b1','R&D','','In Progress','2025-10-01','2025-11-07'),mk('b2','Product Specs / Submission','Kyle N.','In Progress','2025-10-01','2025-11-07','',true),mk('b3','Formulation Dev','Wei','Done','2025-10-01','2025-11-07'),mk('b4','Sensory','Wei','Done','2025-10-01','2025-11-07'),mk('b5','Packaging Dev','Kyle N.','Done','2025-10-01','2025-12-10'),mk('b6','Financial Analysis','Aamir','Done','2025-10-01','2025-11-07','41%',true),mk('b7','Labels','Kyle N.','Not Started','2026-03-16','2026-03-31'),mk('b8','Input','Chi','Not Started','2026-03-01','2026-03-31'),mk('b9','Internal Packaging','Kyle N.','In Progress','2025-12-10','2026-03-31'),mk('b10','External Packaging','Kyle N.','In Progress','2026-03-01',''),mk('b11','Materials On Site','Jeremy','Not Started','',''),mk('b12','Labour','Jeremy','Not Started','',''),mk('b13','PO Received','Jeremy','Not Started','',''),mk('b14','Production/Shipment','Kevin','Not Started','','')]},
-  {id:'nlpr',brand:'Shatterizer',name:'NL 60+ Diamonds & Shatter Infused Pre-Rolls 3×0.5g',shortName:'NL 60+ Pre-Rolls',launchDate:'2026-04-30',tags:['Accepted'],notes:{updates:'',blockers:'Lock in tube spec.'},specs:{'Planned Launch Time':'Spring 2026 - ACCEPTED','Commercial Lead':'Jim','Formulation Lead':'Chi','Ops Lead':'Ian','Brand Name Internal':'Shatterizer','Product Name Internal':'NL 60+ Diamonds & Shatter Infused Pre-Rolls','Manufactured by: LP Name':'Mera Cannabis Corp.','Stocking Status':'TBD','Launch Window':'April 1, 2026','Stocking Type':'Flowthrough','Initial Case Offering (FT)':'N/A','Samples Required':'100 units','Landed Cost':'$18.68','Margin %':'42%','Sales Target':'3,000/month','Category':'Infused Pre-Roll','Product Size':'3×0.5g (1.5g)','Label THC Range':'60-66% (62%)','Flavouring Type':'CDTs','Formulations':'40 wt% biomass + 54 wt.% Extracts + 6 wt.% terpenes','Ingredients':'Dried Cannabis, Cannabis Extract','Master Case GTIN':'10876936002480','Retail Pack GTIN':'876936002483','Who is responsible for Labels Sourcing?':'Mera Cannabis Corp.','Do we need new dies for labels?':'No','Vendor providing retail labels?':'Minuteman Press','Vendor providing case labels?':'MERA In-House','Action Items':'Confirm final product and package specs from sample. Validate quality w/ Wei. Lock in TUBE!'},
-   tasks:[mk('c1','R&D','','In Progress','2025-10-01','2025-11-07'),mk('c2','Product Specs / Submission','Kyle N.','Done','2025-10-01','2025-11-07'),mk('c3','Formulation Dev','Wei','In Progress','2025-11-05','2025-11-26'),mk('c4','Sensory – Internal','Wei','Not Started','2025-11-26','2025-12-03'),mk('c5','Sensory – Customer','Kyle N.','Not Started','2025-12-03','2025-12-10'),mk('c6','Formulation Finalization','Wei','Not Started','',''),mk('c7','Packaging Dev','Kyle N.','Done','2025-10-01','2025-12-10','Acceptable Kief loss – send to Jim'),mk('c8','Financial Analysis','Aamir','Done','2025-10-01','2025-11-07'),mk('c9','Labels','Kyle N.','Not Started','',''),mk('c10','Input','Chi','Not Started','',''),mk('c11','Internal Packaging','Kyle N.','In Progress','2025-12-10',''),mk('c12','External Packaging','Kyle N.','In Progress','2025-12-10','')]},
+  {id:'nlpr',brand:'Shatterizer',name:'NL 60+ Diamonds & Shatter Infused Pre-Rolls 3Ã0.5g',shortName:'NL 60+ Pre-Rolls',launchDate:'2026-04-30',tags:['Accepted'],notes:{updates:'',blockers:'Lock in tube spec.'},specs:{'Planned Launch Time':'Spring 2026 - ACCEPTED','Commercial Lead':'Jim','Formulation Lead':'Chi','Ops Lead':'Ian','Brand Name Internal':'Shatterizer','Product Name Internal':'NL 60+ Diamonds & Shatter Infused Pre-Rolls','Manufactured by: LP Name':'Mera Cannabis Corp.','Stocking Status':'TBD','Launch Window':'April 1, 2026','Stocking Type':'Flowthrough','Initial Case Offering (FT)':'N/A','Samples Required':'100 units','Landed Cost':'$18.68','Margin %':'42%','Sales Target':'3,000/month','Category':'Infused Pre-Roll','Product Size':'3Ã0.5g (1.5g)','Label THC Range':'60-66% (62%)','Flavouring Type':'CDTs','Formulations':'40 wt% biomass + 54 wt.% Extracts + 6 wt.% terpenes','Ingredients':'Dried Cannabis, Cannabis Extract','Master Case GTIN':'10876936002480','Retail Pack GTIN':'876936002483','Who is responsible for Labels Sourcing?':'Mera Cannabis Corp.','Do we need new dies for labels?':'No','Vendor providing retail labels?':'Minuteman Press','Vendor providing case labels?':'MERA In-House','Action Items':'Confirm final product and package specs from sample. Validate quality w/ Wei. Lock in TUBE!'},
+   tasks:[mk('c1','R&D','','In Progress','2025-10-01','2025-11-07'),mk('c2','Product Specs / Submission','Kyle N.','Done','2025-10-01','2025-11-07'),mk('c3','Formulation Dev','Wei','In Progress','2025-11-05','2025-11-26'),mk('c4','Sensory â Internal','Wei','Not Started','2025-11-26','2025-12-03'),mk('c5','Sensory â Customer','Kyle N.','Not Started','2025-12-03','2025-12-10'),mk('c6','Formulation Finalization','Wei','Not Started','',''),mk('c7','Packaging Dev','Kyle N.','Done','2025-10-01','2025-12-10','Acceptable Kief loss â send to Jim'),mk('c8','Financial Analysis','Aamir','Done','2025-10-01','2025-11-07'),mk('c9','Labels','Kyle N.','Not Started','',''),mk('c10','Input','Chi','Not Started','',''),mk('c11','Internal Packaging','Kyle N.','In Progress','2025-12-10',''),mk('c12','External Packaging','Kyle N.','In Progress','2025-12-10','')]},
   {id:'ting',brand:'Litti',name:'Ting-a-Ling Zing Liquid Diamonds All-in-One',shortName:'Ting-a-Ling AIO',launchDate:'',tags:['Rejected'],notes:{updates:'',blockers:''},specs:{'Brand Name Internal':'Litti','Product Name Internal':'Ting-a-Ling Zing AIO','Manufactured by: LP Name':'Mera Cannabis Corp.','Stocking Status':'Rejected','Launch Window':'April-May','Margin %':'41%','Category':'Vape - All-in-One','Product Size':'1g','Label THC Range':'95-99% (98%)'},tasks:[]},
 ],
 pc2:[
-  {id:'bcp',brand:'Greazy',name:'Black Cherry Punch Live Rosin 1g',shortName:'Black Cherry Rosin',launchDate:'2026-07-30',tags:['In Progress'],notes:{updates:'',blockers:''},specs:{'Planned Launch Time':'PC#2 2026','Commercial Lead':'Jim','Formulation Lead':'Chi','Ops Lead':'Ian','Brand Name Internal':'Greazy','Manufactured by: LP Name':'Mera Cannabis Corp.','Launch Window':'June–July 2026','Stocking Type':'Stocking > FT','Initial Case Offering (FT)':'300 (60 cases/day wk1)','Samples Required':'Yes','Landed Cost':'—','Margin %':'—','Category':'Cannabis Extract','Product Size':'1g','Label THC Range':'66-74% (10-15% Terps)','Biomass Input':'Black Cherry Punch','Ingredients':'Cannabis Extract','Product Package/Outer':'ND Rooke Concentrate Jar','Packaging Labels':'1 label','Master Case GTIN':'TBD','Retail Pack GTIN':'TBD','Master Case Dimensions':'4×5×3.5','Units per Master Shipper/Case':'6','Who is responsible for Labels Sourcing?':'Mera Cannabis Corp.','Do we need new dies for labels?':'No','Vendor providing retail labels?':'Minuteman Press','Vendor providing case labels?':'Mera Cannabis Corp.'},
+  {id:'bcp',brand:'Greazy',name:'Black Cherry Punch Live Rosin 1g',shortName:'Black Cherry Rosin',launchDate:'2026-07-30',tags:['In Progress'],notes:{updates:'',blockers:''},specs:{'Planned Launch Time':'PC#2 2026','Commercial Lead':'Jim','Formulation Lead':'Chi','Ops Lead':'Ian','Brand Name Internal':'Greazy','Manufactured by: LP Name':'Mera Cannabis Corp.','Launch Window':'JuneâJuly 2026','Stocking Type':'Stocking > FT','Initial Case Offering (FT)':'300 (60 cases/day wk1)','Samples Required':'Yes','Landed Cost':'â','Margin %':'â','Category':'Cannabis Extract','Product Size':'1g','Label THC Range':'66-74% (10-15% Terps)','Biomass Input':'Black Cherry Punch','Ingredients':'Cannabis Extract','Product Package/Outer':'ND Rooke Concentrate Jar','Packaging Labels':'1 label','Master Case GTIN':'TBD','Retail Pack GTIN':'TBD','Master Case Dimensions':'4Ã5Ã3.5','Units per Master Shipper/Case':'6','Who is responsible for Labels Sourcing?':'Mera Cannabis Corp.','Do we need new dies for labels?':'No','Vendor providing retail labels?':'Minuteman Press','Vendor providing case labels?':'Mera Cannabis Corp.'},
    tasks:[mk('d1','NNCP/GTIN','','Done','2026-01-01','2026-01-30'),mk('d2','Formulation Dev','Chi','In Progress','2026-01-01','2026-05-02'),mk('d3','Sensory','','Not Started','2026-04-07','2026-04-09'),mk('d4','Packaging Dev','','Done','2026-01-01','2026-01-30'),mk('d5','Financial Analysis','','Done','2026-01-01','2026-01-30'),mk('d6','Labels','','Not Started','2026-04-13','2026-05-01'),mk('d7','Input','','Not Started','2026-03-16','2026-05-01'),mk('d8','Internal Packaging','','Not Started','2026-04-13','2026-05-01'),mk('d9','External Packaging','','Not Started','2026-03-16','2026-05-01'),mk('d10','Materials On Site','','Not Started','2026-06-01','2026-06-05'),mk('d11','Sample Run','','Not Started','2026-05-25','2026-06-19','GS1 photography needed'),mk('d12','PO Received','','Not Started','2026-06-04','2026-06-11'),mk('d13','Pre-Selling','','Not Started','2026-06-22','2026-08-04'),mk('d14','Production/Shipment','Kevin','Not Started','2026-07-13','2026-07-24'),mk('d15','Delivery into OCS','','Not Started','2026-07-28','2026-08-04')]},
-  {id:'ww',brand:'Litti',name:'Watermelon Whammy Liquid Diamonds 510 Vape Cart 1g',shortName:'Watermelon Whammy',launchDate:'2026-07-30',tags:['In Progress'],notes:{updates:'',blockers:''},specs:{'Planned Launch Time':'PC#2 2026','Commercial Lead':'Jim','Formulation Lead':'Chi','Ops Lead':'Ian','Brand Name Internal':'Litti','Manufactured by: LP Name':'Mera Cannabis Corp.','Launch Window':'June–July 2026','Stocking Type':'Stocking > FT','Initial Case Offering (FT)':'300','Samples Required':'Yes','Landed Cost':'—','Margin %':'—','Category':'Vape – 510 Thread','Product Size':'1g','Formulated Range':'84.4%','Label THC Range':'95-99% (98%)','Flavouring Type':'Botanical Terpenes','Flavour Description':'Watermelon','Formulations':'50 wt.% Distillate + 40 wt.% Liquid Diamonds + 10 wt.% BT','Ingredients':'Cannabis Extract, Botanical Terpenes','Product Primary/Hardware':'BB TANK – 1G Postless','Product Package/Outer':'116mm tube – white','Packaging Labels':'1 label','Master Case GTIN':'TBD','Retail Pack GTIN':'TBD','Master Case Dimensions':'5×5×4','Units per Master Shipper/Case':'12','Who is responsible for Labels Sourcing?':'Mera Cannabis Corp.','Do we need new dies for labels?':'No','Vendor providing retail labels?':'Minuteman Press','Vendor providing case labels?':'Mera Cannabis Corp.'},
+  {id:'ww',brand:'Litti',name:'Watermelon Whammy Liquid Diamonds 510 Vape Cart 1g',shortName:'Watermelon Whammy',launchDate:'2026-07-30',tags:['In Progress'],notes:{updates:'',blockers:''},specs:{'Planned Launch Time':'PC#2 2026','Commercial Lead':'Jim','Formulation Lead':'Chi','Ops Lead':'Ian','Brand Name Internal':'Litti','Manufactured by: LP Name':'Mera Cannabis Corp.','Launch Window':'JuneâJuly 2026','Stocking Type':'Stocking > FT','Initial Case Offering (FT)':'300','Samples Required':'Yes','Landed Cost':'â','Margin %':'â','Category':'Vape â 510 Thread','Product Size':'1g','Formulated Range':'84.4%','Label THC Range':'95-99% (98%)','Flavouring Type':'Botanical Terpenes','Flavour Description':'Watermelon','Formulations':'50 wt.% Distillate + 40 wt.% Liquid Diamonds + 10 wt.% BT','Ingredients':'Cannabis Extract, Botanical Terpenes','Product Primary/Hardware':'BB TANK â 1G Postless','Product Package/Outer':'116mm tube â white','Packaging Labels':'1 label','Master Case GTIN':'TBD','Retail Pack GTIN':'TBD','Master Case Dimensions':'5Ã5Ã4','Units per Master Shipper/Case':'12','Who is responsible for Labels Sourcing?':'Mera Cannabis Corp.','Do we need new dies for labels?':'No','Vendor providing retail labels?':'Minuteman Press','Vendor providing case labels?':'Mera Cannabis Corp.'},
    tasks:[mk('e1','NNCP/GTIN','','Done','2026-01-01','2026-01-30'),mk('e2','Formulation Dev','Chi','In Progress','2026-01-01','2026-04-10'),mk('e3','Sensory','','Not Started','2026-04-07','2026-04-09'),mk('e4','Packaging Dev','','Done','2026-01-01','2026-01-30'),mk('e5','Financial Analysis','','Done','2026-01-01','2026-01-30'),mk('e6','Labels','','Not Started','2026-04-13','2026-05-01'),mk('e7','Input','','Not Started','2026-03-16','2026-05-01'),mk('e8','Internal Packaging','','Not Started','2026-04-13','2026-05-01'),mk('e9','External Packaging','','Not Started','2026-03-16','2026-05-01'),mk('e10','Materials On Site','','Not Started','2026-05-01','2026-05-13'),mk('e11','Sample Run','','Not Started','2026-05-14','2026-05-29'),mk('e12','Bulk Production','','Not Started','2026-06-22','2026-07-03'),mk('e13','Production/Shipment','','Not Started','2026-07-07','2026-07-13')]},
-  {id:'gp',brand:'Greazy',name:'Golden Pineapple Live Resin & Liquid Diamonds AIO 1g',shortName:'Golden Pineapple AIO',launchDate:'2026-07-30',tags:['In Progress'],notes:{updates:'',blockers:'Pouch revision pending.'},specs:{'Planned Launch Time':'PC#2 2026','Commercial Lead':'Jim','Brand Name Internal':'Greazy','Manufactured by: LP Name':'Mera Cannabis Corp.','Launch Window':'July 2026','Stocking Type':'Stocking > FT','Initial Case Offering (FT)':'300','Samples Required':'Yes','Landed Cost':'—','Margin %':'—','Category':'Vape – All-in-One','Product Size':'1g','Label THC Range':'88-94% (93.1%)','Flavouring Type':'CDTs & BTs','Flavour Description':'Pineapple','Ingredients':'Cannabis Extract, Botanical Terpenes','Product Primary/Hardware':'Cilicon – Nova Deli 1','Product Package/Outer':'4"×6" Near Notch – Bottom Fill','Packaging Labels':'TBD','Accessory':'.25" THC Sticker','Master Case GTIN':'TBD','Retail Pack GTIN':'TBD','Master Case Dimensions':'6×6×4','Units per Master Shipper/Case':'12','Who is responsible for Labels Sourcing?':'Mera Cannabis Corp.','Do we need new dies for labels?':'No','Vendor providing retail labels?':'Minuteman Press','Vendor providing case labels?':'Mera Cannabis Corp.'},
+  {id:'gp',brand:'Greazy',name:'Golden Pineapple Live Resin & Liquid Diamonds AIO 1g',shortName:'Golden Pineapple AIO',launchDate:'2026-07-30',tags:['In Progress'],notes:{updates:'',blockers:'Pouch revision pending.'},specs:{'Planned Launch Time':'PC#2 2026','Commercial Lead':'Jim','Brand Name Internal':'Greazy','Manufactured by: LP Name':'Mera Cannabis Corp.','Launch Window':'July 2026','Stocking Type':'Stocking > FT','Initial Case Offering (FT)':'300','Samples Required':'Yes','Landed Cost':'â','Margin %':'â','Category':'Vape â All-in-One','Product Size':'1g','Label THC Range':'88-94% (93.1%)','Flavouring Type':'CDTs & BTs','Flavour Description':'Pineapple','Ingredients':'Cannabis Extract, Botanical Terpenes','Product Primary/Hardware':'Cilicon â Nova Deli 1','Product Package/Outer':'4"Ã6" Near Notch â Bottom Fill','Packaging Labels':'TBD','Accessory':'.25" THC Sticker','Master Case GTIN':'TBD','Retail Pack GTIN':'TBD','Master Case Dimensions':'6Ã6Ã4','Units per Master Shipper/Case':'12','Who is responsible for Labels Sourcing?':'Mera Cannabis Corp.','Do we need new dies for labels?':'No','Vendor providing retail labels?':'Minuteman Press','Vendor providing case labels?':'Mera Cannabis Corp.'},
    tasks:[mk('f1','NNCP/GTIN','','Done','2026-01-01','2026-01-30'),mk('f2','Formulation Dev','Chi','In Progress','2026-01-01','2026-04-10'),mk('f3','Sensory','','Not Started','2026-04-07','2026-04-09'),mk('f4','Packaging Dev','','Done','2026-01-01','2026-01-30','Pouch revision pending'),mk('f5','Financial Analysis','','Done','2026-01-01','2026-01-30'),mk('f6','Labels','','Not Started','2026-04-13','2026-05-01'),mk('f7','Input','','Not Started','2026-03-16','2026-05-01'),mk('f8','Internal Packaging','','Not Started','2026-04-13','2026-05-01'),mk('f9','External Packaging','','Not Started','2026-03-16','2026-05-01'),mk('f10','Materials On Site','','Not Started','2026-05-01','2026-05-13'),mk('f11','Sample Run','','Not Started','2026-05-14','2026-05-29'),mk('f12','Bulk Production','','Not Started','2026-06-22','2026-07-03'),mk('f13','Production/Shipment','','Not Started','2026-07-07','2026-07-13')]},
-  {id:'nlb',brand:'Shatterizer',name:'Northern Lights 60+ Diamonds & Shatter Infused Blunt 1g',shortName:'NL 60+ Blunt',launchDate:'2026-06-12',tags:['In Progress'],notes:{updates:'Black smoke concern on sample run – investigating.',blockers:'Sample quality issue.'},specs:{'Planned Launch Time':'PC#2 2026','Commercial Lead':'Jim','Brand Name Internal':'Shatterizer','Manufactured by: LP Name':'Mera Cannabis Corp.','Launch Window':'June–July 2026','Stocking Type':'Stocking > FT','Initial Case Offering (FT)':'300','Samples Required':'Yes','Landed Cost':'$18.68','Margin %':'52%','Category':'Infused Pre-Roll','Product Size':'1g','Label THC Range':'60-66% (62.6%)','Flavouring Type':'CDTs','Formulations':'42% Flower, 41% THCA, 7% Distillate, 5% Terp Sauce, 5% CDTs','Ingredients':'Dried Cannabis, Cannabis Extract','Product Primary/Hardware':'StephenG Blunt Cone','Product Package/Outer':'116mm Black Tube','Packaging Labels':'TBD','Master Case GTIN':'TBD','Retail Pack GTIN':'TBD','Master Case Dimensions':'5×5×4','Units per Master Shipper/Case':'12','Who is responsible for Labels Sourcing?':'Mera Cannabis Corp.','Do we need new dies for labels?':'No','Vendor providing retail labels?':'Minuteman Press','Vendor providing case labels?':'Mera Cannabis Corp.'},
+  {id:'nlb',brand:'Shatterizer',name:'Northern Lights 60+ Diamonds & Shatter Infused Blunt 1g',shortName:'NL 60+ Blunt',launchDate:'2026-06-12',tags:['In Progress'],notes:{updates:'Black smoke concern on sample run â investigating.',blockers:'Sample quality issue.'},specs:{'Planned Launch Time':'PC#2 2026','Commercial Lead':'Jim','Brand Name Internal':'Shatterizer','Manufactured by: LP Name':'Mera Cannabis Corp.','Launch Window':'JuneâJuly 2026','Stocking Type':'Stocking > FT','Initial Case Offering (FT)':'300','Samples Required':'Yes','Landed Cost':'$18.68','Margin %':'52%','Category':'Infused Pre-Roll','Product Size':'1g','Label THC Range':'60-66% (62.6%)','Flavouring Type':'CDTs','Formulations':'42% Flower, 41% THCA, 7% Distillate, 5% Terp Sauce, 5% CDTs','Ingredients':'Dried Cannabis, Cannabis Extract','Product Primary/Hardware':'StephenG Blunt Cone','Product Package/Outer':'116mm Black Tube','Packaging Labels':'TBD','Master Case GTIN':'TBD','Retail Pack GTIN':'TBD','Master Case Dimensions':'5Ã5Ã4','Units per Master Shipper/Case':'12','Who is responsible for Labels Sourcing?':'Mera Cannabis Corp.','Do we need new dies for labels?':'No','Vendor providing retail labels?':'Minuteman Press','Vendor providing case labels?':'Mera Cannabis Corp.'},
    tasks:[mk('g1','NNCP/GTIN','','Done','2026-01-01','2026-01-30'),mk('g2','Formulation Dev','Chi','Done','2026-01-01','2026-04-10','2nd run to validate quality'),mk('g3','Sensory','','Done','2026-04-07','2026-04-09','Validate before shipping'),mk('g4','Packaging Dev','','Done','2026-01-01','2026-01-30'),mk('g5','Financial Analysis','','Done','2026-01-01','2026-01-30'),mk('g6','Labels','','Done','2026-04-13','2026-05-01'),mk('g7','Input','','Done','2026-03-16','2026-05-01'),mk('g8','Internal Packaging','','Done','2026-04-13','2026-05-01'),mk('g9','External Packaging','','Done','2026-03-16','2026-05-01'),mk('g10','Materials On Site','','In Progress','2026-05-01','2026-05-08'),mk('g11','Sample Run','','In Progress','2026-05-08','2026-05-15','Black smoke concern'),mk('g12','Pre-Selling','','In Progress','2026-05-11','2026-06-08'),mk('g13','Bulk Production','','Not Started','2026-05-17','2026-06-01'),mk('g14','Production/Shipment','','In Progress','2026-04-24','2026-06-19')]},
-  {id:'gdp',brand:'Shatterizer',name:'Granddaddy Purple 60+ Diamonds & Shatter Pre-Rolls 3×0.5g',shortName:'GDP Pre-Rolls',launchDate:'2026-07-30',tags:['In Progress'],notes:{updates:'',blockers:''},specs:{'Planned Launch Time':'PC#2 2026','Brand Name Internal':'Shatterizer','Manufactured by: LP Name':'Mera Cannabis Corp.','Launch Window':'June–July 2026','Stocking Type':'Stocking > FT','Initial Case Offering (FT)':'300','Samples Required':'Yes','Landed Cost':'—','Margin %':'—','Category':'Infused Pre-Roll','Product Size':'3×0.5g','Label THC Range':'60-66% (62.6%)','Flavouring Type':'CDTs','Formulations':'40 wt% biomass + 54 wt.% Extracts + 6 wt.% terpenes','Ingredients':'Dried Cannabis, Cannabis Extract','Product Primary/Hardware':'98/26mm Reefer','Product Package/Outer':'13 Dram CR Pop-Top Bottles – Black','Packaging Labels':'1 label','Master Case GTIN':'TBD','Retail Pack GTIN':'TBD','Master Case Dimensions':'5×4×3.5"','Units per Master Shipper/Case':'12','Who is responsible for Labels Sourcing?':'Mera Cannabis Corp.','Do we need new dies for labels?':'No','Vendor providing retail labels?':'Minuteman Press','Vendor providing case labels?':'Mera Cannabis Corp.'},
+  {id:'gdp',brand:'Shatterizer',name:'Granddaddy Purple 60+ Diamonds & Shatter Pre-Rolls 3Ã0.5g',shortName:'GDP Pre-Rolls',launchDate:'2026-07-30',tags:['In Progress'],notes:{updates:'',blockers:''},specs:{'Planned Launch Time':'PC#2 2026','Brand Name Internal':'Shatterizer','Manufactured by: LP Name':'Mera Cannabis Corp.','Launch Window':'JuneâJuly 2026','Stocking Type':'Stocking > FT','Initial Case Offering (FT)':'300','Samples Required':'Yes','Landed Cost':'â','Margin %':'â','Category':'Infused Pre-Roll','Product Size':'3Ã0.5g','Label THC Range':'60-66% (62.6%)','Flavouring Type':'CDTs','Formulations':'40 wt% biomass + 54 wt.% Extracts + 6 wt.% terpenes','Ingredients':'Dried Cannabis, Cannabis Extract','Product Primary/Hardware':'98/26mm Reefer','Product Package/Outer':'13 Dram CR Pop-Top Bottles â Black','Packaging Labels':'1 label','Master Case GTIN':'TBD','Retail Pack GTIN':'TBD','Master Case Dimensions':'5Ã4Ã3.5"','Units per Master Shipper/Case':'12','Who is responsible for Labels Sourcing?':'Mera Cannabis Corp.','Do we need new dies for labels?':'No','Vendor providing retail labels?':'Minuteman Press','Vendor providing case labels?':'Mera Cannabis Corp.'},
    tasks:[mk('h1','NNCP/GTIN','','Done','2026-01-01','2026-01-30'),mk('h2','Formulation Dev','Chi','In Progress','2026-01-01','2026-04-10'),mk('h3','Sensory','','Not Started','2026-04-07','2026-04-09'),mk('h4','Packaging Dev','','Done','2026-01-01','2026-01-30'),mk('h5','Financial Analysis','','Done','2026-01-01','2026-01-30'),mk('h6','Labels','','Not Started','2026-04-13','2026-05-01'),mk('h7','Input','','Not Started','2026-03-16','2026-05-01'),mk('h8','Internal Packaging','','Not Started','2026-04-13','2026-05-01'),mk('h9','External Packaging','','Not Started','2026-03-16','2026-05-01'),mk('h10','Materials On Site','','Not Started','2026-05-01','2026-05-08'),mk('h11','Sample Run','','Not Started','2026-05-08','2026-05-15'),mk('h12','Pre-Selling','','Not Started','2026-05-11','2026-06-09'),mk('h13','Bulk Production','','Not Started','2026-05-17','2026-06-01'),mk('h14','Production/Shipment','','In Progress','2026-04-24','2026-06-08')]},
-  {id:'ph',brand:'Buddy Blooms',name:"Purple Haze & Strawberry OG Best Buds Mix'd Pre-Rolls 10×0.5g",shortName:"Purple Haze Mix'd",launchDate:'2026-07-30',tags:['In Progress'],notes:{updates:'',blockers:''},specs:{'Planned Launch Time':'PC#2 2026','Brand Name Internal':'Buddy Blooms','Manufactured by: LP Name':'Mera Cannabis Corp.','Launch Window':'June–July 2026','Stocking Type':'Stocking > FT','Initial Case Offering (FT)':'300','Samples Required':'Yes','Landed Cost':'$15.25','Wholesale Cost':'$19.67','MSRP':'$27.50','Margin %':'33%','Category':'Dried Flower Pre-Roll','Product Size':'10×0.5g (5g)','Label THC Range':'30–33%','Flavouring Type':'N/A','Ingredients':'Dried Cannabis','Product Primary/Hardware':'98mm Natural Brown Paper, Conical, White Branded Tip','Product Package/Outer':'Inquire on size','Packaging Labels':'1 label','Master Case Dimensions':'?','Units per Master Shipper/Case':'12'},
+  {id:'ph',brand:'Buddy Blooms',name:"Purple Haze & Strawberry OG Best Buds Mix'd Pre-Rolls 10Ã0.5g",shortName:"Purple Haze Mix'd",launchDate:'2026-07-30',tags:['In Progress'],notes:{updates:'',blockers:''},specs:{'Planned Launch Time':'PC#2 2026','Brand Name Internal':'Buddy Blooms','Manufactured by: LP Name':'Mera Cannabis Corp.','Launch Window':'JuneâJuly 2026','Stocking Type':'Stocking > FT','Initial Case Offering (FT)':'300','Samples Required':'Yes','Landed Cost':'$15.25','Wholesale Cost':'$19.67','MSRP':'$27.50','Margin %':'33%','Category':'Dried Flower Pre-Roll','Product Size':'10Ã0.5g (5g)','Label THC Range':'30â33%','Flavouring Type':'N/A','Ingredients':'Dried Cannabis','Product Primary/Hardware':'98mm Natural Brown Paper, Conical, White Branded Tip','Product Package/Outer':'Inquire on size','Packaging Labels':'1 label','Master Case Dimensions':'?','Units per Master Shipper/Case':'12'},
    tasks:[mk('i1','NNCP/GTIN','','Done','2026-01-01','2026-01-30'),mk('i2','Formulation Dev','Chi','In Progress','2026-01-01','2026-05-02'),mk('i3','Sensory','','Not Started','2026-04-07','2026-04-09'),mk('i4','Packaging Dev','','Done','2026-01-01','2026-01-30','Strain info focus'),mk('i5','Financial Analysis','','Done','2026-01-01','2026-01-30'),mk('i6','Labels','','Not Started','2026-04-13','2026-05-01'),mk('i7','Input','','Not Started','2026-03-16','2026-05-01'),mk('i8','Internal Packaging','','Not Started','2026-04-13','2026-05-01'),mk('i9','External Packaging','','Not Started','2026-03-16','2026-05-01'),mk('i10','Materials On Site','','Not Started','2026-06-01','2026-06-05'),mk('i11','Sample Run','','Not Started','2026-05-25','2026-06-19'),mk('i12','PO Received','','Not Started','2026-06-04','2026-06-11'),mk('i13','Pre-Selling','','Not Started','2026-06-22','2026-08-04'),mk('i14','Production/Shipment','Kevin','Not Started','2026-07-13','2026-07-24'),mk('i15','Delivery into OCS','','Not Started','2026-07-28','2026-08-04')]},
 ],
 pc3:[
-  {id:'pp',brand:'Litti',name:"Pushin' Peach Liquid Diamonds All-in-One",shortName:"Pushin' Peach AIO",launchDate:'2026-09-01',tags:['In Progress'],notes:{updates:'',blockers:''},specs:{'Planned Launch Time':'PC#3 2026','Brand Name Internal':'Litti','Launch Window':'Aug–Sep 2026','Stocking Type':'Stocking > FT','Samples Required':'Yes','Category':'Vape – All-in-One','Product Size':'1g','Flavouring Type':'Botanical Terpenes','Flavour Description':'Peach'},tasks:[mk('j1','NNCP/GTIN','','Not Started','',''),mk('j2','Formulation Dev','Chi','Not Started','',''),mk('j3','Sensory','','Not Started','',''),mk('j4','Packaging Dev','','Not Started','',''),mk('j5','Financial Analysis','','Not Started','',''),mk('j6','Labels','','Not Started','',''),mk('j7','Input','','Not Started','',''),mk('j8','Internal Packaging','','Not Started','',''),mk('j9','External Packaging','','Not Started','',''),mk('j10','Materials On Site','','Not Started','',''),mk('j11','Sample Run','','Not Started','',''),mk('j12','Pre-Selling','','Not Started','',''),mk('j13','Bulk Production','','Not Started','',''),mk('j14','Production/Shipment','','Not Started','','')]},
-  {id:'gfiz',brand:'Greazy',name:'Ginger Fizz All-in-One',shortName:'Ginger Fizz AIO',launchDate:'2026-09-01',tags:['In Progress'],notes:{updates:'',blockers:''},specs:{'Planned Launch Time':'PC#3 2026','Brand Name Internal':'Greazy','Launch Window':'Aug–Sep 2026','Samples Required':'Yes','Category':'Vape – All-in-One','Product Size':'1g','Flavouring Type':'CDTs & BTs','Flavour Description':'Ginger Fizz'},tasks:[mk('k1','NNCP/GTIN','','Not Started','',''),mk('k2','Formulation Dev','Chi','Not Started','',''),mk('k3','Sensory','','Not Started','',''),mk('k4','Packaging Dev','','Not Started','',''),mk('k5','Financial Analysis','','Not Started','',''),mk('k6','Labels','','Not Started','',''),mk('k7','Input','','Not Started','',''),mk('k8','Internal Packaging','','Not Started','',''),mk('k9','External Packaging','','Not Started','',''),mk('k10','Materials On Site','','Not Started','',''),mk('k11','Sample Run','','Not Started','',''),mk('k12','Pre-Selling','','Not Started','',''),mk('k13','Bulk Production','','Not Started','',''),mk('k14','Production/Shipment','','Not Started','','')]},
-  {id:'gdpblunt',brand:'Shatterizer',name:'Granddaddy Purple 60+ Diamonds & Shatter Infused Blunt 1g',shortName:'GDP Blunt',launchDate:'2026-09-01',tags:['In Progress'],notes:{updates:'',blockers:''},specs:{'Planned Launch Time':'PC#3 2026','Brand Name Internal':'Shatterizer','Launch Window':'Aug–Sep 2026','Category':'Infused Pre-Roll','Product Size':'1g'},tasks:[mk('l1','NNCP/GTIN','','Not Started','',''),mk('l2','Formulation Dev','Chi','Not Started','',''),mk('l3','Sensory','','Not Started','',''),mk('l4','Packaging Dev','','Not Started','',''),mk('l5','Financial Analysis','','Not Started','',''),mk('l6','Labels','','Not Started','',''),mk('l7','Input','','Not Started','',''),mk('l8','Internal Packaging','','Not Started','',''),mk('l9','External Packaging','','Not Started','',''),mk('l10','Materials On Site','','Not Started','',''),mk('l11','Sample Run','','Not Started','',''),mk('l12','Pre-Selling','','Not Started','',''),mk('l13','Bulk Production','','Not Started','',''),mk('l14','Production/Shipment','','Not Started','','')]},
-  {id:'triplepr',brand:'Shatterizer',name:'Triple Infused Pre-Rolls 3×0.5g',shortName:'Triple Infused PRs',launchDate:'2026-09-01',tags:['In Progress'],notes:{updates:'',blockers:''},specs:{'Planned Launch Time':'PC#3 2026','Brand Name Internal':'Shatterizer','Launch Window':'Aug–Sep 2026','Category':'Infused Pre-Roll','Product Size':'3×0.5g'},tasks:[mk('m1','NNCP/GTIN','','Not Started','',''),mk('m2','Formulation Dev','Chi','Not Started','',''),mk('m3','Sensory','','Not Started','',''),mk('m4','Packaging Dev','','Not Started','',''),mk('m5','Financial Analysis','','Not Started','',''),mk('m6','Labels','','Not Started','',''),mk('m7','Input','','Not Started','',''),mk('m8','Internal Packaging','','Not Started','',''),mk('m9','External Packaging','','Not Started','',''),mk('m10','Materials On Site','','Not Started','',''),mk('m11','Sample Run','','Not Started','',''),mk('m12','Pre-Selling','','Not Started','',''),mk('m13','Bulk Production','','Not Started','',''),mk('m14','Production/Shipment','','Not Started','','')]},
-  {id:'crgfiz',brand:'Greazy',name:'Cranberry Ginger Fizz All-in-One',shortName:'Cranberry Ginger Fizz',launchDate:'2026-10-01',tags:['In Progress'],notes:{updates:'',blockers:''},specs:{'Planned Launch Time':'PC#3 2026','Brand Name Internal':'Greazy','Launch Window':'October 2026','Category':'Vape – All-in-One','Flavour Description':'Cranberry Ginger Fizz'},tasks:[mk('n1','NNCP/GTIN','','Not Started','',''),mk('n2','Formulation Dev','Chi','Not Started','',''),mk('n3','Sensory','','Not Started','',''),mk('n4','Packaging Dev','','Not Started','',''),mk('n5','Financial Analysis','','Not Started','',''),mk('n6','Labels','','Not Started','',''),mk('n7','Input','','Not Started','',''),mk('n8','Internal Packaging','','Not Started','',''),mk('n9','External Packaging','','Not Started','',''),mk('n10','Materials On Site','','Not Started','',''),mk('n11','Sample Run','','Not Started','',''),mk('n12','Pre-Selling','','Not Started','',''),mk('n13','Bulk Production','','Not Started','',''),mk('n14','Production/Shipment','','Not Started','','')]},
-  {id:'bcpbh',brand:'Buddy Blooms',name:'Black Cherry Punch Bubble Hash Pre-Rolls',shortName:'BCP Bubble Hash PRs',launchDate:'2026-09-01',tags:['In Progress'],notes:{updates:'',blockers:''},specs:{'Planned Launch Time':'PC#3 2026','Brand Name Internal':'Buddy Blooms','Launch Window':'Aug–Sep 2026','Category':'Infused Pre-Roll','Biomass Input':'Black Cherry Punch'},tasks:[mk('o1','NNCP/GTIN','','Not Started','',''),mk('o2','Formulation Dev','Chi','Not Started','',''),mk('o3','Sensory','','Not Started','',''),mk('o4','Packaging Dev','','Not Started','',''),mk('o5','Financial Analysis','','Not Started','',''),mk('o6','Labels','','Not Started','',''),mk('o7','Input','','Not Started','',''),mk('o8','Internal Packaging','','Not Started','',''),mk('o9','External Packaging','','Not Started','',''),mk('o10','Materials On Site','','Not Started','',''),mk('o11','Sample Run','','Not Started','',''),mk('o12','Pre-Selling','','Not Started','',''),mk('o13','Bulk Production','','Not Started','',''),mk('o14','Production/Shipment','','Not Started','','')]},
+  {id:'pp',brand:'Litti',name:"Pushin' Peach Liquid Diamonds All-in-One",shortName:"Pushin' Peach AIO",launchDate:'2026-09-01',tags:['In Progress'],notes:{updates:'',blockers:''},specs:{'Planned Launch Time':'PC#3 2026','Brand Name Internal':'Litti','Launch Window':'AugâSep 2026','Stocking Type':'Stocking > FT','Samples Required':'Yes','Category':'Vape â All-in-One','Product Size':'1g','Flavouring Type':'Botanical Terpenes','Flavour Description':'Peach'},tasks:[mk('j1','NNCP/GTIN','','Not Started','',''),mk('j2','Formulation Dev','Chi','Not Started','',''),mk('j3','Sensory','','Not Started','',''),mk('j4','Packaging Dev','','Not Started','',''),mk('j5','Financial Analysis','','Not Started','',''),mk('j6','Labels','','Not Started','',''),mk('j7','Input','','Not Started','',''),mk('j8','Internal Packaging','','Not Started','',''),mk('j9','External Packaging','','Not Started','',''),mk('j10','Materials On Site','','Not Started','',''),mk('j11','Sample Run','','Not Started','',''),mk('j12','Pre-Selling','','Not Started','',''),mk('j13','Bulk Production','','Not Started','',''),mk('j14','Production/Shipment','','Not Started','','')]},
+  {id:'gfiz',brand:'Greazy',name:'Ginger Fizz All-in-One',shortName:'Ginger Fizz AIO',launchDate:'2026-09-01',tags:['In Progress'],notes:{updates:'',blockers:''},specs:{'Planned Launch Time':'PC#3 2026','Brand Name Internal':'Greazy','Launch Window':'AugâSep 2026','Samples Required':'Yes','Category':'Vape â All-in-One','Product Size':'1g','Flavouring Type':'CDTs & BTs','Flavour Description':'Ginger Fizz'},tasks:[mk('k1','NNCP/GTIN','','Not Started','',''),mk('k2','Formulation Dev','Chi','Not Started','',''),mk('k3','Sensory','','Not Started','',''),mk('k4','Packaging Dev','','Not Started','',''),mk('k5','Financial Analysis','','Not Started','',''),mk('k6','Labels','','Not Started','',''),mk('k7','Input','','Not Started','',''),mk('k8','Internal Packaging','','Not Started','',''),mk('k9','External Packaging','','Not Started','',''),mk('k10','Materials On Site','','Not Started','',''),mk('k11','Sample Run','','Not Started','',''),mk('k12','Pre-Selling','','Not Started','',''),mk('k13','Bulk Production','','Not Started','',''),mk('k14','Production/Shipment','','Not Started','','')]},
+  {id:'gdpblunt',brand:'Shatterizer',name:'Granddaddy Purple 60+ Diamonds & Shatter Infused Blunt 1g',shortName:'GDP Blunt',launchDate:'2026-09-01',tags:['In Progress'],notes:{updates:'',blockers:''},specs:{'Planned Launch Time':'PC#3 2026','Brand Name Internal':'Shatterizer','Launch Window':'AugâSep 2026','Category':'Infused Pre-Roll','Product Size':'1g'},tasks:[mk('l1','NNCP/GTIN','','Not Started','',''),mk('l2','Formulation Dev','Chi','Not Started','',''),mk('l3','Sensory','','Not Started','',''),mk('l4','Packaging Dev','','Not Started','',''),mk('l5','Financial Analysis','','Not Started','',''),mk('l6','Labels','','Not Started','',''),mk('l7','Input','','Not Started','',''),mk('l8','Internal Packaging','','Not Started','',''),mk('l9','External Packaging','','Not Started','',''),mk('l10','Materials On Site','','Not Started','',''),mk('l11','Sample Run','','Not Started','',''),mk('l12','Pre-Selling','','Not Started','',''),mk('l13','Bulk Production','','Not Started','',''),mk('l14','Production/Shipment','','Not Started','','')]},
+  {id:'triplepr',brand:'Shatterizer',name:'Triple Infused Pre-Rolls 3Ã0.5g',shortName:'Triple Infused PRs',launchDate:'2026-09-01',tags:['In Progress'],notes:{updates:'',blockers:''},specs:{'Planned Launch Time':'PC#3 2026','Brand Name Internal':'Shatterizer','Launch Window':'AugâSep 2026','Category':'Infused Pre-Roll','Product Size':'3Ã0.5g'},tasks:[mk('m1','NNCP/GTIN','','Not Started','',''),mk('m2','Formulation Dev','Chi','Not Started','',''),mk('m3','Sensory','','Not Started','',''),mk('m4','Packaging Dev','','Not Started','',''),mk('m5','Financial Analysis','','Not Started','',''),mk('m6','Labels','','Not Started','',''),mk('m7','Input','','Not Started','',''),mk('m8','Internal Packaging','','Not Started','',''),mk('m9','External Packaging','','Not Started','',''),mk('m10','Materials On Site','','Not Started','',''),mk('m11','Sample Run','','Not Started','',''),mk('m12','Pre-Selling','','Not Started','',''),mk('m13','Bulk Production','','Not Started','',''),mk('m14','Production/Shipment','','Not Started','','')]},
+  {id:'crgfiz',brand:'Greazy',name:'Cranberry Ginger Fizz All-in-One',shortName:'Cranberry Ginger Fizz',launchDate:'2026-10-01',tags:['In Progress'],notes:{updates:'',blockers:''},specs:{'Planned Launch Time':'PC#3 2026','Brand Name Internal':'Greazy','Launch Window':'October 2026','Category':'Vape â All-in-One','Flavour Description':'Cranberry Ginger Fizz'},tasks:[mk('n1','NNCP/GTIN','','Not Started','',''),mk('n2','Formulation Dev','Chi','Not Started','',''),mk('n3','Sensory','','Not Started','',''),mk('n4','Packaging Dev','','Not Started','',''),mk('n5','Financial Analysis','','Not Started','',''),mk('n6','Labels','','Not Started','',''),mk('n7','Input','','Not Started','',''),mk('n8','Internal Packaging','','Not Started','',''),mk('n9','External Packaging','','Not Started','',''),mk('n10','Materials On Site','','Not Started','',''),mk('n11','Sample Run','','Not Started','',''),mk('n12','Pre-Selling','','Not Started','',''),mk('n13','Bulk Production','','Not Started','',''),mk('n14','Production/Shipment','','Not Started','','')]},
+  {id:'bcpbh',brand:'Buddy Blooms',name:'Black Cherry Punch Bubble Hash Pre-Rolls',shortName:'BCP Bubble Hash PRs',launchDate:'2026-09-01',tags:['In Progress'],notes:{updates:'',blockers:''},specs:{'Planned Launch Time':'PC#3 2026','Brand Name Internal':'Buddy Blooms','Launch Window':'AugâSep 2026','Category':'Infused Pre-Roll','Biomass Input':'Black Cherry Punch'},tasks:[mk('o1','NNCP/GTIN','','Not Started','',''),mk('o2','Formulation Dev','Chi','Not Started','',''),mk('o3','Sensory','','Not Started','',''),mk('o4','Packaging Dev','','Not Started','',''),mk('o5','Financial Analysis','','Not Started','',''),mk('o6','Labels','','Not Started','',''),mk('o7','Input','','Not Started','',''),mk('o8','Internal Packaging','','Not Started','',''),mk('o9','External Packaging','','Not Started','',''),mk('o10','Materials On Site','','Not Started','',''),mk('o11','Sample Run','','Not Started','',''),mk('o12','Pre-Selling','','Not Started','',''),mk('o13','Bulk Production','','Not Started','',''),mk('o14','Production/Shipment','','Not Started','','')]},
 ]};
 
 const LS_KEY='au_dash_v8';
 const loadState=()=>{try{const s=localStorage.getItem(LS_KEY);return s?JSON.parse(s):null;}catch{return null;}};
 const saveState=s=>{try{localStorage.setItem(LS_KEY,JSON.stringify(s));}catch{}};
 
-/* ── TagEditor ── */
+/* ââ TagEditor ââ */
 function TagEditor({tags,onChange}){
   const [open,setOpen]=useState(false);const ref=useRef();
   useEffect(()=>{if(!open)return;const h=e=>{if(ref.current&&!ref.current.contains(e.target))setOpen(false);};document.addEventListener('mousedown',h);return()=>document.removeEventListener('mousedown',h);},[open]);
@@ -198,7 +198,7 @@ function TagEditor({tags,onChange}){
   );
 }
 
-/* ── Editable ── */
+/* ââ Editable ââ */
 function Editable({value,onChange,multiline=false,style={},placeholder='',className=''}){
   const [editing,setEditing]=useState(false);const [val,setVal]=useState(value||'');const ref=useRef();
   useEffect(()=>{setVal(value||'');},[value]);
@@ -213,7 +213,7 @@ function ESelect({value,options,onChange,style={}}){
   return el('select',{className:'ei',style,value:value||options[0],onChange:ev=>onChange(ev.target.value)},options.map(o=>el('option',{key:o,value:o},o)));
 }
 
-/* ── Ring (donut progress) ── */
+/* ââ Ring (donut progress) ââ */
 function Ring({rd,pr,op,size=48}){
   const r=size/2-4,circ=2*Math.PI*r,total=rd+pr+op||1;
   const segs=[{v:rd,c:CAT.rd.col},{v:pr,c:CAT.procurement.col},{v:op,c:CAT.operations.col}];
@@ -224,13 +224,13 @@ function Ring({rd,pr,op,size=48}){
   );
 }
 
-/* ── Summary View ── */
+/* ââ Summary View ââ */
 function SummaryView({prods,onSelect}){
   const overallOverdue=prods.reduce((a,p)=>a+p.tasks.filter(t=>isOverdue(t)).length,0);
   return el('div',{style:{padding:'20px'}},
     overallOverdue>0&&el('div',{style:{background:'var(--err-bg)',border:'0.5px solid var(--err)',borderRadius:'var(--r)',padding:'10px 16px',marginBottom:16,display:'flex',alignItems:'center',gap:10}},
       el('i',{className:'ti ti-alert-triangle',style:{color:'var(--err)',fontSize:18,flexShrink:0}}),
-      el('span',{style:{fontSize:13,color:'var(--err)',fontWeight:500}},overallOverdue+' overdue task'+(overallOverdue>1?'s':'')+' across this product call — check tasks highlighted in red.')
+      el('span',{style:{fontSize:13,color:'var(--err)',fontWeight:500}},overallOverdue+' overdue task'+(overallOverdue>1?'s':'')+' across this product call â check tasks highlighted in red.')
     ),
     el('div',{style:{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(220px,1fr))',gap:14}},
       prods.map(p=>{
@@ -258,17 +258,17 @@ function SummaryView({prods,onSelect}){
           ),
           el('div',{style:{display:'flex',gap:6,flexWrap:'wrap',marginBottom:10}},
             (p.tags||[]).map(t=>{const s=sc(t);return el('span',{key:t,className:'badge',style:{background:s.bg,color:s.tx,fontSize:10}},t);}),
-            mg&&mg!=='—'&&el('span',{className:'badge',style:{background:'var(--bg2)',color:'var(--text2)',fontSize:10}},'Margin: '+mg)
+            mg&&mg!=='â'&&el('span',{className:'badge',style:{background:'var(--bg2)',color:'var(--text2)',fontSize:10}},'Margin: '+mg)
           ),
           el('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6}},
             el('div',{style:{background:'var(--bg2)',borderRadius:6,padding:'6px 8px'}},
               el('div',{style:{fontSize:9,color:'var(--text3)',textTransform:'uppercase',letterSpacing:'.06em',marginBottom:2}},'Launch'),
-              el('div',{style:{fontSize:13,fontWeight:700,color:dl===null?'var(--text)':dl<0?'var(--err)':dl<30?'var(--warn)':'var(--ok)'}},dl===null?'—':Math.abs(dl)+' d'),
+              el('div',{style:{fontSize:13,fontWeight:700,color:dl===null?'var(--text)':dl<0?'var(--err)':dl<30?'var(--warn)':'var(--ok)'}},dl===null?'â':Math.abs(dl)+' d'),
               el('div',{style:{fontSize:9,color:'var(--text3)'}},dl===null?'no date':dl<0?'overdue':'remaining')
             ),
             el('div',{style:{background:'var(--bg2)',borderRadius:6,padding:'6px 8px'}},
               el('div',{style:{fontSize:9,color:'var(--text3)',textTransform:'uppercase',letterSpacing:'.06em',marginBottom:2}},'Pre-Sell'),
-              el('div',{style:{fontSize:13,fontWeight:700,color:psd===null?'var(--text3)':psd<0?'var(--ok)':psd<21?'var(--warn)':'var(--info)'}},psd===null?'—':psd<0?'Active':psd+' d'),
+              el('div',{style:{fontSize:13,fontWeight:700,color:psd===null?'var(--text3)':psd<0?'var(--ok)':psd<21?'var(--warn)':'var(--info)'}},psd===null?'â':psd<0?'Active':psd+' d'),
               el('div',{style:{fontSize:9,color:'var(--text3)'}},psd===null?'no date':psd<0?'started':'away')
             )
           )
@@ -278,7 +278,7 @@ function SummaryView({prods,onSelect}){
   );
 }
 
-/* ── Product Panels ── */
+/* ââ Product Panels ââ */
 function ProductPanels({prods,selId,setSelId,onAdd,onRemove}){
   return el('div',{style:{display:'flex',overflowX:'auto',borderBottom:'0.5px solid var(--bdr)',alignItems:'stretch'}},
     prods.map(p=>{
@@ -309,12 +309,12 @@ function ProductPanels({prods,selId,setSelId,onAdd,onRemove}){
   );
 }
 
-/* ── Notes Row ── */
+/* ââ Notes Row ââ */
 function NotesRow({notes,onChange,launchDate,tasks}){
   const dl=dLeft(launchDate),dlC=dl===null?'var(--text)':dl<0?'var(--err)':dl<30?'var(--warn)':'var(--ok)';
   const psDate=getPreSellDate(tasks||[]),psDl=dLeft(psDate),psC=psDl===null?'var(--text3)':psDl<0?'var(--ok)':psDl<21?'var(--warn)':'var(--info)';
   return el('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr auto auto',gap:0,borderBottom:'0.5px solid var(--bdr)'}},
-    [['updates','📋 Key Updates','Updates…'],['blockers','🚧 Blockers','Any blockers?']].map(([k,label,ph])=>
+    [['updates','ð Key Updates','Updatesâ¦'],['blockers','ð§ Blockers','Any blockers?']].map(([k,label,ph])=>
       el('div',{key:k,style:{padding:'12px 16px',borderRight:'0.5px solid var(--bdr)'}},
         el('div',{style:{fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:'.07em',color:'var(--text3)',marginBottom:5}},label),
         el(Editable,{value:notes[k]||'',onChange:v=>onChange({...notes,[k]:v}),multiline:true,placeholder:ph,style:{fontSize:13,lineHeight:1.5,width:'100%',display:'block',minHeight:38}})
@@ -322,18 +322,18 @@ function NotesRow({notes,onChange,launchDate,tasks}){
     ),
     el('div',{style:{padding:'12px 18px',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',minWidth:110,borderRight:'0.5px solid var(--bdr)'}},
       el('div',{style:{fontSize:9,fontWeight:700,textTransform:'uppercase',letterSpacing:'.07em',color:'var(--text3)',marginBottom:4,textAlign:'center'}},'Days to Pre-Selling'),
-      el('div',{style:{fontSize:26,fontWeight:800,color:psC,lineHeight:1}},psDl===null?'—':psDl<0?el('span',null,el('i',{className:'ti ti-check',style:{fontSize:18}})):String(psDl)),
+      el('div',{style:{fontSize:26,fontWeight:800,color:psC,lineHeight:1}},psDl===null?'â':psDl<0?el('span',null,el('i',{className:'ti ti-check',style:{fontSize:18}})):String(psDl)),
       el('div',{style:{fontSize:10,color:'var(--text3)',marginTop:2,textAlign:'center'}},psDl===null?'no date':psDl<0?'started '+Math.abs(psDl)+'d ago':fmtD(psDate))
     ),
     el('div',{style:{padding:'12px 18px',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',minWidth:100}},
       el('div',{style:{fontSize:9,fontWeight:700,textTransform:'uppercase',letterSpacing:'.07em',color:'var(--text3)',marginBottom:4,textAlign:'center'}},'Days to Launch'),
-      el('div',{style:{fontSize:26,fontWeight:800,color:dlC,lineHeight:1}},dl===null?'—':Math.abs(dl)),
+      el('div',{style:{fontSize:26,fontWeight:800,color:dlC,lineHeight:1}},dl===null?'â':Math.abs(dl)),
       el('div',{style:{fontSize:10,color:'var(--text3)',marginTop:2,textAlign:'center'}},dl===null?'no date':dl<0?'overdue '+Math.abs(dl)+'d':dl===0?'today!':'remaining')
     )
   );
 }
 
-/* ── Gantt ── */
+/* ââ Gantt ââ */
 function GanttChart({tasks,launchDate}){
   const [zoom,setZoom]=useState(1);
   const LW=134,dated=tasks.filter(t=>t.start&&t.end);
@@ -357,8 +357,8 @@ function GanttChart({tasks,launchDate}){
       el('button',{className:'gantt-btn',onClick:()=>setZoom(z=>Math.max(z-0.3,0.5))},el('i',{className:'ti ti-zoom-out'}),' Out'),
       el('button',{className:'gantt-btn',onClick:()=>setZoom(1)},el('i',{className:'ti ti-refresh'}),' Reset'),
       el('span',{style:{fontSize:11,color:'var(--text3)',marginLeft:6}},
-        showTd?el('span',null,el('span',{style:{color:'var(--err)',fontWeight:700}},'┃'),' Today  '):'',
-        lP!==null?el('span',null,el('span',{style:{color:'var(--ok)',fontWeight:700}},'┃'),' Launch'):'')
+        showTd?el('span',null,el('span',{style:{color:'var(--err)',fontWeight:700}},'â'),' Today  '):'',
+        lP!==null?el('span',null,el('span',{style:{color:'var(--ok)',fontWeight:700}},'â'),' Launch'):'')
     ),
     el('div',{style:{overflowX:'auto'}},
       el('div',{style:{minWidth:LW+BW}},
@@ -379,7 +379,7 @@ function GanttChart({tasks,launchDate}){
               el('div',{style:{width:BW,flex:'none',position:'relative',height:26}},
                 showTd&&el('div',{style:{position:'absolute',left:(tdP/100*BW)+'px',top:-2,bottom:-2,width:2,background:'var(--err)',zIndex:3,opacity:.85}}),
                 lP!==null&&el('div',{style:{position:'absolute',left:(lP/100*BW)+'px',top:-2,bottom:-2,width:2,background:'var(--ok)',zIndex:3}}),
-                el('div',{className:'gantt-bar',title:t.name+' | '+t.status+'\n'+fmtD(t.start)+' → '+fmtD(t.end)+(od?'\n⚠ OVERDUE':'')+(t.notes?'\n'+t.notes:''),style:{left:(l/100*BW)+'px',width:Math.max(4,w/100*BW)+'px',background:od?'var(--err)':col,outline:od?'2px solid var(--err)':'none'}},
+                el('div',{className:'gantt-bar',title:t.name+' | '+t.status+'\n'+fmtD(t.start)+' â '+fmtD(t.end)+(od?'\nâ  OVERDUE':'')+(t.notes?'\n'+t.notes:''),style:{left:(l/100*BW)+'px',width:Math.max(4,w/100*BW)+'px',background:od?'var(--err)':col,outline:od?'2px solid var(--err)':'none'}},
                   w*BW/100>55&&el('span',{style:{fontSize:10,fontWeight:600,color:od?'#fff':barT(t.cat,t.status),whiteSpace:'nowrap',overflow:'hidden'}},t.name)
                 )
               )
@@ -389,7 +389,7 @@ function GanttChart({tasks,launchDate}){
         el('div',{style:{display:'flex',gap:12,marginTop:14,paddingLeft:LW,flexWrap:'wrap'}},
           CAT_ORDER.flatMap(cid=>['Done','In Progress','Not Started'].map(st=>el('div',{key:cid+st,style:{display:'flex',alignItems:'center',gap:4}},
             el('div',{style:{width:11,height:11,borderRadius:3,background:barC(cid,st)}}),
-            el('span',{style:{fontSize:10,color:'var(--text2)'}},CAT[cid].label.split(' ')[0]+' – '+st)
+            el('span',{style:{fontSize:10,color:'var(--text2)'}},CAT[cid].label.split(' ')[0]+' â '+st)
           ))),
           el('div',{style:{display:'flex',alignItems:'center',gap:4}},
             el('div',{style:{width:11,height:11,borderRadius:3,background:'var(--err)'}}),
@@ -401,7 +401,7 @@ function GanttChart({tasks,launchDate}){
   );
 }
 
-/* ── Tasks ── */
+/* ââ Tasks ââ */
 function TasksPanel({tasks,onChange,onAdd,onDel}){
   const [coll,setColl]=useState({});
   const [ownerFilter,setOwnerFilter]=useState('All');
@@ -419,8 +419,8 @@ function TasksPanel({tasks,onChange,onAdd,onDel}){
         el('div',{onClick:()=>setColl(c=>({...c,[g.id]:!c[g.id]})),style:{display:'flex',alignItems:'center',gap:8,flex:1,cursor:'pointer'}},
           el('i',{className:'ti '+(coll[g.id]?'ti-chevron-right':'ti-chevron-down'),style:{fontSize:12}}),
           el('span',null,g.label),
-          el('span',{style:{fontSize:11,marginLeft:4,opacity:.6}},g.items.length+' tasks · '+g.items.filter(t=>t.status==='Done').length+' done',
-            g.items.some(t=>isOverdue(t))&&el('span',{style:{color:'var(--err)',marginLeft:6,fontWeight:700}},'⚠ overdue')
+          el('span',{style:{fontSize:11,marginLeft:4,opacity:.6}},g.items.length+' tasks Â· '+g.items.filter(t=>t.status==='Done').length+' done',
+            g.items.some(t=>isOverdue(t))&&el('span',{style:{color:'var(--err)',marginLeft:6,fontWeight:700}},'â  overdue')
           )
         ),
         !coll[g.id]&&el('div',{style:{display:'flex',gap:4,marginLeft:'auto'}},
@@ -436,11 +436,11 @@ function TasksPanel({tasks,onChange,onAdd,onDel}){
               (t.atRisk||od)&&el('i',{className:'ti ti-alert-triangle',style:{fontSize:11,color:'var(--err)',flexShrink:0}}),
               el(Editable,{value:t.name,onChange:v=>upd(t.id,'name',v),style:{color:od?'var(--err)':'inherit'}})
             )),
-            el('td',null,el(Editable,{value:t.owner,onChange:v=>upd(t.id,'owner',v),placeholder:'—'})),
+            el('td',null,el(Editable,{value:t.owner,onChange:v=>upd(t.id,'owner',v),placeholder:'â'})),
             el('td',null,el(ESelect,{value:t.status,options:STATUS_OPTS,onChange:v=>upd(t.id,'status',v)})),
             el('td',null,el('input',{type:'date',className:'ei',style:{fontSize:11},value:t.start,onChange:ev=>upd(t.id,'start',ev.target.value)})),
             el('td',null,el('input',{type:'date',className:'ei',style:{fontSize:11,borderColor:od?'var(--err)':''},value:t.end,onChange:ev=>upd(t.id,'end',ev.target.value)})),
-            el('td',null,el(Editable,{value:t.notes,onChange:v=>upd(t.id,'notes',v),style:{fontSize:12,color:'var(--text2)'},placeholder:'—'})),
+            el('td',null,el(Editable,{value:t.notes,onChange:v=>upd(t.id,'notes',v),style:{fontSize:12,color:'var(--text2)'},placeholder:'â'})),
             el('td',null,el('button',{className:'icon-btn',onClick:()=>onDel(t.id)},el('i',{className:'ti ti-trash',style:{fontSize:13}})))
           );}))
         ),
@@ -450,7 +450,7 @@ function TasksPanel({tasks,onChange,onAdd,onDel}){
   );
 }
 
-/* ── Image Field ── */
+/* ââ Image Field ââ */
 function ImageField({value,onChange,label}){
   const fileRef=useRef();
   const hasImg=value&&value.startsWith('data:');
@@ -476,7 +476,7 @@ function ImageField({value,onChange,label}){
   );
 }
 
-/* ── Specs ── */
+/* ââ Specs ââ */
 function SpecsPanel({specs,onChange}){
   const [coll,setColl]=useState({});
   const upd=(k,v)=>onChange({...specs,[k]:v});
@@ -489,7 +489,7 @@ function SpecsPanel({specs,onChange}){
       !coll[sec.key]&&(sec.key==='notes'
         ? el('div',null,sec.fields.map(f=>el('div',{key:f,className:'spec-field full'},
             el('span',{className:'spec-key'},f),
-            el(Editable,{value:specs[f]||'',onChange:v=>upd(f,v),multiline:true,style:{width:'100%'},placeholder:'Add notes…'})
+            el(Editable,{value:specs[f]||'',onChange:v=>upd(f,v),multiline:true,style:{width:'100%'},placeholder:'Add notesâ¦'})
           )))
         : el('div',null,
             el('div',{className:'spec-img-row'},
@@ -504,7 +504,7 @@ function SpecsPanel({specs,onChange}){
               sec.fields.filter(f=>!IMAGE_FIELDS.includes(f)).map(f=>
                 el('div',{key:f,className:'spec-field'},
                   el('span',{className:'spec-key'},f),
-                  el(Editable,{value:specs[f]||'',onChange:v=>upd(f,v),placeholder:'—'})
+                  el(Editable,{value:specs[f]||'',onChange:v=>upd(f,v),placeholder:'â'})
                 )
               )
             )
@@ -514,7 +514,7 @@ function SpecsPanel({specs,onChange}){
   );
 }
 
-/* ── Product Detail ── */
+/* ââ Product Detail ââ */
 function ProductDetail({prod,onChange,onKbNav}){
   const [sec,setSec]=useState('tasks');
   useEffect(()=>{
@@ -535,14 +535,14 @@ function ProductDetail({prod,onChange,onKbNav}){
   return el('div',{className:'main'},
     el('div',{className:'prod-header'},
       overdue>0&&el('div',{style:{background:'var(--err-bg)',border:'0.5px solid var(--err)',borderRadius:6,padding:'6px 12px',marginBottom:12,fontSize:12,color:'var(--err)',display:'flex',alignItems:'center',gap:8}},
-        el('i',{className:'ti ti-alert-triangle',style:{flexShrink:0}}),overdue+' overdue task'+(overdue>1?'s':'')+' — see Tasks tab'
+        el('i',{className:'ti ti-alert-triangle',style:{flexShrink:0}}),overdue+' overdue task'+(overdue>1?'s':'')+' â see Tasks tab'
       ),
       el('div',{style:{display:'flex',alignItems:'flex-start',gap:12,flexWrap:'wrap'}},
         el('div',{style:{flex:1,minWidth:0}},
           el('div',{style:{fontSize:11,color:BRAND_COL[prod.brand]||'var(--info)',fontWeight:700,textTransform:'uppercase',letterSpacing:'.08em',marginBottom:5}},
             el(Editable,{value:prod.brand,onChange:v=>onChange({...prod,brand:v}),style:{color:'inherit'}})
           ),
-          el(Editable,{value:prod.name,onChange:v=>onChange({...prod,name:v,shortName:v.length>30?v.slice(0,30)+'…':v}),style:{fontSize:16,fontWeight:700,display:'block',marginBottom:8,lineHeight:1.3}}),
+          el(Editable,{value:prod.name,onChange:v=>onChange({...prod,name:v,shortName:v.length>30?v.slice(0,30)+'â¦':v}),style:{fontSize:16,fontWeight:700,display:'block',marginBottom:8,lineHeight:1.3}}),
           el(TagEditor,{tags:prod.tags||[],onChange:tags=>onChange({...prod,tags})})
         ),
         el('div',{style:{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:6,flexShrink:0}},
@@ -550,7 +550,7 @@ function ProductDetail({prod,onChange,onKbNav}){
             'Launch date:',
             el('input',{type:'date',style:{font:'inherit',fontSize:12,background:'var(--bg2)',border:'0.5px solid var(--bdr2)',borderRadius:5,padding:'3px 8px',color:'var(--text)'},value:prod.launchDate||'',onChange:ev=>onChange({...prod,launchDate:ev.target.value})})
           ),
-          el('div',{style:{fontSize:11,color:'var(--text3)'}},el('i',{className:'ti ti-keyboard',style:{fontSize:11}}),' T/G/S tabs · ←→ products')
+          el('div',{style:{fontSize:11,color:'var(--text3)'}},el('i',{className:'ti ti-keyboard',style:{fontSize:11}}),' T/G/S tabs Â· ââ products')
         )
       )
     ),
@@ -564,12 +564,12 @@ function ProductDetail({prod,onChange,onKbNav}){
   );
 }
 
-/* ═══════════════════════════════════════
-   /* ═══════════════════════════════════════
-   POST LAUNCH ANALYSIS — v2
+/* âââââââââââââââââââââââââââââââââââââââ
+   /* âââââââââââââââââââââââââââââââââââââââ
+   POST LAUNCH ANALYSIS â v2
    3 products, weekly chart, top stores,
    removable products via state
-═══════════════════════════════════════ */
+âââââââââââââââââââââââââââââââââââââââ */
 
 const SALES_DATA_DEFAULT = {
   "Berry Blaze Liquid Diamonds All-in-One":{
@@ -701,7 +701,7 @@ const toSVG=(lat,lng,W=460,H=320)=>{
   return [Math.round(x*10)/10,Math.round(y*10)/10];
 };
 
-// Format ISO week → readable label
+// Format ISO week â readable label
 const fmtWeek=w=>{
   // ISO week to a readable date label (Monday of that week)
   const[y,wn]=w.split('-W');
@@ -711,7 +711,7 @@ const fmtWeek=w=>{
   return monday.toLocaleString('en-CA',{month:'short',day:'numeric'});
 };
 
-/* ── ROS Classes ── */
+/* ââ ROS Classes ââ */
 const STORE_COUNT_KEY='au_store_count_v1';
 const getStoreCount=()=>{try{const v=localStorage.getItem(STORE_COUNT_KEY);return v?parseInt(v):1695;}catch{return 1695;}};
 const saveStoreCount=v=>{try{localStorage.setItem(STORE_COUNT_KEY,String(v));}catch{}};
@@ -727,7 +727,7 @@ const ROS_CLASSES=[
 const getROS=v=>ROS_CLASSES.find(r=>v>=r.min&&(r.max===null||v<r.max))||ROS_CLASSES[4];
 const nextROS=v=>{const i=ROS_CLASSES.findIndex(r=>v>=r.min&&(r.max===null||v<r.max));return i>0?ROS_CLASSES[i-1]:null;};
 
-/* ── Velocity Card ── */
+/* ââ Velocity Card ââ */
 function VelocityCard({ocs,weekly}){
   if(!ocs||!weekly)return null;
   const CLS={
@@ -751,20 +751,20 @@ function VelocityCard({ocs,weekly}){
   const avg3=Math.round([lw,tw,tr].slice(0,Math.min(3,n)).reduce((a,b)=>a+b,0)/Math.min(3,n));
 
   const bars=[
-    {lbl:n>=3?fmtWeek(sorted[n-3][0]):'—', v:tr},
-    {lbl:n>=2?fmtWeek(sorted[n-2][0]):'—', v:tw},
+    {lbl:n>=3?fmtWeek(sorted[n-3][0]):'â', v:tr},
+    {lbl:n>=2?fmtWeek(sorted[n-2][0]):'â', v:tw},
     {lbl:n>=1?fmtWeek(sorted[n-1][0]):'LW', v:lw, hi:true},
   ].filter((_,i)=>i>=3-Math.min(3,n));
   const bMax=Math.max(...bars.map(b=>b.v),1);
 
   return el('div',{style:{background:'var(--bg)',border:'0.5px solid var(--bdr)',borderRadius:10,padding:'20px',marginBottom:16}},
-    /* ── Header ── */
+    /* ââ Header ââ */
     el('div',{style:{fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:'.08em',color:'var(--text3)',marginBottom:16}},
-      'OCS Velocity  ·  ',
-      el('span',{style:{fontWeight:400,color:'var(--text2)'}},'Last Week SO ÷ '+ONTARIO_STORES.toLocaleString()+' stores  ·  '+n+' weeks of data')
+      'OCS Velocity  Â·  ',
+      el('span',{style:{fontWeight:400,color:'var(--text2)'}},'Last Week SO Ã· '+ONTARIO_STORES.toLocaleString()+' stores  Â·  '+n+' weeks of data')
     ),
 
-    /* ── Top row: class badge | velocity + bars | next class ── */
+    /* ââ Top row: class badge | velocity + bars | next class ââ */
     el('div',{style:{display:'flex',gap:16,alignItems:'stretch',marginBottom:16}},
 
       /* Class badge */
@@ -780,11 +780,11 @@ function VelocityCard({ocs,weekly}){
         el('div',{style:{display:'flex',alignItems:'baseline',gap:10,marginBottom:12}},
           el('span',{style:{fontSize:36,fontWeight:900,color:cls.tx,lineHeight:1}},vel.toFixed(4)),
           el('span',{style:{fontSize:12,color:'var(--text2)'}},
-            'velocity  ·  LW ',
+            'velocity  Â·  LW ',
             el('strong',{style:{color:'var(--text)',fontSize:14}},lw.toLocaleString()),
-            ' units ÷ '+ONTARIO_STORES.toLocaleString())
+            ' units Ã· '+ONTARIO_STORES.toLocaleString())
         ),
-        /* 3-week bars — anchored at baseline */
+        /* 3-week bars â anchored at baseline */
         el('div',null,
           el('div',{style:{display:'flex',gap:10,alignItems:'flex-end',borderBottom:'2px solid var(--bdr2)',paddingBottom:0}},
             bars.map((b,i)=>el('div',{key:i,style:{flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:3}},
@@ -804,7 +804,7 @@ function VelocityCard({ocs,weekly}){
           el('div',{style:{fontSize:10,color:'var(--text3)',marginTop:8}},
             'Avg last ',Math.min(3,n),' wks: ',
             el('strong',{style:{color:'var(--text2)'}},avg3.toLocaleString()),
-            '  ·  avg velocity: ',el('strong',{style:{color:'var(--text2)'}},(avg3/ONTARIO_STORES).toFixed(4))
+            '  Â·  avg velocity: ',el('strong',{style:{color:'var(--text2)'}},(avg3/ONTARIO_STORES).toFixed(4))
           )
         )
       ),
@@ -819,13 +819,13 @@ function VelocityCard({ocs,weekly}){
               el('div',{style:{fontSize:9,color:CLS[next.cls]?.tx,opacity:.55,marginTop:3}},'>'+next.min+' vel threshold')
             )
           : el('div',{style:{background:'#2a2200',border:'1.5px solid #f0c030',borderRadius:10,padding:'14px',textAlign:'center',height:'100%',display:'flex',flexDirection:'column',justifyContent:'center'}},
-              el('div',{style:{fontSize:24,color:'#f0c030'}},'🏆'),
-              el('div',{style:{fontSize:12,fontWeight:700,color:'#f0c030',marginTop:6}},'Class A — Top Tier')
+              el('div',{style:{fontSize:24,color:'#f0c030'}},'ð'),
+              el('div',{style:{fontSize:12,fontWeight:700,color:'#f0c030',marginTop:6}},'Class A â Top Tier')
             )
       )
     ),
 
-    /* ── Bottom row: store penetration | inventory strip ── */
+    /* ââ Bottom row: store penetration | inventory strip ââ */
     el('div',{style:{display:'grid',gridTemplateColumns:'220px 1fr',gap:12,paddingTop:14,borderTop:'0.5px solid var(--bdr)'}},
 
       /* Store penetration */
@@ -845,10 +845,10 @@ function VelocityCard({ocs,weekly}){
 
       /* Inventory + metadata chips */
       el('div',{style:{display:'flex',gap:8,flexWrap:'wrap',alignContent:'flex-start'}},
-        [['On Hand',     ocs.onHand!=null?ocs.onHand.toLocaleString():'—',          'ti-warehouse'],
-         ['On Order',    ocs.onOrder!=null?ocs.onOrder.toLocaleString():'—',         'ti-truck-delivery'],
-         ['Wks of Supply',ocs.weeksOfSupply!=null?ocs.weeksOfSupply.toFixed(1)+'w':'—','ti-calendar-week'],
-         ['Fill Rate',   ocs.fillRate!=null?Math.round(ocs.fillRate*100)+'%':'—',    'ti-check'],
+        [['On Hand',     ocs.onHand!=null?ocs.onHand.toLocaleString():'â',          'ti-warehouse'],
+         ['On Order',    ocs.onOrder!=null?ocs.onOrder.toLocaleString():'â',         'ti-truck-delivery'],
+         ['Wks of Supply',ocs.weeksOfSupply!=null?ocs.weeksOfSupply.toFixed(1)+'w':'â','ti-calendar-week'],
+         ['Fill Rate',   ocs.fillRate!=null?Math.round(ocs.fillRate*100)+'%':'â',    'ti-check'],
          ['Life of SKU', ocs.lifeOfSku+' days',                                      'ti-clock'],
          ['First Receipt',ocs.firstReceipt,                                           'ti-calendar-event'],
         ].map(([label,val,icon])=>el('div',{key:label,style:{background:'var(--bg2)',borderRadius:7,padding:'8px 12px',flex:'0 0 auto'}},
@@ -861,14 +861,14 @@ function VelocityCard({ocs,weekly}){
   );
 }
 
-/* ── Weekly Bar Chart (ROS-aware) ── */
+/* ââ Weekly Bar Chart (ROS-aware) ââ */
 function WeeklyChart({weekly,monthly}){
   const [mode,setMode]=React.useState('weekly');
   const raw=mode==='weekly'?weekly:monthly;
   const entries=Object.entries(raw).sort(([a],[b])=>a.localeCompare(b));
   if(!entries.length)return null;
 
-  // Official thresholds — based on current Ontario store count
+  // Official thresholds â based on current Ontario store count
   const sc=ONTARIO_STORES;
   const ALL_T=mode==='weekly'?[
     {label:'A',units:Math.round(8*sc),   col:'#f0c030'},
@@ -878,7 +878,7 @@ function WeeklyChart({weekly,monthly}){
   ]:[];
 
   const maxV=Math.max(...entries.map(([,v])=>v),1);
-  // Only draw lines that fall within 0–2× of actual data (no point showing A at 13k if max is 400)
+  // Only draw lines that fall within 0â2Ã of actual data (no point showing A at 13k if max is 400)
   const thresholds=ALL_T.filter(t=>t.units<=maxV*2);
   // Scale chart high enough to show the lowest threshold above the data
   const topThresh=thresholds.length?Math.max(...thresholds.map(t=>t.units)):0;
@@ -919,7 +919,7 @@ function WeeklyChart({weekly,monthly}){
           );
         })
       ),
-      /* threshold lines — absolutely on top of bars */
+      /* threshold lines â absolutely on top of bars */
       el('div',{style:{position:'absolute',inset:0,pointerEvents:'none',zIndex:10}},
         thresholds.map(t=>{
           const pxFromBottom=Math.round(t.units/chartMax*BAR_H);
@@ -934,7 +934,7 @@ function WeeklyChart({weekly,monthly}){
               background:'var(--bg)',padding:'1px 5px',
               borderRadius:3,border:'0.5px solid '+t.col,
               whiteSpace:'nowrap',
-            }},t.label+' — '+t.units.toLocaleString()+' units')
+            }},t.label+' â '+t.units.toLocaleString()+' units')
           );
         })
       )
@@ -948,12 +948,12 @@ function WeeklyChart({weekly,monthly}){
         el('div',{style:{width:10,height:10,borderRadius:2,background:r.col}}),
         el('span',{style:{color:'var(--text2)'}},r.cls+' '+r.label)
       )),
-      el('div',{style:{fontSize:9,color:'var(--text3)',marginLeft:'auto'}},'÷ '+ONTARIO_STORES.toLocaleString()+' Ontario stores')
+      el('div',{style:{fontSize:9,color:'var(--text3)',marginLeft:'auto'}},'Ã· '+ONTARIO_STORES.toLocaleString()+' Ontario stores')
     )
   );
 }
 
-/* ── Top Stores ── */
+/* ââ Top Stores ââ */
 function TopStores({stores}){
   const [showAll,setShowAll]=React.useState(false);
   const entries=Object.entries(stores).sort(([,a],[,b])=>b-a);
@@ -976,12 +976,12 @@ function TopStores({stores}){
       )
     )),
     entries.length>8&&el('button',{onClick:()=>setShowAll(s=>!s),style:{background:'transparent',border:'none',cursor:'pointer',color:'var(--info)',fontSize:11,padding:'4px 0',fontFamily:'inherit'}},
-      showAll?'Show less ↑':'Show all '+entries.length+' stores ↓'
+      showAll?'Show less â':'Show all '+entries.length+' stores â'
     )
   );
 }
 
-/* ── Top Cities ── */
+/* ââ Top Cities ââ */
 function TopCities({cities}){
   const [showAll,setShowAll]=React.useState(false);
   const entries=Object.entries(cities).sort(([,a],[,b])=>b-a);
@@ -1004,12 +1004,12 @@ function TopCities({cities}){
       )
     )),
     entries.length>10&&el('button',{onClick:()=>setShowAll(s=>!s),style:{background:'transparent',border:'none',cursor:'pointer',color:'var(--info)',fontSize:11,padding:'4px 0',fontFamily:'inherit'}},
-      showAll?'Show less ↑':'Show all '+entries.length+' cities ↓'
+      showAll?'Show less â':'Show all '+entries.length+' cities â'
     )
   );
 }
 
-/* ── Region Bar ── */
+/* ââ Region Bar ââ */
 function RegionBar({regions}){
   const total=Object.values(regions).reduce((a,b)=>a+b,0)||1;
   const RCOLS={'Toronto':'var(--info)','GTA Region (Excludes Toronto)':'var(--ok)','West Region':'var(--warn)','East Region':'#a78bfa','North Region':'var(--err)'};
@@ -1032,7 +1032,7 @@ function RegionBar({regions}){
 }
 
 
-/* ── Ontario Map (Leaflet) ── */
+/* ââ Ontario Map (Leaflet) ââ */
 function OntarioMap({cityData}){
   const containerRef = React.useRef(null);
   const mapRef       = React.useRef(null);
@@ -1089,7 +1089,7 @@ function OntarioMap({cityData}){
       .addTo(map);
       markersRef.current.push(m);
     });
-  });   // no dep array — runs after every render, safe because we clear first
+  });   // no dep array â runs after every render, safe because we clear first
 
   return el('div',null,
     el('div',{
@@ -1097,12 +1097,12 @@ function OntarioMap({cityData}){
       style:{height:340,borderRadius:8,overflow:'hidden',border:'0.5px solid var(--bdr)'}
     }),
     el('div',{style:{fontSize:10,color:'var(--text3)',textAlign:'center',marginTop:4}},
-      'Hover a city  ·  Bubble size & colour = units sold'
+      'Hover a city  Â·  Bubble size & colour = units sold'
     )
   );
 }
 
-/* ── Daily Line Chart ── */
+/* ââ Daily Line Chart ââ */
 function DailyLineChart({daily,brand,skuClass,launchDate}){
   if(!daily||!Object.keys(daily).length)return null;
 
@@ -1133,7 +1133,7 @@ function DailyLineChart({daily,brand,skuClass,launchDate}){
   // Build SVG polyline points
   const points=entries.map(([,v],i)=>`${PL+xPos(i)},${PT+yPos(v)}`).join(' ');
 
-  // Month labels — show first day of each month
+  // Month labels â show first day of each month
   const monthLabels=[];
   let lastMonth='';
   entries.forEach(([date],i)=>{
@@ -1160,7 +1160,7 @@ function DailyLineChart({daily,brand,skuClass,launchDate}){
     // Find the closest entry index by date
     let mIdx=entries.findIndex(([date])=>date>=ds);
     if(mIdx<0){
-      // Past the end of data — place at the end
+      // Past the end of data â place at the end
       mIdx=entries.length-1;
     }
     // Snap to exact position if date matches, else interpolate
@@ -1168,7 +1168,7 @@ function DailyLineChart({daily,brand,skuClass,launchDate}){
     return{days,x:mx,date:ds,past:ds>entries[entries.length-1][0]};
   }).filter(Boolean):[];
 
-  // Weekly separator x positions — every Monday
+  // Weekly separator x positions â every Monday
   const weekSeps=[];
   entries.forEach(([date],i)=>{
     if(i===0)return;
@@ -1182,10 +1182,10 @@ function DailyLineChart({daily,brand,skuClass,launchDate}){
   return el('div',{style:{background:'var(--bg)',border:'0.5px solid var(--bdr)',borderRadius:10,padding:'16px',marginTop:16}},
     el('div',{style:{fontSize:12,fontWeight:700,marginBottom:12,display:'flex',alignItems:'center',gap:6}},
       el('i',{className:'ti ti-chart-line',style:{color:lineCol}}),
-      'Daily Orders — Full Life of SKU',
+      'Daily Orders â Full Life of SKU',
       el('span',{style:{fontSize:10,color:'var(--text3)',marginLeft:6,fontWeight:400}},
-        entries[0]?.[0]+' → '+entries[entries.length-1]?.[0],
-        '  ·  '+n+' order days'
+        entries[0]?.[0]+' â '+entries[entries.length-1]?.[0],
+        '  Â·  '+n+' order days'
       )
     ),
     el('div',{style:{position:'relative',overflowX:'auto'},
@@ -1208,7 +1208,7 @@ function DailyLineChart({daily,brand,skuClass,launchDate}){
         )),
         // Area fill
         el('polygon',{points:areaPoints,fill:lineCol,opacity:0.08}),
-        // Weekly separators — light vertical lines every Monday
+        // Weekly separators â light vertical lines every Monday
         ...weekSeps.map((x,i)=>el('line',{key:'ws'+i,x1:x,y1:PT,x2:x,y2:PT+cH,stroke:'var(--bdr2)',strokeWidth:0.5,opacity:0.5})),
         // Milestone day lines
         ...milestones.map(m=>{
@@ -1249,7 +1249,7 @@ function DailyLineChart({daily,brand,skuClass,launchDate}){
   );
 }
 
-/* ── Store Distribution Card ── */
+/* ââ Store Distribution Card ââ */
 function StoreDistributionCard({storeMetrics,vel,prevVel,clsCol}){
   if(!storeMetrics)return null;
   const wkEntries=Object.entries(storeMetrics.weekMetrics).sort(([a],[b])=>a.localeCompare(b));
@@ -1282,7 +1282,7 @@ function StoreDistributionCard({storeMetrics,vel,prevVel,clsCol}){
         el('div',{style:{fontSize:10,color:'var(--text3)',marginBottom:6,fontWeight:600}},'New Stores LW'),
         el('div',{style:{fontSize:22,fontWeight:900,color:lw.new>0?'var(--ok)':'var(--text3)',lineHeight:1}},lw.new||0),
         el('div',{style:{fontSize:11,color:'var(--text2)',marginTop:3}},'first-ever orders'),
-        lw.new>0&&el('div',{style:{fontSize:10,color:'var(--ok)',marginTop:2}},'↑ new distribution')
+        lw.new>0&&el('div',{style:{fontSize:10,color:'var(--ok)',marginTop:2}},'â new distribution')
       ),
 
       /* Repeat Store Rate */
@@ -1292,7 +1292,7 @@ function StoreDistributionCard({storeMetrics,vel,prevVel,clsCol}){
           el('div',{style:{fontSize:22,fontWeight:900,lineHeight:1,color:repeatRate>=50?'var(--ok)':repeatRate>=25?'var(--warn)':'var(--err)'}},repeatRate+'%'),
           el('div',{style:{fontSize:11,color:'var(--text2)',marginTop:3}},lw.repeat+' of '+lw.prevActive+' stores'),
           el('div',{style:{fontSize:10,color:'var(--text3)',marginTop:2}},'reordered this week')
-        ):el('div',{style:{fontSize:13,color:'var(--text3)'}},'—')
+        ):el('div',{style:{fontSize:13,color:'var(--text3)'}},'â')
       ),
 
       /* Distribution Opportunity */
@@ -1302,12 +1302,12 @@ function StoreDistributionCard({storeMetrics,vel,prevVel,clsCol}){
         el('div',{style:{height:4,background:'var(--bg3)',borderRadius:2,overflow:'hidden',margin:'6px 0 4px'}},
           el('div',{style:{height:'100%',width:distPct+'%',background:'var(--info)',borderRadius:2}})
         ),
-        el('div',{style:{fontSize:10,color:'var(--text3)'}},distPct+'% of '+ONTARIO_STORES.toLocaleString()+'  ·  ',
+        el('div',{style:{fontSize:10,color:'var(--text3)'}},distPct+'% of '+ONTARIO_STORES.toLocaleString()+'  Â·  ',
           el('span',{style:{color:'var(--warn)',fontWeight:600}},storeMetrics.opportunity,' untapped'))
       )
     ),
 
-    /* ── Weekly store activity table ── */
+    /* ââ Weekly store activity table ââ */
     el('div',{style:{borderTop:'0.5px solid var(--bdr)',paddingTop:14}},
       el('div',{style:{fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:'.07em',color:'var(--text3)',marginBottom:12}},'Weekly Store Activity'),
       el('div',{style:{overflowX:'auto'}},
@@ -1317,7 +1317,7 @@ function StoreDistributionCard({storeMetrics,vel,prevVel,clsCol}){
             el('tr',null,
               el('th',{style:{padding:'7px 12px',textAlign:'left',fontSize:11,fontWeight:600,color:'var(--text3)',background:'var(--bg2)',borderBottom:'0.5px solid var(--bdr)',whiteSpace:'nowrap'}},'Week'),
               el('th',{style:{padding:'7px 12px',textAlign:'center',fontSize:11,fontWeight:600,color:'var(--text3)',background:'var(--bg2)',borderBottom:'0.5px solid var(--bdr)'}},'Active'),
-              el('th',{style:{padding:'7px 12px',textAlign:'center',fontSize:11,fontWeight:600,color:'var(--ok)',background:'var(--bg2)',borderBottom:'0.5px solid var(--bdr)'}},'New ✦'),
+              el('th',{style:{padding:'7px 12px',textAlign:'center',fontSize:11,fontWeight:600,color:'var(--ok)',background:'var(--bg2)',borderBottom:'0.5px solid var(--bdr)'}},'New â¦'),
               el('th',{style:{padding:'7px 12px',textAlign:'center',fontSize:11,fontWeight:600,color:'var(--info)',background:'var(--bg2)',borderBottom:'0.5px solid var(--bdr)'}},'Repeat'),
               el('th',{style:{padding:'7px 12px',textAlign:'center',fontSize:11,fontWeight:600,color:'var(--text3)',background:'var(--bg2)',borderBottom:'0.5px solid var(--bdr)'}},'Repeat %'),
               el('th',{style:{padding:'7px 12px',textAlign:'left',fontSize:11,fontWeight:600,color:'var(--text3)',background:'var(--bg2)',borderBottom:'0.5px solid var(--bdr)',minWidth:120}},'Trend')
@@ -1345,19 +1345,19 @@ function StoreDistributionCard({storeMetrics,vel,prevVel,clsCol}){
                 el('td',{style:{padding:'9px 12px',textAlign:'center',borderBottom:'0.5px solid var(--bdr)'}},
                   m.new>0
                     ? el('span',{style:{fontSize:13,fontWeight:700,color:'var(--ok)'}},'+'+m.new)
-                    : el('span',{style:{fontSize:12,color:'var(--text3)'}},'—')
+                    : el('span',{style:{fontSize:12,color:'var(--text3)'}},'â')
                 ),
                 /* Repeat */
                 el('td',{style:{padding:'9px 12px',textAlign:'center',borderBottom:'0.5px solid var(--bdr)'}},
                   m.prevActive>0
                     ? el('span',{style:{fontSize:13,fontWeight:600,color:'var(--info)'}},m.repeat)
-                    : el('span',{style:{fontSize:12,color:'var(--text3)'}},'—')
+                    : el('span',{style:{fontSize:12,color:'var(--text3)'}},'â')
                 ),
                 /* Repeat % */
                 el('td',{style:{padding:'9px 12px',textAlign:'center',borderBottom:'0.5px solid var(--bdr)'}},
                   rrPct!=null
                     ? el('span',{style:{fontSize:13,fontWeight:700,color:rrCol}},rrPct+'%')
-                    : el('span',{style:{fontSize:12,color:'var(--text3)'}},'—')
+                    : el('span',{style:{fontSize:12,color:'var(--text3)'}},'â')
                 ),
                 /* Trend bar */
                 el('td',{style:{padding:'9px 12px',borderBottom:'0.5px solid var(--bdr)'}},
@@ -1373,9 +1373,9 @@ function StoreDistributionCard({storeMetrics,vel,prevVel,clsCol}){
       ),
       /* Legend */
       el('div',{style:{display:'flex',gap:20,marginTop:12,flexWrap:'wrap'}},
-        [['var(--ok)','New — first-ever order from that store'],
-         ['var(--info)','Repeat — reordered from previous week'],
-         ['var(--warn)','Repeat % — of prior week active stores']
+        [['var(--ok)','New â first-ever order from that store'],
+         ['var(--info)','Repeat â reordered from previous week'],
+         ['var(--warn)','Repeat % â of prior week active stores']
         ].map(([col,lbl])=>el('div',{key:lbl,style:{display:'flex',alignItems:'center',gap:5,fontSize:10}},
           el('div',{style:{width:8,height:8,borderRadius:'50%',background:col,flexShrink:0}}),
           el('span',{style:{color:'var(--text3)'}},lbl)
@@ -1386,22 +1386,22 @@ function StoreDistributionCard({storeMetrics,vel,prevVel,clsCol}){
 }
 
 
-/* ── Post Launch View ── */
+/* ââ Post Launch View ââ */
 
 
-/* ══════════════════════════════════════════
+/* ââââââââââââââââââââââââââââââââââââââââââ
    GITHUB SYNC
-   ─ Saves/loads data.json in your repo
-   ─ Code (index.html) and data are separate
-   ─ Data survives all future code updates
-══════════════════════════════════════════ */
+   â Saves/loads data.json in your repo
+   â Code (index.html) and data are separate
+   â Data survives all future code updates
+ââââââââââââââââââââââââââââââââââââââââââ */
 
 const GH_CONF_KEY = 'au_gh_config_v1';
 const GH_OWNER    = 'kylenauj';
 const GH_REPO     = 'productdev';
 const GH_FILE     = 'data.json';
 const GH_BRANCH   = 'main';
-const GH_TOKEN_DEFAULT = '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';
+const GH_TOKEN_DEFAULT='';
 
 const getGHConf = ()=>{ try{ return JSON.parse(localStorage.getItem(GH_CONF_KEY))||{}; }catch{ return {}; } };
 const saveGHConf = c=>{ try{ localStorage.setItem(GH_CONF_KEY, JSON.stringify(c)); }catch{} };
@@ -1454,20 +1454,27 @@ async function ghWrite(token, data, sha){
   return d.content.sha; // return new sha for next write
 }
 
-/* ── GitHub Sync Panel ── */
+/* ââ GitHub Sync Panel ââ */
 function GitHubSyncPanel({data, setData, onClose}){
-  const token = (getGHConf().token)||GH_TOKEN_DEFAULT;
-  const [autoRef, setAutoRef] = React.useState(()=>getGHConf().autoRefresh||false);
+  const conf = getGHConf();
+  const [token,   setToken]   = React.useState(conf.token||'');
+  const [autoRef, setAutoRef] = React.useState(conf.autoRefresh!==false);
   const [status,  setStatus]  = React.useState(null);
   const [busy,    setBusy]    = React.useState(false);
-  const shaRef = React.useRef(getGHConf().sha||null);
+  const shaRef = React.useRef(conf.sha||null);
 
   const saveConf = (t,ar,sha)=>{
-    saveGHConf({token:t,autoRefresh:ar,sha:sha||shaRef.current});
+    shaRef.current = sha||shaRef.current;
+    saveGHConf({token:t, autoRefresh:ar, sha:shaRef.current});
+  };
+
+  const handleTokenChange = val=>{
+    setToken(val);
+    saveConf(val, autoRef, shaRef.current);
   };
 
   const handlePull = async()=>{
-    if(!token){ setStatus({ok:false,msg:'Enter your GitHub PAT first.'}); return; }
+    if(!token){ setStatus({ok:false,msg:'Paste your GitHub PAT below first.'}); return; }
     setBusy(true); setStatus(null);
     try{
       const result = await ghRead(token);
@@ -1483,12 +1490,11 @@ function GitHubSyncPanel({data, setData, onClose}){
   };
 
   const handlePush = async()=>{
-    if(!token){ setStatus({ok:false,msg:'Enter your GitHub PAT first.'}); return; }
+    if(!token){ setStatus({ok:false,msg:'Paste your GitHub PAT below first.'}); return; }
     setBusy(true); setStatus(null);
     try{
-      // Get latest sha before writing to avoid conflicts
       const latest = await ghRead(token);
-      const sha = latest?.sha || shaRef.current || null;
+      const sha = latest ? latest.sha : shaRef.current;
       const newSha = await ghWrite(token, data, sha);
       shaRef.current = newSha;
       saveConf(token, autoRef, newSha);
@@ -1502,15 +1508,16 @@ function GitHubSyncPanel({data, setData, onClose}){
     saveConf(token, val, shaRef.current);
   };
 
+  const hasToken = token && token.length > 10;
+
   return el('div',{style:{
     position:'fixed',inset:0,background:'rgba(0,0,0,0.55)',zIndex:500,
     display:'flex',alignItems:'center',justifyContent:'center',padding:20
-  }, onClick:e=>e.target===e.currentTarget&&onClose()},
+  }},
     el('div',{style:{
       background:'var(--bg)',border:'0.5px solid var(--bdr2)',borderRadius:14,
       width:'100%',maxWidth:500,boxShadow:'0 8px 40px rgba(0,0,0,0.4)'
     }},
-      /* Header */
       el('div',{style:{padding:'16px 20px',borderBottom:'0.5px solid var(--bdr)',display:'flex',alignItems:'center',justifyContent:'space-between'}},
         el('div',null,
           el('div',{style:{fontSize:15,fontWeight:800,display:'flex',alignItems:'center',gap:8}},
@@ -1524,45 +1531,54 @@ function GitHubSyncPanel({data, setData, onClose}){
           el('i',{className:'ti ti-x'})
         )
       ),
-
       el('div',{style:{padding:'20px'}},
-        /* Info banner */
-        el('div',{style:{background:'var(--info-bg)',border:'0.5px solid var(--info)',borderRadius:8,padding:'10px 14px',marginBottom:18,fontSize:12,color:'var(--info)'}},
+        el('div',{style:{background:'var(--info-bg)',border:'0.5px solid var(--info)',borderRadius:8,padding:'10px 14px',marginBottom:16,fontSize:12,color:'var(--info)'}},
           el('i',{className:'ti ti-info-circle',style:{marginRight:6}}),
-          'Code and data are separate. Pushing saves ',el('strong',null,'data.json'),' to your repo — your HTML/code is never changed. Data survives all future dashboard updates.'
+          'Code and data are separate. Pushing saves ',el('strong',null,'data.json'),' to your repo — your HTML/code is never changed.'
         ),
-
-        /* Connected indicator */
-        el('div',{style:{background:'var(--ok-bg)',border:'0.5px solid var(--ok)',borderRadius:8,padding:'10px 14px',marginBottom:18,fontSize:12,color:'var(--ok)',display:'flex',alignItems:'center',gap:8}},
-          el('i',{className:'ti ti-check'}),
-          el('span',null,el('strong',null,'Connected'),' — kylenauj/productdev · data.json')
+        el('div',{style:{marginBottom:16}},
+          el('div',{style:{fontSize:11,fontWeight:600,color:'var(--text2)',marginBottom:5,display:'flex',alignItems:'center',gap:6}},
+            el('i',{className:'ti ti-key',style:{fontSize:13}}),
+            'GitHub Personal Access Token',
+            hasToken&&el('span',{style:{color:'var(--ok)',fontWeight:400}},' ✓ saved')
+          ),
+          el('input',{
+            type:'password',
+            className:'ei',
+            placeholder:'ghp_xxxxxxxxxxxxxxxxxxxx',
+            value:token,
+            onChange:e=>handleTokenChange(e.target.value),
+            style:{fontSize:13,marginBottom:5}
+          }),
+          el('div',{style:{fontSize:10,color:'var(--text3)'}},
+            'Needs ',el('code',null,'public_repo'),' scope. ',
+            el('a',{href:'https://github.com/settings/tokens/new?scopes=public_repo&description=productdev+dashboard',target:'_blank',style:{color:'var(--info)'}},
+              'Generate one ↗'
+            )
+          )
         ),
-
-        /* Buttons */
         el('div',{style:{display:'flex',gap:10,marginBottom:14}},
-          el('button',{onClick:handlePull,disabled:busy||!token,style:{
+          el('button',{onClick:handlePull,disabled:busy||!hasToken,style:{
             flex:1,background:'var(--bg2)',border:'0.5px solid var(--bdr2)',
-            borderRadius:8,cursor:'pointer',padding:'10px',fontSize:13,
+            borderRadius:8,cursor:hasToken?'pointer':'not-allowed',padding:'10px',fontSize:13,
             fontFamily:'inherit',color:'var(--text)',fontWeight:500,
             display:'flex',alignItems:'center',justifyContent:'center',gap:7,
-            opacity:(busy||!token)?0.5:1
+            opacity:(busy||!hasToken)?0.4:1
           }},
             el('i',{className:'ti ti-cloud-download',style:{fontSize:16}}), 'Pull from GitHub'
           ),
-          el('button',{onClick:handlePush,disabled:busy||!token,style:{
+          el('button',{onClick:handlePush,disabled:busy||!hasToken,style:{
             flex:1,background:'#24292f',border:'none',
-            borderRadius:8,cursor:'pointer',padding:'10px',fontSize:13,
+            borderRadius:8,cursor:hasToken?'pointer':'not-allowed',padding:'10px',fontSize:13,
             fontFamily:'inherit',color:'#fff',fontWeight:600,
             display:'flex',alignItems:'center',justifyContent:'center',gap:7,
-            opacity:(busy||!token)?0.5:1
+            opacity:(busy||!hasToken)?0.4:1
           }},
             busy
               ? el('span',null,el('i',{className:'ti ti-loader-2',style:{animation:'spin 1s linear infinite',fontSize:14}}),' Saving…')
               : el('span',null,el('i',{className:'ti ti-cloud-upload',style:{fontSize:16}}), ' Push to GitHub')
           )
         ),
-
-        /* Auto-refresh toggle */
         el('div',{style:{display:'flex',alignItems:'center',gap:10,padding:'10px 14px',background:'var(--bg2)',borderRadius:8,marginBottom:14}},
           el('div',{style:{flex:1}},
             el('div',{style:{fontSize:12,fontWeight:600,color:'var(--text)'}},'Auto-refresh (Viewer Mode)'),
@@ -1580,8 +1596,6 @@ function GitHubSyncPanel({data, setData, onClose}){
             }})
           )
         ),
-
-        /* Status */
         status&&el('div',{style:{
           padding:'10px 14px',borderRadius:8,fontSize:12,
           background:status.ok?'var(--ok-bg)':'var(--err-bg)',
@@ -1595,8 +1609,6 @@ function GitHubSyncPanel({data, setData, onClose}){
     )
   );
 }
-
-
 function PostLaunchView({data}){
   // data = launch dashboard data (for reading launchDate from product tasks)
   const [salesData,setSalesData]=React.useState(()=>{
@@ -1688,7 +1700,7 @@ function PostLaunchView({data}){
     );
 
   return el('div',{style:{padding:'20px'}},
-    /* ── PC Tab bar ── */
+    /* ââ PC Tab bar ââ */
     el('div',{style:{display:'flex',gap:0,borderBottom:'0.5px solid var(--bdr)',marginBottom:16,overflowX:'auto'}},
       PC_GROUPS.map(pc=>{
         const count=Object.keys(salesData).filter(k=>!hidden.includes(k)&&(salesData[k]?.pc||'other')===pc.id).length;
@@ -1708,7 +1720,7 @@ function PostLaunchView({data}){
       })
     ),
 
-    /* ── Product cards for active PC ── */
+    /* ââ Product cards for active PC ââ */
     el('div',{style:{marginBottom:20}},
       el('div',{style:{display:'flex',gap:10,flexWrap:'wrap',alignItems:'flex-start'}},
         visibleProds.map(name=>{
@@ -1739,12 +1751,12 @@ function PostLaunchView({data}){
             background:'var(--bg2)',border:'0.5px dashed var(--bdr2)',borderRadius:8,
             cursor:'pointer',padding:'8px 12px',fontSize:11,color:'var(--text2)',
             fontFamily:'inherit',display:'flex',alignItems:'center',gap:5
-          }},el('i',{className:'ti ti-eye',style:{fontSize:11}}),name.slice(0,22)+'…')
+          }},el('i',{className:'ti ti-eye',style:{fontSize:11}}),name.slice(0,22)+'â¦')
         )
       )
     ),
 
-    /* ── Product detail ── */
+    /* ââ Product detail ââ */
     !current?el('div',{style:{color:'var(--text2)',padding:20,textAlign:'center'}},'No products in this product call yet.'):
     el('div',null,
       el(DailyLineChart,{daily:current.daily,brand:current.brand,skuClass:current.ocs?.skuClass,launchDate:effectiveLaunchDate}),
@@ -1794,7 +1806,7 @@ function PostLaunchView({data}){
   );
 }
 
-/* ── App ── */
+/* ââ App ââ */
 const APP_PASSWORD='Mera2026!';
 const AUTH_KEY='au_auth_v1';
 const isAuthed=()=>{try{return localStorage.getItem(AUTH_KEY)==='1';}catch{return false;}};
@@ -1834,12 +1846,12 @@ function LoginScreen({onAuth}){
         setAuthed();
         setTimeout(()=>onAuth(result),500);
       } else {
-        setGhStatus({ok:false,msg:'No data file found — loading with local data.'});
+        setGhStatus({ok:false,msg:'No data file found â loading with local data.'});
         setAuthed();
         setTimeout(()=>onAuth(),500);
       }
     }catch(e){
-      setGhStatus({ok:false,msg:'Load error: '+e.message+' — using local data.'});
+      setGhStatus({ok:false,msg:'Load error: '+e.message+' â using local data.'});
       setAuthed();
       setTimeout(()=>onAuth(),500);
     }
@@ -1859,9 +1871,9 @@ function LoginScreen({onAuth}){
     }},
       el('div',{style:{fontSize:11,fontWeight:700,textTransform:'uppercase',letterSpacing:'.1em',color:'var(--text3)',marginBottom:10}},'Adult Rec'),
       el('h1',{style:{fontSize:22,fontWeight:800,letterSpacing:'-.3px',marginBottom:6}},'Product Launch Dashboard'),
-      el('div',{style:{fontSize:11,color:'var(--text3)',marginBottom:32}},'Ontario · 2026 · v1.14'),
+      el('div',{style:{fontSize:11,color:'var(--text3)',marginBottom:32}},'Ontario Â· 2026 Â· v1.14'),
 
-      /* ── Stage 1: Password ── */
+      /* ââ Stage 1: Password ââ */
       stage==='password'&&el('div',null,
         el('input',{
           ref:pwRef,type:'password',className:'ei',
@@ -1877,10 +1889,10 @@ function LoginScreen({onAuth}){
           width:'100%',background:'var(--info-bg)',border:'0.5px solid var(--info)',
           borderRadius:8,padding:'12px',fontSize:13,fontFamily:'inherit',
           color:'var(--info)',fontWeight:700,cursor:'pointer'
-        }},'Continue →')
+        }},'Continue â')
       ),
 
-      /* ── Stage 2: Load ── */
+      /* ââ Stage 2: Load ââ */
       stage==='load'&&el('div',null,
         el('div',{style:{
           background:'var(--ok-bg)',border:'0.5px solid var(--ok)',borderRadius:8,
@@ -1894,7 +1906,7 @@ function LoginScreen({onAuth}){
           gap:8,marginBottom:12,opacity:loading?0.6:1
         }},
           loading
-            ? el('span',null,el('i',{className:'ti ti-loader-2',style:{animation:'spin 1s linear infinite',marginRight:6}}),'Loading…')
+            ? el('span',null,el('i',{className:'ti ti-loader-2',style:{animation:'spin 1s linear infinite',marginRight:6}}),'Loadingâ¦')
             : el('span',null,el('i',{className:'ti ti-cloud-download'}),' Load from GitHub')
         ),
         ghStatus&&el('div',{style:{
@@ -1907,7 +1919,7 @@ function LoginScreen({onAuth}){
           width:'100%',background:'transparent',border:'0.5px solid var(--bdr2)',
           borderRadius:8,padding:'10px',fontSize:12,fontFamily:'inherit',
           color:'var(--text2)',cursor:'pointer'
-        }},'Skip — use local data')
+        }},'Skip â use local data')
       )
     )
   );
@@ -2045,10 +2057,10 @@ function App(){
   return el('div',null,
     el('div',{className:'page-hd'},
       el('div',null,
-        el('h1',null,'Adult Rec — Product Launch Dashboard'),
+        el('h1',null,'Adult Rec â Product Launch Dashboard'),
         el('div',{style:{display:'flex',alignItems:'center',gap:12,flexWrap:'wrap',marginTop:2}},
           el('div',{style:{display:'flex',alignItems:'center',gap:10}},
-            el('small',{style:{color:'var(--text2)'}},'Ontario · 2026  ·  Last saved: ',fmtTs(lastSaved)),
+            el('small',{style:{color:'var(--text2)'}},'Ontario Â· 2026  Â·  Last saved: ',fmtTs(lastSaved)),
             el('span',{style:{fontSize:10,background:'var(--info-bg)',color:'var(--info)',border:'0.5px solid var(--info)',borderRadius:5,padding:'1px 7px',fontWeight:700,letterSpacing:'.03em'}},'v1.14')
           ),
           el('div',{style:{display:'flex',alignItems:'center',gap:6,background:'var(--bg2)',border:'0.5px solid var(--bdr2)',borderRadius:7,padding:'3px 10px'}},
@@ -2059,7 +2071,7 @@ function App(){
               key:'sc-'+storeCountVer,
               defaultValue:ONTARIO_STORES,
               min:1,max:99999,
-              title:'Active Ontario store count — updates all velocity & threshold calculations',
+              title:'Active Ontario store count â updates all velocity & threshold calculations',
               style:{width:56,background:'transparent',border:'none',outline:'none',fontSize:12,fontWeight:700,color:'var(--info)',fontFamily:'inherit',textAlign:'center',MozAppearance:'textfield'},
               onChange:ev=>{
                 const v=parseInt(ev.target.value);
@@ -2082,7 +2094,7 @@ function App(){
     ),
     showGH&&el(GitHubSyncPanel,{data,setData,onClose:()=>setShowGH(false)}),
     shell,
-    el('p',{style:{fontSize:11,color:'var(--text3)',textAlign:'center',marginTop:12}},'Generated '+new Date().toLocaleDateString('en-CA',{year:'numeric',month:'long',day:'numeric'})+' · Keyboard: T Tasks · G Gantt · S Specs · ← → switch products · F fullscreen  ·  Built by Kyle Naujokaitis  ·  v1.14')
+    el('p',{style:{fontSize:11,color:'var(--text3)',textAlign:'center',marginTop:12}},'Generated '+new Date().toLocaleDateString('en-CA',{year:'numeric',month:'long',day:'numeric'})+' Â· Keyboard: T Tasks Â· G Gantt Â· S Specs Â· â â switch products Â· F fullscreen  Â·  Built by Kyle Naujokaitis  Â·  v1.14')
   );
 }
 ReactDOM.createRoot(document.getElementById('root')).render(el(App));
