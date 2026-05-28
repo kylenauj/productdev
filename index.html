@@ -1401,16 +1401,17 @@ const GH_OWNER    = 'kylenauj';
 const GH_REPO     = 'productdev';
 const GH_FILE     = 'data.json';
 const GH_BRANCH   = 'main';
-const GH_TOKEN_DEFAULT = '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';
+const GH_TOKEN_DEFAULT = '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';
 
 const getGHConf = ()=>{ try{ return JSON.parse(localStorage.getItem(GH_CONF_KEY))||{}; }catch{ return {}; } };
 const saveGHConf = c=>{ try{ localStorage.setItem(GH_CONF_KEY, JSON.stringify(c)); }catch{} };
 const getToken = ()=>getGHConf().token||GH_TOKEN_DEFAULT;
 
 const ghHeaders = token=>({
-  'Authorization': 'token '+token,
+  'Authorization': 'Bearer '+token,
   'Accept': 'application/vnd.github.v3+json',
   'Content-Type': 'application/json',
+  'X-GitHub-Api-Version': '2022-11-28',
 });
 
 async function ghRead(token){
@@ -1419,7 +1420,10 @@ async function ghRead(token){
     { headers: ghHeaders(token) }
   );
   if(r.status===404) return null; // file doesn't exist yet
-  if(r.status===401||r.status===403) throw new Error('Invalid token — check your PAT has repo access.');
+  if(r.status===401||r.status===403){
+    const e=await r.json().catch(()=>({}));
+    throw new Error('Auth failed ('+r.status+'): '+(e.message||'PAT may be expired or missing repo scope'));
+  }
   if(!r.ok) throw new Error('GitHub read failed: '+r.status);
   const d = await r.json();
   const content = JSON.parse(atob(d.content.replace(/\n/g,'')));
@@ -1438,7 +1442,10 @@ async function ghWrite(token, data, sha){
     `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${GH_FILE}`,
     { method:'PUT', headers: ghHeaders(token), body: JSON.stringify(body) }
   );
-  if(r.status===401||r.status===403) throw new Error('Invalid token — check your PAT has repo access.');
+  if(r.status===401||r.status===403){
+    const e=await r.json().catch(()=>({}));
+    throw new Error('Auth failed ('+r.status+'): '+(e.message||'check PAT has repo scope and is not expired'));
+  }
   if(!r.ok){
     const e = await r.json().catch(()=>({}));
     throw new Error(e.message||'GitHub write failed: '+r.status);
