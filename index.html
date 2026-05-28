@@ -1456,7 +1456,7 @@ async function ghWrite(token, data, sha){
 
 /* ── GitHub Sync Panel ── */
 function GitHubSyncPanel({data, setData, onClose}){
-  const token = GH_TOKEN_DEFAULT;
+  const token = (getGHConf().token)||GH_TOKEN_DEFAULT;
   const [autoRef, setAutoRef] = React.useState(()=>getGHConf().autoRefresh||false);
   const [status,  setStatus]  = React.useState(null);
   const [busy,    setBusy]    = React.useState(false);
