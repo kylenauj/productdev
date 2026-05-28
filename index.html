@@ -9,7 +9,7 @@
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#0f1729;--bg2:#162040;--bg3:#0a1120;
+  --bg:#0f1729;--bg2:#162040;--bg3:#0a1120;h
   --text:#e8edf8;--text2:#8fa3c8;--text3:#6b85a8;
   --bdr:rgba(255,255,255,.08);--bdr2:rgba(255,255,255,.18);
   --ok-bg:#0a2214;--ok:#6dba7a;
@@ -1824,20 +1824,24 @@ function LoginScreen({onAuth}){
   const loadFromGitHub=async()=>{
     setLoading(true); setGhStatus(null);
     try{
-      const result=await ghRead(GH_TOKEN_DEFAULT);
+      const r=await fetch(
+        'https://raw.githubusercontent.com/'+GH_OWNER+'/'+GH_REPO+'/'+GH_BRANCH+'/'+GH_FILE+'?t='+Date.now()
+      );
+      if(!r.ok) throw new Error('HTTP '+r.status);
+      const result=await r.json();
       if(result){
         setGhStatus({ok:true,msg:'Loaded from GitHub!'});
         setAuthed();
-        setTimeout(()=>onAuth(result.data),500);
+        setTimeout(()=>onAuth(result),500);
       } else {
         setGhStatus({ok:false,msg:'No data file found — loading with local data.'});
         setAuthed();
-        setTimeout(()=>onAuth(),800);
+        setTimeout(()=>onAuth(),500);
       }
     }catch(e){
-      setGhStatus({ok:false,msg:'GitHub error: '+e.message+' — loading local data.'});
+      setGhStatus({ok:false,msg:'Load error: '+e.message+' — using local data.'});
       setAuthed();
-      setTimeout(()=>onAuth(),1000);
+      setTimeout(()=>onAuth(),500);
     }
     setLoading(false);
   };
