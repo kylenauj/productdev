@@ -9,8 +9,8 @@
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#0f1729;--bg2:#162040;--bg3:#0a1120;
-  --text:#e8edf8;--text2:#b0c4de;--text3:#8facc8;
+  --bg:#0f1729;--bg2:#162040;--bg3:#0a1120;h
+  --text:#e8edf8;--text2:#8fa3c8;--text3:#6b85a8;
   --bdr:rgba(255,255,255,.08);--bdr2:rgba(255,255,255,.18);
   --ok-bg:#0a2214;--ok:#6dba7a;
   --info-bg:#0d1f3c;--info:#5b9bd5;
@@ -434,7 +434,7 @@ function TasksPanel({tasks,onChange,onAdd,onDel}){
           el('tbody',null,g.items.map(t=>{const od=isOverdue(t);return el('tr',{key:t.id,style:{background:od?'var(--err-bg)':''}},
             el('td',null,el('span',{style:{display:'flex',alignItems:'center',gap:5}},
               (t.atRisk||od)&&el('i',{className:'ti ti-alert-triangle',style:{fontSize:11,color:'var(--err)',flexShrink:0}}),
-              el(Editable,{value:t.name,onChange:v=>upd(t.id,'name',v),style:{color:'var(--text)'}})
+              el(Editable,{value:t.name,onChange:v=>upd(t.id,'name',v),style:{color:od?'var(--err)':'inherit'}})
             )),
             el('td',null,el(Editable,{value:t.owner,onChange:v=>upd(t.id,'owner',v),placeholder:'—'})),
             el('td',null,el(ESelect,{value:t.status,options:STATUS_OPTS,onChange:v=>upd(t.id,'status',v)})),
@@ -1435,27 +1435,157 @@ async function ghWrite(token,data,sha){
 }
 
 /* ── GitHub Sync Panel ── */
-function SupabaseRefreshPanel({data,setData,onClose}){
-  const [status,setStatus]=React.useState('');
-  const [loading,setLoading]=React.useState(false);
-  async function doRefresh(){
-    setLoading(true);setStatus('');
-    const d=await ghRead(null);
-    if(d){setData(d);setSaveTime(new Date());setStatus('Data refreshed successfully!');setTimeout(onClose,1200);}
-    else{setStatus('Refresh failed — check connection.');}
-    setLoading(false);
-  }
-  return el('div',{style:{position:'fixed',top:0,left:0,width:'100%',height:'100%',background:'rgba(0,0,0,.55)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:9999}},
-    el('div',{style:{background:'var(--bg2)',border:'1px solid var(--bdr2)',borderRadius:12,padding:28,width:340,maxWidth:'90vw',color:'var(--text)'}},
-      el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}},
-        el('strong',{style:{fontSize:16}},'Refresh Dashboard Data'),
-        el('button',{onClick:onClose,style:{background:'none',border:'none',color:'var(--text2)',fontSize:20,cursor:'pointer',lineHeight:1}},'×')
+function GitHubSyncPanel({data, setData, onClose}){
+  const conf = getGHConf();
+  const [token,   setToken]   = React.useState(conf.token||'');
+  const [autoRef, setAutoRef] = React.useState(conf.autoRefresh!==false);
+  const [status,  setStatus]  = React.useState(null);
+  const [busy,    setBusy]    = React.useState(false);
+  const shaRef = React.useRef(conf.sha||null);
+
+  const saveConf = (t,ar,sha)=>{
+    shaRef.current = sha||shaRef.current;
+    saveGHConf({token:t, autoRefresh:ar, sha:shaRef.current});
+  };
+
+  const handleTokenChange = val=>{
+    setToken(val);
+    saveConf(val, autoRef, shaRef.current);
+  };
+
+  const handlePull = async()=>{
+    if(!token){ setStatus({ok:false,msg:'Paste your GitHub PAT below first.'}); return; }
+    setBusy(true); setStatus(null);
+    try{
+      const result = await ghRead(token);
+      if(!result){ setStatus({ok:false,msg:'No data.json found yet — use Push first to create it.'}); }
+      else{
+        shaRef.current = result.sha;
+        saveConf(token, autoRef, result.sha);
+        setData(result.data);
+        setStatus({ok:true, msg:'Pulled! Dashboard loaded from GitHub.'});
+      }
+    }catch(e){ setStatus({ok:false,msg:e.message}); }
+    finally{ setBusy(false); }
+  };
+
+  const handlePush = async()=>{
+    if(!token){ setStatus({ok:false,msg:'Paste your GitHub PAT below first.'}); return; }
+    setBusy(true); setStatus(null);
+    try{
+      const latest = await ghRead(token);
+      const sha = latest ? latest.sha : shaRef.current;
+      const newSha = await ghWrite(token, data, sha);
+      shaRef.current = newSha;
+      saveConf(token, autoRef, newSha);
+      setStatus({ok:true, msg:'Saved to GitHub! Viewers can Pull to see your changes.'});
+    }catch(e){ setStatus({ok:false,msg:e.message}); }
+    finally{ setBusy(false); }
+  };
+
+  const handleAutoRefresh = val=>{
+    setAutoRef(val);
+    saveConf(token, val, shaRef.current);
+  };
+
+  const hasToken = token && token.length > 10;
+
+  return el('div',{style:{
+    position:'fixed',inset:0,background:'rgba(0,0,0,0.55)',zIndex:500,
+    display:'flex',alignItems:'center',justifyContent:'center',padding:20
+  }},
+    el('div',{style:{
+      background:'var(--bg)',border:'0.5px solid var(--bdr2)',borderRadius:14,
+      width:'100%',maxWidth:500,boxShadow:'0 8px 40px rgba(0,0,0,0.4)'
+    }},
+      el('div',{style:{padding:'16px 20px',borderBottom:'0.5px solid var(--bdr)',display:'flex',alignItems:'center',justifyContent:'space-between'}},
+        el('div',null,
+          el('div',{style:{fontSize:15,fontWeight:800,display:'flex',alignItems:'center',gap:8}},
+            el('i',{className:'ti ti-brand-github',style:{fontSize:18}}), 'GitHub Sync'
+          ),
+          el('div',{style:{fontSize:11,color:'var(--text3)',marginTop:3}},
+            GH_OWNER+' / '+GH_REPO+' → '+GH_FILE
+          )
+        ),
+        el('button',{onClick:onClose,style:{background:'none',border:'none',cursor:'pointer',color:'var(--text3)',fontSize:18}},
+          el('i',{className:'ti ti-x'})
+        )
       ),
-      el('p',{style:{color:'var(--text2)',fontSize:13,marginBottom:20}},'Pull the latest data from Supabase and update the dashboard.'),
-      el('button',{onClick:doRefresh,disabled:loading,style:{width:'100%',padding:'10px 0',background:'var(--info)',color:'var(--text)',border:'none',borderRadius:6,fontSize:14,fontWeight:600,cursor:loading?'not-allowed':'pointer',opacity:loading?.7:1}},
-        loading?'Refreshing…':'Refresh Data'
-      ),
-      status&&el('p',{style:{marginTop:14,fontSize:13,color:status.includes('success')?'var(--ok)':'var(--err)',textAlign:'center'}},status)
+      el('div',{style:{padding:'20px'}},
+        el('div',{style:{background:'var(--info-bg)',border:'0.5px solid var(--info)',borderRadius:8,padding:'10px 14px',marginBottom:16,fontSize:12,color:'var(--info)'}},
+          el('i',{className:'ti ti-info-circle',style:{marginRight:6}}),
+          'Code and data are separate. Pushing saves ',el('strong',null,'data.json'),' to your repo — your HTML/code is never changed.'
+        ),
+        el('div',{style:{marginBottom:16}},
+          el('div',{style:{fontSize:11,fontWeight:600,color:'var(--text2)',marginBottom:5,display:'flex',alignItems:'center',gap:6}},
+            el('i',{className:'ti ti-key',style:{fontSize:13}}),
+            'GitHub Personal Access Token',
+            hasToken&&el('span',{style:{color:'var(--ok)',fontWeight:400}},' ✓ saved')
+          ),
+          el('input',{
+            type:'password',
+            className:'ei',
+            placeholder:'ghp_xxxxxxxxxxxxxxxxxxxx',
+            value:token,
+            onChange:e=>handleTokenChange(e.target.value),
+            style:{fontSize:13,marginBottom:5}
+          }),
+          el('div',{style:{fontSize:10,color:'var(--text3)'}},
+            'Needs ',el('code',null,'public_repo'),' scope. ',
+            el('a',{href:'https://github.com/settings/tokens/new?scopes=public_repo&description=productdev+dashboard',target:'_blank',style:{color:'var(--info)'}},
+              'Generate one ↗'
+            )
+          )
+        ),
+        el('div',{style:{display:'flex',gap:10,marginBottom:14}},
+          el('button',{onClick:handlePull,disabled:busy||!hasToken,style:{
+            flex:1,background:'var(--bg2)',border:'0.5px solid var(--bdr2)',
+            borderRadius:8,cursor:hasToken?'pointer':'not-allowed',padding:'10px',fontSize:13,
+            fontFamily:'inherit',color:'var(--text)',fontWeight:500,
+            display:'flex',alignItems:'center',justifyContent:'center',gap:7,
+            opacity:(busy||!hasToken)?0.4:1
+          }},
+            el('i',{className:'ti ti-cloud-download',style:{fontSize:16}}), 'Pull from GitHub'
+          ),
+          el('button',{onClick:handlePush,disabled:busy||!hasToken,style:{
+            flex:1,background:'#24292f',border:'none',
+            borderRadius:8,cursor:hasToken?'pointer':'not-allowed',padding:'10px',fontSize:13,
+            fontFamily:'inherit',color:'#fff',fontWeight:600,
+            display:'flex',alignItems:'center',justifyContent:'center',gap:7,
+            opacity:(busy||!hasToken)?0.4:1
+          }},
+            busy
+              ? el('span',null,el('i',{className:'ti ti-loader-2',style:{animation:'spin 1s linear infinite',fontSize:14}}),' Saving…')
+              : el('span',null,el('i',{className:'ti ti-cloud-upload',style:{fontSize:16}}), ' Push to GitHub')
+          )
+        ),
+        el('div',{style:{display:'flex',alignItems:'center',gap:10,padding:'10px 14px',background:'var(--bg2)',borderRadius:8,marginBottom:14}},
+          el('div',{style:{flex:1}},
+            el('div',{style:{fontSize:12,fontWeight:600,color:'var(--text)'}},'Auto-refresh (Viewer Mode)'),
+            el('div',{style:{fontSize:10,color:'var(--text3)',marginTop:2}},'Pulls latest data every 30 seconds — turn on for viewers')
+          ),
+          el('button',{onClick:()=>handleAutoRefresh(!autoRef),style:{
+            width:44,height:24,borderRadius:12,border:'none',cursor:'pointer',
+            background:autoRef?'#24292f':'var(--bg3)',position:'relative',
+            transition:'background .2s',flexShrink:0
+          }},
+            el('div',{style:{
+              width:18,height:18,borderRadius:9,background:'#fff',
+              position:'absolute',top:3,left:autoRef?23:3,
+              transition:'left .2s',boxShadow:'0 1px 3px rgba(0,0,0,.3)'
+            }})
+          )
+        ),
+        status&&el('div',{style:{
+          padding:'10px 14px',borderRadius:8,fontSize:12,
+          background:status.ok?'var(--ok-bg)':'var(--err-bg)',
+          color:status.ok?'var(--ok)':'var(--err)',
+          display:'flex',alignItems:'center',gap:8
+        }},
+          el('i',{className:'ti '+(status.ok?'ti-check':'ti-alert-circle')}),
+          status.msg
+        )
+      )
     )
   );
 }
@@ -1936,12 +2066,13 @@ function App(){
         saved&&el('span',{className:'save-ind'},el('i',{className:'ti ti-check'}),' Saved'),
         
         el('button',{className:'btn',onClick:()=>{const b=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='au_dashboard_'+new Date().toISOString().slice(0,10)+'.json';a.click();}},el('i',{className:'ti ti-download'}),' Backup'),
-        el('button',{className:'btn',onClick:()=>importRef.current.click()},el('i',{className:'ti ti-upload'}),' Import'),el('button',{className:'hdr-btn',onClick:()=>{ghRead(null).then(d=>{if(d){setData(d);setSaveTime(new Date());}});},title:'Refresh data from Supabase'},el('i',{className:'ti ti-refresh'}),' Refresh')),
+        el('button',{className:'btn',onClick:()=>importRef.current.click()},el('i',{className:'ti ti-upload'}),' Import'),
+        el('button',{className:'btn',onClick:()=>setShowGH(true),style:{background:getToken()?'rgba(36,41,47,0.2)':'',border:getToken()?'0.5px solid rgba(255,255,255,0.3)':''}},el('i',{className:'ti ti-brand-github'}),' GitHub'),
         el('input',{ref:importRef,type:'file',accept:'.json',style:{display:'none'},onChange:importJSON}),
         el('button',{className:'btn',onClick:()=>window.print()},el('i',{className:'ti ti-printer'}),' Print')
       )
     ),
-    showGH&&el(SupabaseRefreshPanel,{data,setData,onClose:()=>setShowGH(false)}),
+    showGH&&el(GitHubSyncPanel,{data,setData,onClose:()=>setShowGH(false)}),
     shell,
     el('p',{style:{fontSize:11,color:'var(--text3)',textAlign:'center',marginTop:12}},'Generated '+new Date().toLocaleDateString('en-CA',{year:'numeric',month:'long',day:'numeric'})+' · Keyboard: T Tasks · G Gantt · S Specs · ← → switch products · F fullscreen  ·  Built by Kyle Naujokaitis  ·  v1.14')
   );
