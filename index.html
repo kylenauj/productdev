@@ -104,6 +104,7 @@ div:hover > .rm-btn{display:block!important}
 <body>
 <div id="root"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
 <script>
@@ -1122,7 +1123,7 @@ function OntarioMap({cityData}){
 }
 
 /* ── Daily Line Chart ── */
-function DailyLineChart({daily,brand,skuClass,launchDate}){
+function DailyLineChart({daily,brand,skuClass,launchDate,showCumulative=true}){
   if(!daily||!Object.keys(daily).length)return null;
 
   const CLS_COL={A:'#f0c030',B:'#4dbb6a',C:'#5b9bd5',D:'#e09b3d',E:'#e07878','New Product':'#a78bfa'};
@@ -1143,6 +1144,11 @@ function DailyLineChart({daily,brand,skuClass,launchDate}){
   const entries=allEntries;
   const vals=entries.map(([,v])=>v);
   const maxV=Math.max(...vals,1);
+
+  // Cumulative units
+  let cum=0;
+  const cumVals=vals.map(v=>{cum+=v;return cum;});
+  const maxCum=Math.max(...cumVals,1);
   const W=880, H=120, PL=44, PR=12, PT=12, PB=28;
   const cW=W-PL-PR, cH=H-PT-PB;
   const n=entries.length;
@@ -1229,6 +1235,15 @@ function DailyLineChart({daily,brand,skuClass,launchDate}){
         el('polygon',{points:areaPoints,fill:lineCol,opacity:0.08}),
         // Weekly separators — light vertical lines every Monday
         ...weekSeps.map((x,i)=>el('line',{key:'ws'+i,x1:x,y1:PT,x2:x,y2:PT+cH,stroke:'var(--bdr2)',strokeWidth:0.5,opacity:0.5})),
+        // Cumulative units line (secondary axis, right side, lighter)
+        showCumulative&&el('polyline',{
+          points:entries.map((_,i)=>`${PL+xPos(i)},${PT+cH-(cumVals[i]/maxCum*cH)}`).join(' '),
+          fill:'none',stroke:'rgba(255,255,255,0.12)',strokeWidth:1,
+          strokeDasharray:'2 3',strokeLinecap:'round'
+        }),
+        showCumulative&&el('text',{x:PL+cW-2,y:PT+cH-(cumVals[cumVals.length-1]/maxCum*cH)-4,
+          fontSize:9,fill:'rgba(255,255,255,0.35)',textAnchor:'end',fontFamily:'inherit'
+        },cumVals[cumVals.length-1].toLocaleString()+' total'),
         // Milestone day lines
         ...milestones.map(m=>{
           if(m.past)return null;
@@ -1607,7 +1622,475 @@ function GitHubSyncPanel({data, setData, onClose}){
       )
     )
   );
-}/* ── Add SKU Modal ── */
+}
+/* ══════════════════════════════════════════
+   UPDATE SKU SALES DATA — Excel Upload
+   Parses .xlsx and refreshes post-launch data
+   for the selected product
+══════════════════════════════════════════ */
+
+function parseExcelSalesData(buffer, existingProdName){
+  const XLSX = window.XLSX;
+  if(!XLSX) throw new Error('SheetJS not loaded. Please refresh the page.');
+
+  const wb = XLSX.read(buffer, {type:'array', cellDates:true});
+  const ws = wb.Sheets[wb.SheetNames[0]];
+  // raw:true → numbers stay numbers, dates stay Date objects
+  const rows = XLSX.utils.sheet_to_json(ws, {header:1, raw:true, defval:''});
+
+  if(rows.length < 2) throw new Error('No data rows found in file.');
+
+  // ── Map columns by header name (exact OCS format) ──
+  // Expected: SKU[0] | Item Name[1] | Category[2] | Sub Category[3] | Brand[4] |
+  //           Vendor ID[5] | Vendor Name[6] | Store Name[7] | Store Address[8] |
+  //           Region[9] | City[10] | Order Date[11] | Order Type[12] | Units Sold[13] | Barcode[14]
+  // OCS export format is always fixed — hardcode indices
+  // [0]SKU [1]Item Name [2]Category [3]Sub Category [4]Brand [5]Vendor ID
+  // [6]Vendor Name [7]Store Name [8]Store Address [9]Region [10]City
+  // [11]Order Date [12]Order Type [13]Units Sold [14]Item Barcode
+  const hdrs = rows[0].map(h=>String(h||'').trim());
+  
+  // Verify we have the right format by checking key headers
+  const hdrStr = hdrs.join('|');
+  if(!hdrStr.includes('Item Name')) throw new Error('Cannot find "Item Name" column. Is this an OCS sales export? Headers: '+hdrs.join(', '));
+  if(!hdrStr.includes('Units Sold')) throw new Error('Cannot find "Units Sold" column.');
+  if(!hdrStr.includes('Order Date')) throw new Error('Cannot find "Order Date" column.');
+
+  // Always use fixed positions — never guess
+  const iName=1, iBrand=4, iStore=7, iRegion=9, iCity=10, iDate=11, iUnits=13;
+  
+  // Safety: verify the headers actually match at these positions
+  console.log('Header check:', {
+    iName:  hdrs[iName],    // should be "Item Name"
+    iBrand: hdrs[iBrand],   // should be "Brand"
+    iStore: hdrs[iStore],   // should be "Store Name"
+    iRegion:hdrs[iRegion],  // should be "Region"
+    iCity:  hdrs[iCity],    // should be "City"
+    iDate:  hdrs[iDate],    // should be "Order Date"
+    iUnits: hdrs[iUnits],   // should be "Units Sold"
+  });
+
+  // ── Get distinct product names ──
+  const productNames=[...new Set(
+    rows.slice(1).filter(r=>r[iName]).map(r=>String(r[iName]).trim())
+  )];
+
+  // Match to existing product name
+  let targetName=existingProdName;
+  if(productNames.length===1){
+    targetName=productNames[0];
+  } else {
+    const kw=existingProdName.split(' ').slice(0,3).join(' ').toLowerCase();
+    const match=productNames.find(n=>
+      n.toLowerCase().includes(kw)||kw.includes(n.split(' ').slice(0,3).join(' ').toLowerCase())
+    );
+    if(match) targetName=match;
+  }
+
+  const dataRows=rows.slice(1).filter(r=>
+    r[iName]&&String(r[iName]).trim()===targetName
+  );
+
+  if(dataRows.length===0)
+    throw new Error('No rows for "'+targetName+'". Products in file: '+productNames.join(', '));
+
+  // ── Aggregate ──
+  const cities={}, stores={}, regions={}, weeks={}, months={}, daily={}, storeWeeks={};
+  let totalUnits=0, totalOrders=0, brand='';
+
+  dataRows.forEach(row=>{
+    // Units Sold — always a small integer (never > 10,000 per order)
+    let units=0;
+    const rawUnits=row[iUnits];
+    if(typeof rawUnits==='number'){
+      units=Math.round(rawUnits);
+    } else {
+      units=parseInt(String(rawUnits||'0').replace(/[^0-9]/g,''))||0;
+    }
+    // Sanity check — if units looks like a barcode/ID (>50000), skip row
+    if(units<=0||units>50000) return;
+
+    const city  = String(row[iCity]  ||'Unknown').trim();
+    const store = String(row[iStore] ||'Unknown').trim();
+    const reg   = String(row[iRegion]||'').trim();
+    if(iBrand>=0&&row[iBrand]) brand=String(row[iBrand]).trim();
+
+    cities[city]  = (cities[city]  ||0)+units;
+    stores[store] = (stores[store] ||0)+units;
+    if(reg) regions[reg]=(regions[reg]||0)+units;
+    totalUnits+=units;
+    totalOrders++;
+
+    // ── Date parsing ──
+    const raw=row[iDate];
+    let d=null;
+    if(raw instanceof Date&&!isNaN(raw)){
+      d=raw;
+    } else if(typeof raw==='number'&&raw>0){
+      // Excel serial number
+      try{
+        const pd=XLSX.SSF.parse_date_code(raw);
+        if(pd) d=new Date(pd.y, pd.m-1, pd.d);
+      }catch(e){}
+    } else if(typeof raw==='string'&&raw.trim()){
+      d=new Date(raw);
+      if(isNaN(d)) d=null;
+    }
+
+    if(d&&!isNaN(d)){
+      const yr=d.getFullYear(), mo=d.getMonth(), dy=d.getDate();
+      const ds=yr+'-'+String(mo+1).padStart(2,'0')+'-'+String(dy).padStart(2,'0');
+      const moStr=ds.slice(0,7);
+      // ISO week number
+      const utc=new Date(Date.UTC(yr,mo,dy));
+      const dow=utc.getUTCDay()||7;
+      utc.setUTCDate(utc.getUTCDate()+4-dow);
+      const y1=new Date(Date.UTC(utc.getUTCFullYear(),0,1));
+      const wkN=Math.ceil((((utc-y1)/86400000)+1)/7);
+      const wk=utc.getUTCFullYear()+'-W'+String(wkN).padStart(2,'0');
+
+      daily[ds]  =(daily[ds]  ||0)+units;
+      weeks[wk]  =(weeks[wk]  ||0)+units;
+      months[moStr]=(months[moStr]||0)+units;
+      if(!storeWeeks[store]) storeWeeks[store]=new Set();
+      storeWeeks[store].add(wk);
+    }
+  });
+
+  // ── Store metrics per week ──
+  const allWeeks=Object.keys(weeks).sort();
+  const storeFirst={};
+  Object.entries(storeWeeks).forEach(([s,ws2])=>{
+    storeFirst[s]=Array.from(ws2).sort()[0];
+  });
+  let prev=new Set(); const weekMetrics={};
+  allWeeks.forEach(wk=>{
+    const active=new Set(
+      Object.entries(storeWeeks).filter(([,ws2])=>ws2.has(wk)).map(([s])=>s)
+    );
+    const newS=new Set([...active].filter(s=>storeFirst[s]===wk));
+    const repeat=new Set([...active].filter(s=>prev.has(s)));
+    weekMetrics[wk]={active:active.size,new:newS.size,repeat:repeat.size,prevActive:prev.size};
+    prev=active;
+  });
+
+  console.log('Parsed:', {totalUnits, totalOrders, stores:Object.keys(stores).length, weeks:allWeeks});
+
+  return {
+    detectedName: targetName,
+    productNames,
+    data:{
+      brand,
+      units: totalUnits,
+      orders: totalOrders,
+      storeCount: Object.keys(stores).length,
+      cities:  Object.fromEntries(Object.entries(cities).sort(([,a],[,b])=>b-a)),
+      stores:  Object.fromEntries(Object.entries(stores).sort(([,a],[,b])=>b-a)),
+      regions,
+      weekly:  Object.fromEntries(Object.entries(weeks).sort()),
+      monthly: Object.fromEntries(Object.entries(months).sort()),
+      daily:   Object.fromEntries(Object.entries(daily).sort()),
+      storeMetrics:{
+        weekMetrics,
+        totalStores:Object.keys(stores).length,
+        opportunity:Math.max(0,ONTARIO_STORES-Object.keys(stores).length)
+      },
+    }
+  };
+}
+
+/* ── Update SKU Modal ── */
+function UpdateSKUModal({prodName, currentProd, onUpdate, onClose}){
+  const [step,setStep]     = React.useState('upload'); // upload | preview | done
+  const [parsed,setParsed] = React.useState(null);
+  const [err,setErr]       = React.useState('');
+  const [busy,setBusy]     = React.useState(false);
+  const [mergeMode,setMergeMode] = React.useState('replace'); // replace | append
+  const fileRef = React.useRef();
+
+  const handleFile=async(file)=>{
+    if(!file) return;
+    if(!file.name.match(/\.(xlsx|xls)$/i)){setErr('Please upload an Excel file (.xlsx or .xls)');return;}
+    setBusy(true); setErr('');
+    try{
+      const buf = await file.arrayBuffer();
+      const result = parseExcelSalesData(buf, prodName);
+      setParsed(result);
+      setStep('preview');
+    }catch(e){
+      setErr(e.message);
+    }
+    setBusy(false);
+  };
+
+  const handleDrop=e=>{e.preventDefault();handleFile(e.dataTransfer.files[0]);};
+
+  const handleConfirm=()=>{
+    if(!parsed) return;
+    let updated;
+    if(mergeMode==='replace'){
+      updated={...currentProd,...parsed.data, pc:currentProd.pc, launchDate:currentProd.launchDate, ocs:currentProd.ocs};
+    } else {
+      // Append — merge daily/weekly/monthly, take latest store/city data
+      const mergedDaily={...currentProd.daily,...parsed.data.daily};
+      const mergedWeekly={...currentProd.weekly,...parsed.data.weekly};
+      const mergedMonthly={...currentProd.monthly,...parsed.data.monthly};
+      updated={
+        ...currentProd,
+        ...parsed.data,
+        units:(currentProd.units||0)+(parsed.data.units||0),
+        orders:(currentProd.orders||0)+(parsed.data.orders||0),
+        daily:mergedDaily, weekly:mergedWeekly, monthly:mergedMonthly,
+        pc:currentProd.pc, launchDate:currentProd.launchDate, ocs:currentProd.ocs
+      };
+    }
+    onUpdate(updated);
+    setStep('done');
+    setTimeout(onClose, 1200);
+  };
+
+  const weeks  = parsed?Object.keys(parsed.data.weekly).sort():[];
+  const lwUnits= weeks.length?parsed.data.weekly[weeks[weeks.length-1]]:0;
+
+  return el('div',{style:{
+    position:'fixed',inset:0,background:'rgba(0,0,0,0.65)',zIndex:600,
+    display:'flex',alignItems:'center',justifyContent:'center',padding:20
+  },onClick:e=>e.target===e.currentTarget&&onClose()},
+    el('div',{style:{
+      background:'var(--bg)',border:'0.5px solid var(--bdr2)',borderRadius:14,
+      width:'100%',maxWidth:520,boxShadow:'0 8px 40px rgba(0,0,0,0.45)',maxHeight:'90vh',overflowY:'auto'
+    }},
+      /* Header */
+      el('div',{style:{padding:'16px 20px',borderBottom:'0.5px solid var(--bdr)',display:'flex',alignItems:'center',justifyContent:'space-between',position:'sticky',top:0,background:'var(--bg)',zIndex:1}},
+        el('div',null,
+          el('div',{style:{fontSize:15,fontWeight:800,display:'flex',alignItems:'center',gap:8}},
+            el('i',{className:'ti ti-file-spreadsheet',style:{color:'var(--ok)',fontSize:18}}), 'Update Sales Data'
+          ),
+          el('div',{style:{fontSize:11,color:'var(--text3)',marginTop:3,maxWidth:360,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},prodName)
+        ),
+        el('button',{onClick:onClose,style:{background:'none',border:'none',cursor:'pointer',color:'var(--text3)',fontSize:18}},el('i',{className:'ti ti-x'}))
+      ),
+
+      el('div',{style:{padding:'20px'}},
+        /* ── Step: Upload ── */
+        step==='upload'&&el('div',null,
+          el('div',{style:{background:'var(--info-bg)',border:'0.5px solid var(--info)',borderRadius:8,padding:'10px 14px',marginBottom:18,fontSize:12,color:'var(--info)'}},
+            el('i',{className:'ti ti-info-circle',style:{marginRight:6}}),
+            'Drop in this week\'s Excel export from OCS. Same format as your original data files.'
+          ),
+          /* Drop zone */
+          el('div',{
+            onDragOver:e=>e.preventDefault(),
+            onDrop:handleDrop,
+            onClick:()=>fileRef.current.click(),
+            style:{
+              border:'2px dashed var(--info)',borderRadius:10,padding:'40px 20px',
+              textAlign:'center',cursor:'pointer',background:'var(--info-bg)',
+              marginBottom:16,transition:'background .15s'
+            }
+          },
+            el('i',{className:'ti ti-cloud-upload',style:{fontSize:36,color:'var(--info)',display:'block',marginBottom:10}}),
+            el('div',{style:{fontSize:14,fontWeight:600,color:'var(--info)',marginBottom:6}},'Drop Excel file here'),
+            el('div',{style:{fontSize:12,color:'var(--text3)'}},'.xlsx or .xls · OCS sales export format'),
+            el('input',{ref:fileRef,type:'file',accept:'.xlsx,.xls',style:{display:'none'},onChange:e=>handleFile(e.target.files[0])})
+          ),
+          busy&&el('div',{style:{textAlign:'center',color:'var(--text2)',fontSize:12,display:'flex',alignItems:'center',justifyContent:'center',gap:8}},
+            el('i',{className:'ti ti-loader-2',style:{animation:'spin 1s linear infinite',fontSize:16}}), 'Parsing file…'
+          ),
+          err&&el('div',{style:{padding:'10px 14px',borderRadius:8,fontSize:12,background:'var(--err-bg)',color:'var(--err)',display:'flex',alignItems:'flex-start',gap:8}},
+            el('i',{className:'ti ti-alert-circle',style:{flexShrink:0,marginTop:1}}),err
+          )
+        ),
+
+        /* ── Step: Preview ── */
+        step==='preview'&&parsed&&el('div',null,
+          /* Summary stats */
+          el('div',{style:{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:8,marginBottom:18}},
+            [['Units',parsed.data.units.toLocaleString(),'var(--ok)','ti-package'],
+             ['Orders',parsed.data.orders,'var(--info)','ti-receipt'],
+             ['Stores',parsed.data.storeCount,'var(--warn)','ti-building-store'],
+             ['Weeks',Object.keys(parsed.data.weekly).length,'var(--text)','ti-calendar-week'],
+            ].map(([l,v,c,i])=>el('div',{key:l,style:{background:'var(--bg2)',borderRadius:8,padding:'10px 12px',textAlign:'center'}},
+              el('div',{style:{fontSize:9,textTransform:'uppercase',letterSpacing:'.07em',color:'var(--text3)',marginBottom:4,display:'flex',alignItems:'center',justifyContent:'center',gap:4}},
+                el('i',{className:'ti '+i,style:{fontSize:10}}),l),
+              el('div',{style:{fontSize:18,fontWeight:800,color:c}},v)
+            ))
+          ),
+          /* Weekly breakdown */
+          el('div',{style:{background:'var(--bg2)',borderRadius:8,padding:'12px',marginBottom:16}},
+            el('div',{style:{fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:'.07em',color:'var(--text3)',marginBottom:8}},'Weekly Breakdown'),
+            el('div',{style:{display:'flex',flexWrap:'wrap',gap:6}},
+              Object.entries(parsed.data.weekly).sort().map(([wk,u])=>
+                el('div',{key:wk,style:{background:'var(--bg)',borderRadius:6,padding:'5px 10px',fontSize:11}},
+                  el('div',{style:{color:'var(--text3)',fontSize:9}},fmtWeek(wk)),
+                  el('div',{style:{fontWeight:700,color:'var(--text)'}},u.toLocaleString())
+                )
+              )
+            )
+          ),
+          /* Detected product name */
+          parsed.detectedName!==prodName&&el('div',{style:{background:'var(--warn-bg)',border:'0.5px solid var(--warn)',borderRadius:8,padding:'10px 14px',marginBottom:14,fontSize:12,color:'var(--warn)'}},
+            el('i',{className:'ti ti-alert-triangle',style:{marginRight:6}}),
+            'Detected product: "',el('strong',null,parsed.detectedName),'" — data will be applied to "',prodName,'"'
+          ),
+          /* Merge mode */
+          el('div',{style:{background:'var(--bg2)',borderRadius:8,padding:'12px 14px',marginBottom:16}},
+            el('div',{style:{fontSize:11,fontWeight:700,color:'var(--text2)',marginBottom:10}},'How to apply this data:'),
+            el('div',{style:{display:'flex',gap:10}},
+              [['replace','Replace all existing data','ti-refresh'],['append','Merge with existing data','ti-git-merge']].map(([val,lbl,icon])=>
+                el('button',{key:val,onClick:()=>setMergeMode(val),style:{
+                  flex:1,padding:'9px 12px',borderRadius:7,cursor:'pointer',
+                  background:mergeMode===val?'var(--info-bg)':'var(--bg)',
+                  border:'0.5px solid '+(mergeMode===val?'var(--info)':'var(--bdr)'),
+                  color:mergeMode===val?'var(--info)':'var(--text2)',fontFamily:'inherit',fontSize:12,
+                  display:'flex',flexDirection:'column',alignItems:'center',gap:5
+                }},
+                  el('i',{className:'ti '+icon,style:{fontSize:16}}),
+                  el('span',{style:{fontWeight:600}},val==='replace'?'Replace':'Merge'),
+                  el('span',{style:{fontSize:10,opacity:.7}},lbl)
+                )
+              )
+            )
+          ),
+          el('div',{style:{display:'flex',gap:10}},
+            el('button',{onClick:()=>setStep('upload'),style:{
+              background:'var(--bg2)',border:'0.5px solid var(--bdr2)',borderRadius:8,
+              padding:'11px 18px',fontSize:13,fontFamily:'inherit',color:'var(--text2)',cursor:'pointer'
+            }},el('i',{className:'ti ti-arrow-left'}),' Back'),
+            el('button',{onClick:handleConfirm,style:{
+              flex:1,background:'var(--ok)',border:'none',borderRadius:8,
+              padding:'11px',fontSize:13,fontFamily:'inherit',color:'#fff',fontWeight:700,cursor:'pointer',
+              display:'flex',alignItems:'center',justifyContent:'center',gap:7
+            }},el('i',{className:'ti ti-check'}),' Apply Data')
+          )
+        ),
+
+        /* ── Step: Done ── */
+        step==='done'&&el('div',{style:{textAlign:'center',padding:'20px 0'}},
+          el('i',{className:'ti ti-circle-check',style:{fontSize:48,color:'var(--ok)',display:'block',marginBottom:12}}),
+          el('div',{style:{fontSize:16,fontWeight:700,color:'var(--ok)'}},'Data Updated!'),
+          el('div',{style:{fontSize:12,color:'var(--text3)',marginTop:6}},'Post Launch data has been refreshed.')
+        )
+      )
+    )
+  );
+}
+
+
+/* ── Bulk Upload Modal ── */
+function BulkUploadModal({salesData,onUpdate,onClose}){
+  const [results,setResults]=React.useState(null);
+  const [busy,setBusy]=React.useState(false);
+  const [err,setErr]=React.useState('');
+  const fileRef=React.useRef();
+
+  const handleFile=async(file)=>{
+    if(!file) return;
+    if(!file.name.match(/\.(xlsx|xls)$/i)){setErr('Please upload an Excel file (.xlsx or .xls)');return;}
+    setBusy(true); setErr(''); setResults(null);
+    try{
+      const buf=await file.arrayBuffer();
+      const XLSX=window.XLSX;
+      const wb=XLSX.read(buf,{type:'array',cellDates:true});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      const rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:true});
+      if(rows.length<2) throw new Error('No data found in file.');
+      const hdrs=rows[0].map(h=>String(h||'').trim());
+      if(!hdrs.includes('Item Name')) throw new Error('Cannot find "Item Name" column.');
+      // Get all distinct products in this file
+      const allNames=[...new Set(rows.slice(1).filter(r=>r[1]).map(r=>String(r[1]).trim()))];
+      const parsed=[];
+      for(const pName of allNames){
+        try{
+          const result=parseExcelSalesData(buf,pName);
+          parsed.push({name:pName,detected:result.detectedName,data:result.data,matched:!!salesData[pName]});
+        }catch(e){
+          parsed.push({name:pName,err:e.message});
+        }
+      }
+      setResults(parsed);
+    }catch(e){ setErr(e.message); }
+    setBusy(false);
+  };
+
+  const applyAll=()=>{
+    if(!results) return;
+    const lu={};
+    results.filter(r=>!r.err&&r.matched).forEach(r=>{
+      const existing=salesData[r.name]||{};
+      onUpdate(r.name,{...existing,...r.data,pc:existing.pc,launchDate:existing.launchDate,ocs:existing.ocs},lu);
+      lu[r.name]=new Date().toISOString();
+    });
+    onClose();
+  };
+
+  const matched=results?.filter(r=>!r.err&&r.matched)||[];
+  const unmatched=results?.filter(r=>!r.err&&!r.matched)||[];
+  const errored=results?.filter(r=>r.err)||[];
+
+  return el('div',{style:{position:'fixed',inset:0,background:'rgba(0,0,0,0.65)',zIndex:600,display:'flex',alignItems:'center',justifyContent:'center',padding:20},onClick:e=>e.target===e.currentTarget&&onClose()},
+    el('div',{style:{background:'var(--bg)',border:'0.5px solid var(--bdr2)',borderRadius:14,width:'100%',maxWidth:540,maxHeight:'85vh',display:'flex',flexDirection:'column',boxShadow:'0 8px 40px rgba(0,0,0,0.45)'}},
+      el('div',{style:{padding:'14px 18px',borderBottom:'0.5px solid var(--bdr)',display:'flex',alignItems:'center',justifyContent:'space-between',flexShrink:0}},
+        el('div',{style:{fontSize:15,fontWeight:800,display:'flex',alignItems:'center',gap:8}},
+          el('i',{className:'ti ti-table-import',style:{color:'var(--ok)',fontSize:18}}), 'Bulk Upload — All SKUs'
+        ),
+        el('button',{onClick:onClose,style:{background:'none',border:'none',cursor:'pointer',color:'var(--text3)',fontSize:18}},el('i',{className:'ti ti-x'}))
+      ),
+      el('div',{style:{flex:1,overflowY:'auto',padding:'20px'}},
+        !results&&el('div',null,
+          el('div',{style:{background:'var(--ok-bg)',border:'0.5px solid var(--ok)',borderRadius:8,padding:'10px 14px',marginBottom:16,fontSize:12,color:'var(--ok)'}},
+            el('i',{className:'ti ti-info-circle',style:{marginRight:6}}),
+            'Upload one Excel file with multiple SKUs — the dashboard will detect each product automatically and update all matching SKUs at once.'
+          ),
+          el('div',{onDragOver:e=>e.preventDefault(),onDrop:e=>{e.preventDefault();handleFile(e.dataTransfer.files[0]);},onClick:()=>fileRef.current.click(),style:{border:'2px dashed var(--ok)',borderRadius:10,padding:'36px 20px',textAlign:'center',cursor:'pointer',background:'var(--ok-bg)',marginBottom:14}},
+            el('i',{className:'ti ti-table-import',style:{fontSize:36,color:'var(--ok)',display:'block',marginBottom:10}}),
+            el('div',{style:{fontSize:14,fontWeight:600,color:'var(--ok)',marginBottom:4}},'Drop Excel file here'),
+            el('div',{style:{fontSize:11,color:'var(--text3)'}},'Multiple SKUs in one file · OCS export format'),
+            el('input',{ref:fileRef,type:'file',accept:'.xlsx,.xls',style:{display:'none'},onChange:e=>handleFile(e.target.files[0])})
+          ),
+          busy&&el('div',{style:{textAlign:'center',color:'var(--text2)',fontSize:12,display:'flex',alignItems:'center',justifyContent:'center',gap:8}},
+            el('i',{className:'ti ti-loader-2',style:{animation:'spin 1s linear infinite',fontSize:16}}),' Parsing all SKUs…'
+          ),
+          err&&el('div',{style:{padding:'10px 14px',borderRadius:8,fontSize:12,background:'var(--err-bg)',color:'var(--err)',display:'flex',alignItems:'flex-start',gap:8}},
+            el('i',{className:'ti ti-alert-circle',style:{flexShrink:0}}),err)
+        ),
+        results&&el('div',null,
+          matched.length>0&&el('div',{style:{marginBottom:16}},
+            el('div',{style:{fontSize:11,fontWeight:700,color:'var(--ok)',textTransform:'uppercase',letterSpacing:'.06em',marginBottom:8}},
+              el('i',{className:'ti ti-check'}),' '+matched.length+' SKUs Ready to Update'
+            ),
+            matched.map(r=>el('div',{key:r.name,style:{background:'var(--ok-bg)',border:'0.5px solid var(--ok)',borderRadius:7,padding:'8px 12px',marginBottom:6,fontSize:12}},
+              el('div',{style:{fontWeight:600,color:'var(--ok)'}},r.name),
+              el('div',{style:{color:'var(--text3)',marginTop:2}},
+                r.data.units.toLocaleString()+' units · '+r.data.orders+' orders · '+r.data.storeCount+' stores · '+Object.keys(r.data.weekly).length+' weeks'
+              )
+            ))
+          ),
+          unmatched.length>0&&el('div',{style:{marginBottom:12}},
+            el('div',{style:{fontSize:11,fontWeight:700,color:'var(--warn)',textTransform:'uppercase',letterSpacing:'.06em',marginBottom:8}},
+              el('i',{className:'ti ti-alert-triangle'}),' '+unmatched.length+' SKUs Not Found in Dashboard'
+            ),
+            unmatched.map(r=>el('div',{key:r.name,style:{background:'var(--warn-bg)',border:'0.5px solid var(--warn)',borderRadius:7,padding:'8px 12px',marginBottom:6,fontSize:12,color:'var(--warn)'}},r.name))
+          ),
+          errored.length>0&&el('div',{style:{marginBottom:12}},
+            errored.map(r=>el('div',{key:r.name,style:{background:'var(--err-bg)',border:'0.5px solid var(--err)',borderRadius:7,padding:'8px 12px',marginBottom:6,fontSize:12,color:'var(--err)'}},
+              el('div',{style:{fontWeight:600}},r.name),el('div',null,r.err)
+            ))
+          ),
+          matched.length>0&&el('button',{onClick:applyAll,style:{
+            width:'100%',background:'var(--ok)',border:'none',borderRadius:8,
+            padding:'12px',fontSize:14,fontFamily:'inherit',color:'#fff',fontWeight:700,cursor:'pointer',
+            display:'flex',alignItems:'center',justifyContent:'center',gap:8
+          }},el('i',{className:'ti ti-check'}),' Apply All ('+matched.length+' SKUs)'),
+          matched.length===0&&el('div',{style:{textAlign:'center',color:'var(--warn)',padding:'10px 0',fontSize:12}},'No matching SKUs found. Make sure product names match the dashboard.')
+        )
+      )
+    )
+  );
+}
+
+
+/* ── Add SKU Modal ── */
 function AddSKUModal({activePC,onAdd,onClose}){
   const [name,setName]=React.useState('');
   const [brand,setBrand]=React.useState('');
@@ -1720,6 +2203,136 @@ function AddSKUModal({activePC,onAdd,onClose}){
 }
 
 
+
+/* ══════════════════════════════════════════
+   NEW FEATURES v2
+   1. Change Log
+   2. Meeting Mode
+   3. PDF Export helper
+   4. Comments per product
+   5. Bulk upload parser
+══════════════════════════════════════════ */
+
+/* ── Change Log ── */
+const CL_KEY='au_changelog_v1';
+const getChangelog=()=>{try{return JSON.parse(localStorage.getItem(CL_KEY))||[];}catch{return [];}};
+const addChangelogEntry=(action,product='')=>{
+  const log=getChangelog();
+  log.unshift({ts:new Date().toISOString(),action,product,user:'You'});
+  if(log.length>100) log.splice(100);
+  try{localStorage.setItem(CL_KEY,JSON.stringify(log));}catch{}
+};
+
+/* ── Comments ── */
+const CMT_KEY='au_comments_v1';
+const getComments=()=>{try{return JSON.parse(localStorage.getItem(CMT_KEY))||{};}catch{return {};}};
+const saveComments=c=>{try{localStorage.setItem(CMT_KEY,JSON.stringify(c));}catch{}};
+
+/* ── Change Log Panel ── */
+function ChangelogPanel({onClose}){
+  const [log]=React.useState(getChangelog);
+  const fmtTime=ts=>{
+    const d=new Date(ts);
+    return d.toLocaleDateString('en-CA',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+  };
+  return el('div',{style:{
+    position:'fixed',inset:0,background:'rgba(0,0,0,0.55)',zIndex:600,
+    display:'flex',alignItems:'center',justifyContent:'center',padding:20
+  },onClick:e=>e.target===e.currentTarget&&onClose()},
+    el('div',{style:{
+      background:'var(--bg)',border:'0.5px solid var(--bdr2)',borderRadius:14,
+      width:'100%',maxWidth:460,maxHeight:'80vh',display:'flex',flexDirection:'column',
+      boxShadow:'0 8px 40px rgba(0,0,0,0.4)'
+    }},
+      el('div',{style:{padding:'14px 18px',borderBottom:'0.5px solid var(--bdr)',display:'flex',alignItems:'center',justifyContent:'space-between',flexShrink:0}},
+        el('div',{style:{fontSize:14,fontWeight:700,display:'flex',alignItems:'center',gap:7}},
+          el('i',{className:'ti ti-history',style:{color:'var(--warn)'}}), 'Change Log'
+        ),
+        el('button',{onClick:onClose,style:{background:'none',border:'none',cursor:'pointer',color:'var(--text3)',fontSize:16}},el('i',{className:'ti ti-x'}))
+      ),
+      el('div',{style:{flex:1,overflowY:'auto',padding:'12px 16px'}},
+        log.length===0&&el('div',{style:{textAlign:'center',color:'var(--text3)',padding:'30px 0',fontSize:12}},'No changes recorded yet.'),
+        log.map((e,i)=>el('div',{key:i,style:{display:'flex',gap:10,marginBottom:12,paddingBottom:12,borderBottom:'0.5px solid var(--bdr)'}},
+          el('div',{style:{width:6,height:6,borderRadius:'50%',background:'var(--info)',flexShrink:0,marginTop:5}}),
+          el('div',null,
+            el('div',{style:{fontSize:12,color:'var(--text)',fontWeight:500}},e.action),
+            e.product&&el('div',{style:{fontSize:11,color:'var(--info)',marginTop:2}},e.product),
+            el('div',{style:{fontSize:10,color:'var(--text3)',marginTop:2}},fmtTime(e.ts),' · ',e.user)
+          )
+        ))
+      )
+    )
+  );
+}
+
+/* ── Meeting Mode ── */
+function MeetingMode({product,name,vel,clsKey,clsCol,lwUnits,wowDelta,wowPct,unitsToNext,nextCls,onClose}){
+  const CLS={A:'#f0c030',B:'#4dbb6a',C:'#5b9bd5',D:'#e09b3d',E:'#e07878'};
+  const col=CLS[clsKey]||'var(--info)';
+  const nextCol=CLS[nextCls]||'var(--text2)';
+
+  React.useEffect(()=>{
+    const onKey=e=>{if(e.key==='Escape'||e.key==='m'||e.key==='M')onClose();};
+    window.addEventListener('keydown',onKey);
+    return()=>window.removeEventListener('keydown',onKey);
+  },[]);
+
+  return el('div',{style:{
+    position:'fixed',inset:0,background:'var(--bg3)',zIndex:900,
+    display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',
+    padding:40
+  }},
+    el('button',{onClick:onClose,style:{position:'absolute',top:20,right:24,background:'var(--bg2)',border:'0.5px solid var(--bdr2)',borderRadius:8,cursor:'pointer',padding:'6px 14px',color:'var(--text2)',fontFamily:'inherit',fontSize:12}},
+      el('i',{className:'ti ti-x'}),' Exit (Esc)'
+    ),
+    el('div',{style:{fontSize:12,fontWeight:700,textTransform:'uppercase',letterSpacing:'.12em',color:'var(--text3)',marginBottom:10}},'Post Launch · Meeting View'),
+    el('h1',{style:{fontSize:32,fontWeight:900,letterSpacing:'-.5px',color:'var(--text)',marginBottom:6,textAlign:'center',maxWidth:800}},name),
+    el('div',{style:{fontSize:16,color:'var(--text3)',marginBottom:48}},product?.brand||''),
+
+    el('div',{style:{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:24,width:'100%',maxWidth:900}},
+      // SKU Class
+      el('div',{style:{background:col+'22',border:'2px solid '+col,borderRadius:16,padding:'28px 20px',textAlign:'center'}},
+        el('div',{style:{fontSize:14,color:col,fontWeight:700,marginBottom:8,textTransform:'uppercase',letterSpacing:'.07em'}},'SKU Class'),
+        el('div',{style:{fontSize:72,fontWeight:900,color:col,lineHeight:1}},clsKey),
+        el('div',{style:{fontSize:14,color:col,opacity:.7,marginTop:6}},
+          clsKey==='A'?'Ultra Fast':clsKey==='B'?'Fast':clsKey==='C'?'Moderate':clsKey==='D'?'Slow':'Ultra Slow'
+        )
+      ),
+      // LW Velocity
+      el('div',{style:{background:'var(--bg)',border:'0.5px solid var(--bdr2)',borderRadius:16,padding:'28px 20px',textAlign:'center'}},
+        el('div',{style:{fontSize:14,color:'var(--text3)',fontWeight:700,marginBottom:8,textTransform:'uppercase',letterSpacing:'.07em'}},'LW Velocity'),
+        el('div',{style:{fontSize:52,fontWeight:900,color:col,lineHeight:1}},vel.toFixed(4)),
+        el('div',{style:{fontSize:14,color:'var(--text3)',marginTop:6}},lwUnits.toLocaleString()+' units ÷ 1,695')
+      ),
+      // W/W Delta
+      el('div',{style:{background:'var(--bg)',border:'0.5px solid var(--bdr2)',borderRadius:16,padding:'28px 20px',textAlign:'center'}},
+        el('div',{style:{fontSize:14,color:'var(--text3)',fontWeight:700,marginBottom:8,textTransform:'uppercase',letterSpacing:'.07em'}},'W/W Change'),
+        wowDelta!=null?el('div',null,
+          el('div',{style:{fontSize:52,fontWeight:900,lineHeight:1,color:wowDelta>=0?'var(--ok)':'var(--err)'}},
+            (wowDelta>=0?'+':'')+wowDelta.toFixed(4)
+          ),
+          el('div',{style:{fontSize:16,color:wowDelta>=0?'var(--ok)':'var(--err)',marginTop:6}},
+            el('i',{className:'ti '+(wowDelta>=0?'ti-arrow-up-right':'ti-arrow-down-right')}),
+            ' '+(wowPct>=0?'+':'')+wowPct.toFixed(1)+'%'
+          )
+        ):el('div',{style:{fontSize:20,color:'var(--text3)',marginTop:16}},'—')
+      ),
+      // Next Class
+      el('div',{style:{background:nextCol+'18',border:'1.5px dashed '+nextCol,borderRadius:16,padding:'28px 20px',textAlign:'center'}},
+        el('div',{style:{fontSize:14,color:nextCol,fontWeight:700,marginBottom:8,textTransform:'uppercase',letterSpacing:'.07em'}},'Next: Class '+nextCls),
+        el('div',{style:{fontSize:52,fontWeight:900,color:nextCol,lineHeight:1}},
+          unitsToNext>0?'+'+unitsToNext.toLocaleString():'🏆'
+        ),
+        el('div',{style:{fontSize:14,color:nextCol,opacity:.7,marginTop:6}},
+          unitsToNext>0?'units/week needed':'Top class achieved!'
+        )
+      )
+    ),
+    el('div',{style:{marginTop:32,fontSize:12,color:'var(--text3)'}},'Press M or Esc to exit meeting mode')
+  );
+}
+
+
 function PostLaunchView({data}){
   // data = launch dashboard data (for reading launchDate from product tasks)
   const [salesData,setSalesData]=React.useState(()=>{
@@ -1733,6 +2346,12 @@ function PostLaunchView({data}){
   const [sel,setSel]=React.useState(Object.keys(SALES_DATA_DEFAULT)[0]||'');
   const [activePC,setActivePC]=React.useState('pc1');
   const [showAddSKU,setShowAddSKU]=React.useState(false);
+  const [showUpdateSKU,setShowUpdateSKU]=React.useState(false);
+  const [showBulkUpload,setShowBulkUpload]=React.useState(false);
+  const [showChangelog,setShowChangelog]=React.useState(false);
+  const [lastUpdated,setLastUpdated]=React.useState(()=>{
+    try{return JSON.parse(localStorage.getItem('au_pl_lastupdated')||'{}');}catch{return {};}
+  });
 
   const saveHidden=h=>{setHidden(h);try{localStorage.setItem('au_pl_hidden',JSON.stringify(h));}catch{}};
   const removeProduct=name=>saveHidden([...hidden,name]);
@@ -1844,17 +2463,43 @@ function PostLaunchView({data}){
               borderRadius:10,padding:'12px 16px',cursor:'pointer',minWidth:190,
               boxShadow:isOn?'0 0 0 1px var(--info)':'none',transition:'all .12s'
             }},
-              el('div',{style:{fontSize:10,color:isOn?'var(--info)':'var(--text3)',fontWeight:700,textTransform:'uppercase',letterSpacing:'.07em',marginBottom:4}},d.brand),
+              el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:4}},
+                el('div',{style:{fontSize:10,color:isOn?'var(--info)':'var(--text3)',fontWeight:700,textTransform:'uppercase',letterSpacing:'.07em'}},d.brand),
+                (()=>{
+                  const sw=Object.entries(d.weekly||{}).sort(([a],[b])=>a.localeCompare(b));
+                  const lw=sw.length>=1?sw[sw.length-1][1]:0;
+                  const pw=sw.length>=2?sw[sw.length-2][1]:null;
+                  if(pw==null) return null;
+                  const delta=lw-pw;
+                  return el('span',{style:{fontSize:10,fontWeight:700,color:delta>=0?'var(--ok)':'var(--err)'}},
+                    el('i',{className:'ti '+(delta>=0?'ti-trending-up':'ti-trending-down'),style:{fontSize:10}}),
+                    ' '+(delta>=0?'+':'')+delta
+                  );
+                })()
+              ),
               el('div',{style:{fontSize:13,fontWeight:700,color:isOn?'var(--info)':'var(--text)',marginBottom:6,lineHeight:1.3}},name),
-              el('div',{style:{display:'flex',gap:10,fontSize:11,color:isOn?'var(--info)':'var(--text2)'}},
+              el('div',{style:{display:'flex',gap:8,fontSize:11,color:isOn?'var(--info)':'var(--text2)',flexWrap:'wrap',alignItems:'center'}},
                 el('span',null,d.units.toLocaleString()+' units'),
-                el('span',null,d.storeCount+' stores')
+                el('span',null,d.storeCount+' stores'),
+                (()=>{
+                  const skuClass=(()=>{const sw=Object.entries(d.weekly||{}).sort(([a],[b])=>a.localeCompare(b));const lw=sw.length?sw[sw.length-1][1]:0;const v=lw/ONTARIO_STORES;return v>=8?'A':v>=3?'B':v>=0.8?'C':v>=0.2?'D':'E';})();
+                  const CLS_C={A:'#f0c030',B:'#4dbb6a',C:'#5b9bd5',D:'#e09b3d',E:'#e07878'};
+                  return el('span',{style:{fontWeight:800,color:CLS_C[skuClass]||'var(--text3)',fontSize:12}},'Class '+skuClass);
+                })()
+              ),
+              lastUpdated[name]&&el('div',{style:{fontSize:9,color:'var(--text3)',marginTop:4}},
+                el('i',{className:'ti ti-refresh',style:{fontSize:9}}),
+                ' Updated '+new Date(lastUpdated[name]).toLocaleDateString('en-CA',{month:'short',day:'numeric'})
               )
             ),
             el('button',{onClick:e=>{e.stopPropagation();if(confirm('Remove "'+name+'" from Post Launch?'))removeProduct(name);},
               title:'Remove',className:'rm-btn',
               style:{position:'absolute',top:-6,right:-6,background:'var(--bg2)',border:'0.5px solid var(--bdr2)',borderRadius:'50%',width:20,height:20,cursor:'pointer',display:'none',alignItems:'center',justifyContent:'center',color:'var(--text3)',fontSize:11,padding:0}
-            },el('i',{className:'ti ti-x'}))
+            },el('i',{className:'ti ti-x'})),
+            isOn&&el('button',{onClick:e=>{e.stopPropagation();setSel(name);setShowUpdateSKU(true);},
+              title:'Update sales data',
+              style:{position:'absolute',bottom:-6,right:-6,background:'var(--ok)',border:'none',borderRadius:'50%',width:22,height:22,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontSize:11,padding:0,boxShadow:'0 1px 4px rgba(0,0,0,.3)'}
+            },el('i',{className:'ti ti-refresh'}))
           );
         }),
         /* Restore hidden products in this PC */
@@ -1864,6 +2509,16 @@ function PostLaunchView({data}){
             cursor:'pointer',padding:'8px 12px',fontSize:11,color:'var(--text2)',
             fontFamily:'inherit',display:'flex',alignItems:'center',gap:5
           }},el('i',{className:'ti ti-eye',style:{fontSize:11}}),name.slice(0,22)+'…')
+        ),
+        /* Bulk upload button */
+        el('button',{onClick:()=>setShowBulkUpload(true),style:{
+          background:'var(--bg)',border:'0.5px dashed var(--ok)',borderRadius:10,
+          padding:'12px 16px',cursor:'pointer',minWidth:160,
+          display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',
+          gap:6,color:'var(--ok)',fontFamily:'inherit',transition:'all .12s'
+        }},
+          el('i',{className:'ti ti-table-import',style:{fontSize:20}}),
+          el('span',{style:{fontSize:11,fontWeight:600}},'Bulk Upload')
         ),
         /* Add SKU button */
         el('button',{onClick:()=>setShowAddSKU(true),style:{
@@ -1878,6 +2533,35 @@ function PostLaunchView({data}){
       )
     ),
 
+
+    showChangelog&&el(ChangelogPanel,{onClose:()=>setShowChangelog(false)}),
+    showUpdateSKU&&current&&el(UpdateSKUModal,{
+      prodName:sel,
+      currentProd:current,
+      onUpdate:updated=>{
+        const next={...salesData,[sel]:updated};
+        setSalesData(next);
+        try{localStorage.setItem('au_pl_data',JSON.stringify(next));}catch{}
+        const lu={...lastUpdated,[sel]:new Date().toISOString()};
+        setLastUpdated(lu);
+        try{localStorage.setItem('au_pl_lastupdated',JSON.stringify(lu));}catch{}
+        addChangelogEntry('Sales data updated',sel);
+      },
+      onClose:()=>setShowUpdateSKU(false)
+    }),
+    showBulkUpload&&el(BulkUploadModal,{
+      salesData,
+      onUpdate:(name,prod,lu)=>{
+        const next={...salesData,[name]:prod};
+        setSalesData(next);
+        try{localStorage.setItem('au_pl_data',JSON.stringify(next));}catch{}
+        const luAll={...lastUpdated,...lu};
+        setLastUpdated(luAll);
+        try{localStorage.setItem('au_pl_lastupdated',JSON.stringify(luAll));}catch{}
+        addChangelogEntry('Bulk sales data updated',Object.keys(lu).join(', '));
+      },
+      onClose:()=>setShowBulkUpload(false)
+    }),
     showAddSKU&&el(AddSKUModal,{
       activePC,
       onAdd:(name,prod)=>{
@@ -1891,6 +2575,45 @@ function PostLaunchView({data}){
     /* ── Product detail ── */
     !current?el('div',{style:{color:'var(--text2)',padding:20,textAlign:'center'}},'No products in this product call yet.'):
     el('div',null,
+      /* ── Action toolbar ── */
+      el('div',{style:{display:'flex',gap:8,alignItems:'center',marginBottom:16,flexWrap:'wrap'}},
+
+
+        el('button',{onClick:()=>setShowChangelog(true),style:{
+          background:'var(--bg)',border:'0.5px solid var(--bdr2)',borderRadius:7,cursor:'pointer',
+          padding:'7px 14px',fontSize:12,fontFamily:'inherit',color:'var(--text2)',
+          display:'flex',alignItems:'center',gap:6
+        }},el('i',{className:'ti ti-history',style:{fontSize:13}}),' Changelog'),
+        el('button',{onClick:()=>window.print(),style:{
+          background:'var(--bg)',border:'0.5px solid var(--bdr2)',borderRadius:7,cursor:'pointer',
+          padding:'7px 14px',fontSize:12,fontFamily:'inherit',color:'var(--text2)',
+          display:'flex',alignItems:'center',gap:6,marginLeft:'auto'
+        }},el('i',{className:'ti ti-printer',style:{fontSize:13}}),' Print / PDF')
+      ),
+      (()=>{
+        const sw=Object.entries(current.weekly||{}).sort(([a],[b])=>a.localeCompare(b));
+        const lw=sw.length>=1?sw[sw.length-1][1]:0;
+        const pw=sw.length>=2?sw[sw.length-2][1]:null;
+        const delta=pw!=null?lw-pw:null;
+        const pct=pw>0?((lw-pw)/pw*100):null;
+        return delta!=null?el('div',{style:{
+          display:'flex',alignItems:'center',gap:10,background:'var(--bg)',
+          border:'0.5px solid var(--bdr)',borderRadius:10,padding:'10px 16px',marginBottom:12
+        }},
+          el('div',{style:{fontSize:11,color:'var(--text3)',fontWeight:600}},'WEEK OVER WEEK'),
+          el('div',{style:{fontSize:22,fontWeight:900,color:delta>=0?'var(--ok)':'var(--err)'}},
+            el('i',{className:'ti '+(delta>=0?'ti-arrow-up-right':'ti-arrow-down-right'),style:{fontSize:18}}),
+            ' '+(delta>=0?'+':'')+delta.toLocaleString()+' units'
+          ),
+          el('div',{style:{fontSize:13,color:delta>=0?'var(--ok)':'var(--err)',fontWeight:600}},
+            (pct>=0?'+':'')+pct.toFixed(1)+'% vs last week'
+          ),
+          el('div',{style:{borderLeft:'0.5px solid var(--bdr)',paddingLeft:10,marginLeft:2,fontSize:11,color:'var(--text3)'}},
+            'LW: ',el('strong',{style:{color:'var(--text)'}},lw.toLocaleString(),' units'),
+            '  ·  PW: ',el('strong',{style:{color:'var(--text)'}},pw.toLocaleString(),' units')
+          )
+        ):null;
+      })(),
       el(DailyLineChart,{daily:current.daily,brand:current.brand,skuClass:current.ocs?.skuClass,launchDate:effectiveLaunchDate}),
       el(VelocityCard,{ocs:current.ocs,weekly:current.weekly}),
       el(StoreDistributionCard,{
