@@ -9,9 +9,9 @@
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#0f1729;--bg2:#162040;--bg3:#0a1120;h
-  --text:#e8edf8;--text2:#8fa3c8;--text3:#6b85a8;
-  --bdr:rgba(255,255,255,.08);--bdr2:rgba(255,255,255,.18);
+  --bg:#0f1729;--bg2:#162040;--bg3:#0a1120;
+  --text:#f0f4ff;--text2:#b8cce8;--text3:#8aa8cc;
+  --bdr:rgba(255,255,255,.12);--bdr2:rgba(255,255,255,.24);
   --ok-bg:#0a2214;--ok:#6dba7a;
   --info-bg:#0d1f3c;--info:#5b9bd5;
   --warn-bg:#271900;--warn:#e09b3d;
@@ -21,6 +21,24 @@
   --pr-col:#d4944a;--pr-light:#28190a;
   --op-col:#3dba8a;--op-light:#0c2a22;
 }
+
+/* ── Global dark-mode input fix ── */
+*{color-scheme:dark}
+input,textarea,select{
+  color:var(--text) !important;
+  background:var(--bg2);
+  color-scheme:dark;
+  font-family:inherit;
+}
+input[type=date]{color-scheme:dark;color:var(--text) !important;}
+input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1);opacity:.55;cursor:pointer}
+input[type=date]::-webkit-datetime-edit{color:var(--text)}
+input[type=date]::-webkit-datetime-edit-fields-wrapper{color:var(--text)}
+input[type=date]::-webkit-datetime-edit-day-field,
+input[type=date]::-webkit-datetime-edit-month-field,
+input[type=date]::-webkit-datetime-edit-year-field{color:var(--text)}
+input[type=number]::-webkit-inner-spin-button{filter:invert(.7)}
+select option{background:var(--bg2);color:var(--text)}
 
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg3);color:var(--text);font-size:14px;line-height:1.5}
 #root{max-width:1200px;margin:0 auto;padding:20px 16px 40px}
@@ -38,7 +56,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .prod-header{padding:16px 20px 14px;border-bottom:0.5px solid var(--bdr)}
 .editable{cursor:pointer;border-radius:4px;padding:1px 4px;display:inline-block;min-width:10px}
 .editable:hover{background:var(--bg2);outline:1px dashed var(--bdr2)}
-input.ei,textarea.ei,select.ei{background:var(--bg2);border:1.5px solid var(--info);border-radius:4px;color:var(--text);font:inherit;font-size:inherit;padding:2px 6px;outline:none;width:100%}
+input.ei,textarea.ei,select.ei{background:var(--bg2);border:1.5px solid var(--info);border-radius:4px;color:var(--text) !important;font:inherit;font-size:inherit;padding:2px 6px;outline:none;width:100%}
 textarea.ei{resize:vertical;min-height:52px}
 .cat-header{display:flex;align-items:center;gap:8px;padding:8px 20px;font-size:12px;font-weight:700;cursor:pointer;user-select:none;border-bottom:0.5px solid var(--bdr)}
 .task-tbl{width:100%;border-collapse:collapse}
@@ -74,12 +92,13 @@ textarea.ei{resize:vertical;min-height:52px}
 .save-ind{font-size:11px;color:var(--ok);display:flex;align-items:center;gap:4px}
 .truncate{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 div:hover > .rm-btn{display:block!important}
-/* Leaflet map tweaks */
+/* Leaflet */
 .leaflet-container{font-family:inherit;font-size:12px}
 .leaflet-tooltip{background:var(--bg);color:var(--text);border:0.5px solid var(--bdr2);border-radius:6px;padding:5px 10px;box-shadow:0 2px 8px rgba(0,0,0,.3);font-family:inherit}
 .leaflet-tooltip-top::before{border-top-color:var(--bdr2)}
 .leaflet-control-attribution{font-size:9px;opacity:.5}
 .leaflet-tile{filter:brightness(0.85) saturate(0.9)}
+@keyframes spin{to{transform:rotate(360deg)}}
 </style>
 </head>
 <body>
@@ -1588,7 +1607,119 @@ function GitHubSyncPanel({data, setData, onClose}){
       )
     )
   );
+}/* ── Add SKU Modal ── */
+function AddSKUModal({activePC,onAdd,onClose}){
+  const [name,setName]=React.useState('');
+  const [brand,setBrand]=React.useState('');
+  const [pc,setPc]=React.useState(activePC);
+  const [launchDate,setLaunchDate]=React.useState('');
+  const [units,setUnits]=React.useState('');
+  const [storeCount,setStoreCount]=React.useState('');
+  const [err,setErr]=React.useState('');
+
+  const PC_OPTS=[
+    {id:'pc1',label:'PC#1 2026'},
+    {id:'pc2',label:'PC#2 2026'},
+    {id:'pc3',label:'PC#3 2026'},
+    {id:'other',label:'Other SKUs'},
+  ];
+
+  const handleAdd=()=>{
+    if(!name.trim()){setErr('Product name is required.');return;}
+    const newProd={
+      pc,
+      brand:brand.trim()||'—',
+      units:parseInt(units)||0,
+      orders:0,
+      storeCount:parseInt(storeCount)||0,
+      launchDate:launchDate||'',
+      storeMetrics:{weekMetrics:{},totalStores:parseInt(storeCount)||0,opportunity:ONTARIO_STORES-(parseInt(storeCount)||0)},
+      ocs:{velocity:0,skuClass:'New Product',lwUnits:0,twoWkUnits:0,threeWkUnits:0,avgLast3:0,storesL4W:0,penPct4W:0,penPct8W:0,penPct12W:0,onHand:null,onOrder:null,weeksOfSupply:null,fillRate:null,lifeOfSku:0,firstReceipt:launchDate||''},
+      cities:{},stores:{},regions:{},weekly:{},monthly:{},daily:{}
+    };
+    onAdd(name.trim(),newProd);
+    onClose();
+  };
+
+  const field=(label,input)=>el('div',{style:{marginBottom:14}},
+    el('label',{style:{fontSize:11,fontWeight:600,color:'var(--text2)',display:'block',marginBottom:5}},label),
+    input
+  );
+
+  return el('div',{style:{
+    position:'fixed',inset:0,background:'rgba(0,0,0,0.6)',zIndex:600,
+    display:'flex',alignItems:'center',justifyContent:'center',padding:20
+  },onClick:e=>e.target===e.currentTarget&&onClose()},
+    el('div',{style:{
+      background:'var(--bg)',border:'0.5px solid var(--bdr2)',borderRadius:14,
+      width:'100%',maxWidth:480,boxShadow:'0 8px 40px rgba(0,0,0,0.4)'
+    }},
+      /* Header */
+      el('div',{style:{padding:'16px 20px',borderBottom:'0.5px solid var(--bdr)',display:'flex',alignItems:'center',justifyContent:'space-between'}},
+        el('div',{style:{fontSize:15,fontWeight:800,display:'flex',alignItems:'center',gap:8}},
+          el('i',{className:'ti ti-package',style:{color:'var(--info)',fontSize:18}}), 'Add New SKU'
+        ),
+        el('button',{onClick:onClose,style:{background:'none',border:'none',cursor:'pointer',color:'var(--text3)',fontSize:18}},
+          el('i',{className:'ti ti-x'})
+        )
+      ),
+
+      el('div',{style:{padding:'20px'}},
+        el('div',{style:{background:'var(--info-bg)',border:'0.5px solid var(--info)',borderRadius:8,padding:'10px 14px',marginBottom:18,fontSize:12,color:'var(--info)'}},
+          el('i',{className:'ti ti-info-circle',style:{marginRight:6}}),
+          'Add basic info now — upload sales data from Excel later using the data reload flow.'
+        ),
+
+        field('Product Name *',
+          el('input',{className:'ei',placeholder:'e.g. Watermelon Whammy 510 Vape',value:name,onChange:e=>setName(e.target.value),onKeyDown:e=>e.key==='Enter'&&handleAdd()})
+        ),
+        el('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:14}},
+          el('div',null,
+            el('label',{style:{fontSize:11,fontWeight:600,color:'var(--text2)',display:'block',marginBottom:5}},'Brand'),
+            el('input',{className:'ei',placeholder:'e.g. LITTI.',value:brand,onChange:e=>setBrand(e.target.value)})
+          ),
+          el('div',null,
+            el('label',{style:{fontSize:11,fontWeight:600,color:'var(--text2)',display:'block',marginBottom:5}},'Product Call'),
+            el('select',{className:'ei',value:pc,onChange:e=>setPc(e.target.value)},
+              PC_OPTS.map(o=>el('option',{key:o.id,value:o.id},o.label))
+            )
+          )
+        ),
+        el('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:12,marginBottom:14}},
+          el('div',null,
+            el('label',{style:{fontSize:11,fontWeight:600,color:'var(--text2)',display:'block',marginBottom:5}},'Launch Date'),
+            el('input',{className:'ei',type:'date',value:launchDate,onChange:e=>setLaunchDate(e.target.value)})
+          ),
+          el('div',null,
+            el('label',{style:{fontSize:11,fontWeight:600,color:'var(--text2)',display:'block',marginBottom:5}},'Total Units'),
+            el('input',{className:'ei',type:'number',placeholder:'0',value:units,onChange:e=>setUnits(e.target.value)})
+          ),
+          el('div',null,
+            el('label',{style:{fontSize:11,fontWeight:600,color:'var(--text2)',display:'block',marginBottom:5}},'Stores Reached'),
+            el('input',{className:'ei',type:'number',placeholder:'0',value:storeCount,onChange:e=>setStoreCount(e.target.value)})
+          )
+        ),
+        err&&el('div',{style:{fontSize:12,color:'var(--err)',marginBottom:10,display:'flex',alignItems:'center',gap:5}},
+          el('i',{className:'ti ti-alert-circle'}),err
+        ),
+        el('div',{style:{display:'flex',gap:10}},
+          el('button',{onClick:handleAdd,style:{
+            flex:1,background:'var(--info)',border:'none',borderRadius:8,
+            padding:'11px',fontSize:13,fontFamily:'inherit',color:'#fff',
+            fontWeight:700,cursor:'pointer'
+          }},el('i',{className:'ti ti-plus'}),' Add SKU'),
+          el('button',{onClick:onClose,style:{
+            background:'var(--bg2)',border:'0.5px solid var(--bdr2)',borderRadius:8,
+            padding:'11px 20px',fontSize:13,fontFamily:'inherit',color:'var(--text2)',
+            cursor:'pointer'
+          }},'Cancel')
+        )
+      )
+    )
+  );
 }
+
+
 function PostLaunchView({data}){
   // data = launch dashboard data (for reading launchDate from product tasks)
   const [salesData,setSalesData]=React.useState(()=>{
@@ -1601,6 +1732,7 @@ function PostLaunchView({data}){
   });
   const [sel,setSel]=React.useState(Object.keys(SALES_DATA_DEFAULT)[0]||'');
   const [activePC,setActivePC]=React.useState('pc1');
+  const [showAddSKU,setShowAddSKU]=React.useState(false);
 
   const saveHidden=h=>{setHidden(h);try{localStorage.setItem('au_pl_hidden',JSON.stringify(h));}catch{}};
   const removeProduct=name=>saveHidden([...hidden,name]);
@@ -1732,10 +1864,30 @@ function PostLaunchView({data}){
             cursor:'pointer',padding:'8px 12px',fontSize:11,color:'var(--text2)',
             fontFamily:'inherit',display:'flex',alignItems:'center',gap:5
           }},el('i',{className:'ti ti-eye',style:{fontSize:11}}),name.slice(0,22)+'…')
+        ),
+        /* Add SKU button */
+        el('button',{onClick:()=>setShowAddSKU(true),style:{
+          background:'var(--bg)',border:'0.5px dashed var(--info)',borderRadius:10,
+          padding:'12px 16px',cursor:'pointer',minWidth:160,
+          display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',
+          gap:6,color:'var(--info)',fontFamily:'inherit',transition:'all .12s'
+        }},
+          el('i',{className:'ti ti-plus',style:{fontSize:20}}),
+          el('span',{style:{fontSize:11,fontWeight:600}},'Add SKU')
         )
       )
     ),
 
+    showAddSKU&&el(AddSKUModal,{
+      activePC,
+      onAdd:(name,prod)=>{
+        const updated={...salesData,[name]:prod};
+        setSalesData(updated);
+        try{localStorage.setItem('au_pl_data',JSON.stringify(updated));}catch{}
+        setSel(name);
+      },
+      onClose:()=>setShowAddSKU(false)
+    }),
     /* ── Product detail ── */
     !current?el('div',{style:{color:'var(--text2)',padding:20,textAlign:'center'}},'No products in this product call yet.'):
     el('div',null,
