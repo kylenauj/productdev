@@ -1573,24 +1573,26 @@ function GitHubSyncPanel({data, setData, onClose}){
         ),
         el('div',{style:{display:'flex',gap:10,marginBottom:14}},
           el('button',{onClick:handlePull,disabled:busy||!hasToken,style:{
-            flex:1,background:'var(--bg2)',border:'0.5px solid var(--bdr2)',
-            borderRadius:8,cursor:hasToken?'pointer':'not-allowed',padding:'10px',fontSize:13,
-            fontFamily:'inherit',color:'var(--text)',fontWeight:500,
+            flex:1,background:'#238636',border:'2px solid #2ea043',
+            borderRadius:8,cursor:hasToken?'pointer':'not-allowed',padding:'18px 36px',fontSize:18,
+            fontFamily:'inherit',color:'#ffffff',fontWeight:700,
             display:'flex',alignItems:'center',justifyContent:'center',gap:7,
+            boxShadow:'0 0 12px rgba(46,160,67,0.5)',
             opacity:(busy||!hasToken)?0.4:1
           }},
-            el('i',{className:'ti ti-cloud-download',style:{fontSize:16}}), 'Pull from GitHub'
+            el('i',{className:'ti ti-cloud-download',style:{fontSize:22}}), 'Pull from GitHub'
           ),
           el('button',{onClick:handlePush,disabled:busy||!hasToken,style:{
-            flex:1,background:'#24292f',border:'none',
-            borderRadius:8,cursor:hasToken?'pointer':'not-allowed',padding:'10px',fontSize:13,
-            fontFamily:'inherit',color:'#fff',fontWeight:600,
-            display:'flex',alignItems:'center',justifyContent:'center',gap:7,
-            opacity:(busy||!hasToken)?0.4:1
+            flex:0,background:'#21262d',border:'1px solid #30363d',
+            borderRadius:4,cursor:hasToken?'pointer':'not-allowed',padding:'3px 7px',fontSize:9,
+            fontFamily:'inherit',color:'#484f58',fontWeight:400,
+            display:'flex',alignItems:'center',justifyContent:'center',gap:4,
+            opacity:(busy||!hasToken)?0.2:0.5,
+            alignSelf:'flex-end'
           }},
             busy
-              ? el('span',null,el('i',{className:'ti ti-loader-2',style:{animation:'spin 1s linear infinite',fontSize:14}}),' Saving…')
-              : el('span',null,el('i',{className:'ti ti-cloud-upload',style:{fontSize:16}}), ' Push to GitHub')
+              ? el('span',null,el('i',{className:'ti ti-loader-2',style:{animation:'spin 1s linear infinite',fontSize:9}}),' Saving…')
+              : el('span',null,el('i',{className:'ti ti-cloud-upload',style:{fontSize:9}}), ' Push to GitHub')
           )
         ),
         el('div',{style:{display:'flex',alignItems:'center',gap:10,padding:'10px 14px',background:'var(--bg2)',borderRadius:8,marginBottom:14}},
