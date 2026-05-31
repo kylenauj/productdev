@@ -1469,7 +1469,7 @@ async function ghWrite(token,data,sha){
 }
 
 /* ── GitHub Sync Panel ── */
-function GitHubSyncPanel({data, setData, onClose}){
+function GitHubSyncPanel({data, setData, onClose, onPushed}){
   const conf = getGHConf();
   const [token,   setToken]   = React.useState(conf.token||'');
   const [autoRef, setAutoRef] = React.useState(conf.autoRefresh!==false);
@@ -1512,7 +1512,8 @@ function GitHubSyncPanel({data, setData, onClose}){
       const newSha = await ghWrite(token, data, sha);
       shaRef.current = newSha;
       saveConf(token, autoRef, newSha);
-      setStatus({ok:true, msg:'Saved to GitHub! Viewers can Pull to see your changes.'});
+      if(onPushed) onPushed();
+      setStatus({ok:true, msg:'Saved to GitHub! Auto-refresh re-enabled for viewers.'});
     }catch(e){ setStatus({ok:false,msg:e.message}); }
     finally{ setBusy(false); }
   };
@@ -1573,26 +1574,24 @@ function GitHubSyncPanel({data, setData, onClose}){
         ),
         el('div',{style:{display:'flex',gap:10,marginBottom:14}},
           el('button',{onClick:handlePull,disabled:busy||!hasToken,style:{
-            flex:1,background:'#238636',border:'2px solid #2ea043',
-            borderRadius:8,cursor:hasToken?'pointer':'not-allowed',padding:'18px 36px',fontSize:18,
-            fontFamily:'inherit',color:'#ffffff',fontWeight:700,
+            flex:1,background:'var(--bg2)',border:'0.5px solid var(--bdr2)',
+            borderRadius:8,cursor:hasToken?'pointer':'not-allowed',padding:'10px',fontSize:13,
+            fontFamily:'inherit',color:'var(--text)',fontWeight:500,
             display:'flex',alignItems:'center',justifyContent:'center',gap:7,
-            boxShadow:'0 0 12px rgba(46,160,67,0.5)',
             opacity:(busy||!hasToken)?0.4:1
           }},
-            el('i',{className:'ti ti-cloud-download',style:{fontSize:22}}), 'Pull from GitHub'
+            el('i',{className:'ti ti-cloud-download',style:{fontSize:16}}), 'Pull from GitHub'
           ),
           el('button',{onClick:handlePush,disabled:busy||!hasToken,style:{
-            flex:0,background:'#21262d',border:'1px solid #30363d',
-            borderRadius:4,cursor:hasToken?'pointer':'not-allowed',padding:'3px 7px',fontSize:9,
-            fontFamily:'inherit',color:'#484f58',fontWeight:400,
-            display:'flex',alignItems:'center',justifyContent:'center',gap:4,
-            opacity:(busy||!hasToken)?0.2:0.5,
-            alignSelf:'flex-end'
+            flex:1,background:'#24292f',border:'none',
+            borderRadius:8,cursor:hasToken?'pointer':'not-allowed',padding:'10px',fontSize:13,
+            fontFamily:'inherit',color:'#fff',fontWeight:600,
+            display:'flex',alignItems:'center',justifyContent:'center',gap:7,
+            opacity:(busy||!hasToken)?0.4:1
           }},
             busy
-              ? el('span',null,el('i',{className:'ti ti-loader-2',style:{animation:'spin 1s linear infinite',fontSize:9}}),' Saving…')
-              : el('span',null,el('i',{className:'ti ti-cloud-upload',style:{fontSize:9}}), ' Push to GitHub')
+              ? el('span',null,el('i',{className:'ti ti-loader-2',style:{animation:'spin 1s linear infinite',fontSize:14}}),' Saving…')
+              : el('span',null,el('i',{className:'ti ti-cloud-upload',style:{fontSize:16}}), ' Push to GitHub')
           )
         ),
         el('div',{style:{display:'flex',alignItems:'center',gap:10,padding:'10px 14px',background:'var(--bg2)',borderRadius:8,marginBottom:14}},
@@ -2792,18 +2791,32 @@ function App(){
   const [fullscreen,setFullscreen]=useState(false);
   const [saved,setSaved]=useState(false);
   const [lastSaved,setLastSaved]=useState(null);
+  const [isDirty,setIsDirty]=useState(false);
   const [showGH,setShowGH]=useState(false);
   const [renamingTab,setRenamingTab]=useState(null);
   const [storeCountVer,setStoreCountVer]=useState(0); // bumped when store count changes to force re-render
   const importRef=useRef();
 
-  useEffect(()=>{saveState(data);setSaved(true);setLastSaved(Date.now());const t=setTimeout(()=>setSaved(false),1800);return()=>clearTimeout(t);},[data]);
+  useEffect(()=>{
+    saveState(data);
+    dirtyRef.current=true; // mark as edited — pause auto-refresh
+    setIsDirty(true);
+    setSaved(true);setLastSaved(Date.now());
+    const t=setTimeout(()=>setSaved(false),1800);
+    return()=>clearTimeout(t);
+  },[data]);
 
-  // Auto-refresh from GitHub for viewers
+  // Auto-refresh from GitHub — PAUSES the moment user makes any edit
+  const dirtyRef = React.useRef(false); // true = user has unsaved edits
   useEffect(()=>{
     const conf=getGHConf();
     if(!conf.autoRefresh||!conf.token)return;
     const interval=setInterval(async()=>{
+      if(dirtyRef.current){
+        // User has unsaved edits — skip this refresh cycle
+        console.log('[Auto-refresh] Skipped — unsaved edits pending');
+        return;
+      }
       try{
         const result=await ghRead(conf.token);
         if(result)setData(result.data);
@@ -2944,12 +2957,21 @@ function App(){
         
         el('button',{className:'btn',onClick:()=>{const b=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='au_dashboard_'+new Date().toISOString().slice(0,10)+'.json';a.click();}},el('i',{className:'ti ti-download'}),' Backup'),
         el('button',{className:'btn',onClick:()=>importRef.current.click()},el('i',{className:'ti ti-upload'}),' Import'),
-        el('button',{className:'btn',onClick:()=>setShowGH(true),style:{background:getToken()?'rgba(36,41,47,0.2)':'',border:getToken()?'0.5px solid rgba(255,255,255,0.3)':''}},el('i',{className:'ti ti-brand-github'}),' GitHub'),
+        el('div',{style:{position:'relative',display:'inline-flex',alignItems:'center'}},
+          el('button',{className:'btn',onClick:()=>setShowGH(true),style:{
+            background:isDirty?'rgba(224,155,61,0.15)':getToken()?'rgba(36,41,47,0.2)':'',
+            border:isDirty?'0.5px solid var(--warn)':getToken()?'0.5px solid rgba(255,255,255,0.3)':''
+          }},
+            el('i',{className:'ti ti-brand-github'}),
+            ' GitHub',
+            isDirty&&el('span',{style:{fontSize:10,color:'var(--warn)',fontWeight:700,marginLeft:4}},'● Push')
+          )
+        ),
         el('input',{ref:importRef,type:'file',accept:'.json',style:{display:'none'},onChange:importJSON}),
         el('button',{className:'btn',onClick:()=>window.print()},el('i',{className:'ti ti-printer'}),' Print')
       )
     ),
-    showGH&&el(GitHubSyncPanel,{data,setData,onClose:()=>setShowGH(false)}),
+    showGH&&el(GitHubSyncPanel,{data,setData,onClose:()=>setShowGH(false),onPushed:()=>{dirtyRef.current=false;setIsDirty(false);}}),
     shell,
     el('p',{style:{fontSize:11,color:'var(--text3)',textAlign:'center',marginTop:12}},'Generated '+new Date().toLocaleDateString('en-CA',{year:'numeric',month:'long',day:'numeric'})+' · Keyboard: T Tasks · G Gantt · S Specs · ← → switch products · F fullscreen  ·  Built by Kyle Naujokaitis  ·  v1.14')
   );
