@@ -1558,6 +1558,7 @@ function GitHubSyncPanel({data, setData, onClose, onPushed}){
       else{
         shaRef.current = result.sha;
         saveConf(token, autoRef, result.sha);
+        skipDirtyRef.current=true;
         setData(result.data);
         setStatus({ok:true, msg:'Pulled! Dashboard loaded from GitHub.'});
       }
@@ -2873,9 +2874,16 @@ function App(){
   const [storeCountVer,setStoreCountVer]=useState(0); // bumped when store count changes to force re-render
   const importRef=useRef();
 
+  // skipDirty=true when data was set programmatically (GitHub pull) — don't mark as edited
+  const skipDirtyRef = React.useRef(true); // start true so initial load doesn't mark dirty
+
   useEffect(()=>{
     saveState(data);
-    dirtyRef.current=true; // mark as edited — pause auto-refresh
+    if(skipDirtyRef.current){
+      skipDirtyRef.current=false; // reset — next change will be user-driven
+      return;
+    }
+    dirtyRef.current=true; // user made a real edit
     setIsDirty(true);
     setSaved(true);setLastSaved(Date.now());
     const t=setTimeout(()=>setSaved(false),1800);
@@ -2890,7 +2898,10 @@ function App(){
   useEffect(()=>{
     if(!refreshToken||dirtyRef.current)return;
     ghRead(refreshToken).then(result=>{
-      if(result&&!dirtyRef.current) setData(result.data);
+      if(result&&!dirtyRef.current){
+        skipDirtyRef.current=true;
+        setData(result.data);
+      }
     }).catch(()=>{});
   },[]);
 
@@ -2906,7 +2917,7 @@ function App(){
       }
       try{
         const result=await ghRead(token);
-        if(result)setData(result.data);
+        if(result){skipDirtyRef.current=true;setData(result.data);}
       }catch(e){ /* silent fail */ }
     },30000);
     return()=>clearInterval(interval);
