@@ -2884,19 +2884,28 @@ function App(){
 
   // Auto-refresh from GitHub — PAUSES the moment user makes any edit
   const dirtyRef = React.useRef(false); // true = user has unsaved edits
+  const refreshToken = GH_TOKEN_DEFAULT || getGHConf().token || '';
+
+  // ── Silent pull on every page load (if not dirty) ──
+  useEffect(()=>{
+    if(!refreshToken||dirtyRef.current)return;
+    ghRead(refreshToken).then(result=>{
+      if(result&&!dirtyRef.current) setData(result.data);
+    }).catch(()=>{});
+  },[]);
+
+  // ── Periodic auto-refresh every 30s (only when auto-refresh is on) ──
   useEffect(()=>{
     const conf=getGHConf();
-    if(!conf.autoRefresh)return;
-    const refreshToken=conf.token||GH_TOKEN_DEFAULT;
-    if(!refreshToken)return;
+    const token=refreshToken;
+    if(!token)return;
     const interval=setInterval(async()=>{
       if(dirtyRef.current){
-        // User has unsaved edits — skip this refresh cycle
         console.log('[Auto-refresh] Skipped — unsaved edits pending');
         return;
       }
       try{
-        const result=await ghRead(refreshToken);
+        const result=await ghRead(token);
         if(result)setData(result.data);
       }catch(e){ /* silent fail */ }
     },30000);
