@@ -197,6 +197,68 @@ pc3:[
 ]};
 
 const LS_KEY='au_dash_v8';
+const DEFAULT_TASK_OWNERS={
+  'R&D':'',
+  'NNCP/GTIN':'Kyle',
+  'Product Specs / Submission':'Kyle',
+  'Formulation Dev':'Wei',
+  'Sensory':'Team',
+  'Sensory – Internal':'Team',
+  'Sensory – Customer':'Team',
+  'Formulation Finalization':'Wei',
+  'Packaging Dev':'Kyle',
+  'Financial Analysis':'Jim/Kyle',
+  'Labels':'Kyle',
+  'Input':'Wei',
+  'Internal Packaging':'Kyle',
+  'External Packaging':'Kyle',
+  'Materials On Site':'Jeremy',
+  'Labour':'Jeremy',
+  'Samples Ready':'Jeremy',
+  'Sample Run':'Jeremy',
+  'Base Marketing Materials':'Kyle',
+  'Pre-Sell / Promo':'Sales Team',
+  'Pre-Selling':'Sales Team',
+  'PO Received':'Jeremy',
+  'Production Week':'Jeremy',
+  'Bulk Production':'Jeremy',
+  'Production/Shipment':'Jeremy',
+  'Delivery into OCS':'Jeremy',
+  'Pre-Sell Communications':'Kyle',
+  'Launch Eblast & Comms':'Kyle',
+  'Digital Selling Assets':'Kyle',
+  'Printed Marketing Materials':'Kyle',
+};
+
+// One-time migration: apply default owners to all existing products
+// Only fills in EMPTY owners — never overwrites a name someone already set
+const MIGRATION_KEY='au_owner_migration_v1';
+const applyDefaultOwners=data=>{
+  let changed=false;
+  Object.keys(data).forEach(pcKey=>{
+    if(!Array.isArray(data[pcKey]))return;
+    data[pcKey].forEach(prod=>{
+      if(!Array.isArray(prod.tasks))return;
+      prod.tasks.forEach(task=>{
+        if(!task.owner&&DEFAULT_TASK_OWNERS[task.name]!==undefined){
+          task.owner=DEFAULT_TASK_OWNERS[task.name];
+          changed=true;
+        }
+      });
+      // Also ensure marketing tasks exist
+      const hasMkt=prod.tasks.some(t=>t.name==='Pre-Sell Communications');
+      if(!hasMkt){
+        ['Pre-Sell Communications','Launch Eblast & Comms','Digital Selling Assets','Printed Marketing Materials']
+          .forEach(name=>{
+            prod.tasks.push({id:'mkt_'+Math.random().toString(36).slice(2,8),name,owner:DEFAULT_TASK_OWNERS[name]||'Kyle',status:'Not Started',start:'',end:'',notes:'',atRisk:false,cat:'marketing'});
+          });
+        changed=true;
+      }
+    });
+  });
+  return changed;
+};
+
 const loadState=()=>{try{const s=localStorage.getItem(LS_KEY);return s?JSON.parse(s):null;}catch{return null;}};
 const saveState=s=>{try{localStorage.setItem(LS_KEY,JSON.stringify(s));}catch{}};
 
@@ -2788,7 +2850,16 @@ function LoginScreen({onAuth}){
 
 function App(){
   const [authed,setAuthed_]=useState(isAuthed);
-  const init=loadState()||INITIAL;
+  const init=(()=>{
+    const s=loadState()||INITIAL;
+    // Apply default owners migration (fills empty owners only)
+    if(!localStorage.getItem(MIGRATION_KEY)){
+      applyDefaultOwners(s);
+      saveState(s);
+      localStorage.setItem(MIGRATION_KEY,'1');
+    }
+    return s;
+  })();
   const [data,setData]=useState(()=>({...INITIAL,...init,pcTabs:init.pcTabs||INITIAL.pcTabs}));
   const [view,setView]=useState(()=>data.pcTabs[0]?.id||'pc1');
   const [sels,setSels]=useState({pc1:'bb',pc2:'bcp',pc3:'pp'});
