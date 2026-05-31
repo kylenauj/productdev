@@ -2886,7 +2886,9 @@ function App(){
   const dirtyRef = React.useRef(false); // true = user has unsaved edits
   useEffect(()=>{
     const conf=getGHConf();
-    if(!conf.autoRefresh||!conf.token)return;
+    if(!conf.autoRefresh)return;
+    const refreshToken=conf.token||GH_TOKEN_DEFAULT;
+    if(!refreshToken)return;
     const interval=setInterval(async()=>{
       if(dirtyRef.current){
         // User has unsaved edits — skip this refresh cycle
@@ -2894,7 +2896,7 @@ function App(){
         return;
       }
       try{
-        const result=await ghRead(conf.token);
+        const result=await ghRead(refreshToken);
         if(result)setData(result.data);
       }catch(e){ /* silent fail */ }
     },30000);
