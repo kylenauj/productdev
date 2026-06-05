@@ -1496,26 +1496,25 @@ function WeeklyChart({weekly,monthly}){
 /* ── Top Stores ── */
 function TopStores({stores}){
   const [showAll,setShowAll]=React.useState(false);
-  const entries=Object.entries(stores).sort(([,a],[,b])=>b-a);
+  const entries=Object.entries(stores||{}).sort(([,a],[,b])=>b-a);
   const shown=showAll?entries:entries.slice(0,8);
   const max=entries[0]?.[1]||1;
   return el('div',null,
     el('div',{style:{fontSize:12,fontWeight:700,marginBottom:12,display:'flex',alignItems:'center',gap:6}},
       el('i',{className:'ti ti-building-store',style:{color:'var(--ok)'}}), 'Top Stores'
     ),
-    shown.map(([store,units],i)=>el('div',{key:store,style:{marginBottom:7}},
-      el('div',{style:{display:'flex',justifyContent:'space-between',marginBottom:3,gap:8}},
-        el('span',{style:{fontSize:11,color:'var(--text)',display:'flex',alignItems:'center',gap:5,minWidth:0}},
-          el('span',{style:{fontSize:10,color:'var(--text3)',width:16,textAlign:'right',flexShrink:0}},i+1+'.'),
-          el('span',{style:{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},store)
-        ),
-        el('span',{style:{fontSize:11,fontWeight:700,color:'var(--text)',flexShrink:0}},units)
+    shown.map(([store,units],i)=>el('div',{key:store,style:{marginBottom:8}},
+      el('div',{style:{display:'flex',alignItems:'center',gap:6,marginBottom:4}},
+        el('span',{style:{fontSize:10,color:'var(--text3)',width:18,textAlign:'right',flexShrink:0}},i+1+'.'),
+        el('span',{style:{flex:1,fontSize:12,color:'var(--text)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},store),
+        el('span',{style:{fontSize:12,fontWeight:700,color:'var(--text)',flexShrink:0,width:32,textAlign:'right'}},units)
       ),
-      el('div',{style:{height:3,background:'var(--bg2)',borderRadius:2,overflow:'hidden'}},
-        el('div',{style:{height:'100%',width:(units/max*100)+'%',background:'var(--ok)',borderRadius:2}})
+      el('div',{style:{marginLeft:24,height:6,background:'var(--bg3)',borderRadius:3,overflow:'hidden'}},
+        el('div',{style:{height:'100%',width:(units/max*100)+'%',background:'var(--ok)',borderRadius:3,transition:'width .3s'}})
       )
     )),
-    entries.length>8&&el('button',{onClick:()=>setShowAll(s=>!s),style:{background:'transparent',border:'none',cursor:'pointer',color:'var(--info)',fontSize:11,padding:'4px 0',fontFamily:'inherit'}},
+    entries.length>8&&el('button',{onClick:()=>setShowAll(s=>!s),
+      style:{background:'transparent',border:'none',cursor:'pointer',color:'var(--info)',fontSize:11,padding:'6px 0',fontFamily:'inherit'}},
       showAll?'Show less ↑':'Show all '+entries.length+' stores ↓'
     )
   );
@@ -2234,7 +2233,7 @@ function parseExcelSalesData(buffer, existingProdName){
     throw new Error('No rows for "'+targetName+'". Products in file: '+productNames.join(', '));
 
   // ── Aggregate ──
-  const cities={}, stores={}, regions={}, weeks={}, months={}, daily={}, storeWeeks={};
+  const cities={}, stores={}, regions={}, weeks={}, months={}, daily={}, storeWeeks={}, storeRegions={};
   let totalUnits=0, totalOrders=0, brand='';
 
   dataRows.forEach(row=>{
@@ -2257,6 +2256,7 @@ function parseExcelSalesData(buffer, existingProdName){
     cities[city]  = (cities[city]  ||0)+units;
     stores[store] = (stores[store] ||0)+units;
     if(reg) regions[reg]=(regions[reg]||0)+units;
+    if(reg&&!storeRegions[store]) storeRegions[store]=reg;
     totalUnits+=units;
     totalOrders++;
 
@@ -2325,6 +2325,7 @@ function parseExcelSalesData(buffer, existingProdName){
       storeCount: Object.keys(stores).length,
       cities:  Object.fromEntries(Object.entries(cities).sort(([,a],[,b])=>b-a)),
       stores:  Object.fromEntries(Object.entries(stores).sort(([,a],[,b])=>b-a)),
+        storeRegions,
       regions,
       weekly:  Object.fromEntries(Object.entries(weeks).sort()),
       monthly: Object.fromEntries(Object.entries(months).sort()),
@@ -2368,7 +2369,8 @@ function UpdateSKUModal({prodName, currentProd, onUpdate, onClose}){
     if(!parsed) return;
     let updated;
     if(mergeMode==='replace'){
-      updated={...currentProd,...parsed.data, pc:currentProd.pc, launchDate:currentProd.launchDate, ocs:currentProd.ocs};
+      updated={...currentProd,...parsed.data, pc:currentProd.pc, launchDate:currentProd.launchDate, ocs:currentProd.ocs,
+        storeRegions:{...currentProd.storeRegions,...parsed.data.storeRegions}};
     } else {
       // Append — merge daily/weekly/monthly, take latest store/city data
       const mergedDaily={...currentProd.daily,...parsed.data.daily};
