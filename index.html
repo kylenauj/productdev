@@ -2167,6 +2167,95 @@ function GitHubSyncPanel({data, setData, onClose, onPushed}){
    for the selected product
 ══════════════════════════════════════════ */
 
+
+/* ── Detect & parse OCS Replenishment Report format ── */
+function isReplenishmentFormat(rows){
+  if(!rows||!rows[0]) return false;
+  const hdrs=rows[0].map(h=>String(h||'').trim());
+  return hdrs.includes('Velocity') && hdrs.includes('SKU Class') && hdrs.includes('Last Week Sales Order Units');
+}
+
+function parseReplenishmentData(buffer){
+  const XLSX=window.XLSX;
+  if(!XLSX) throw new Error('SheetJS not loaded.');
+  const wb=XLSX.read(buffer,{type:'array',cellDates:true});
+  const ws=wb.Sheets[wb.SheetNames[0]];
+  const rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:true});
+  if(!isReplenishmentFormat(rows)) return null;
+
+  const hdrs=rows[0].map(h=>String(h||'').trim());
+  const col=name=>hdrs.findIndex(h=>h.toLowerCase()===name.toLowerCase());
+
+  const iSKU      =col('SKU');
+  const iBrand    =col('Brand');
+  const iSupplier =col('Supplier');
+  const iVel      =col('Velocity');
+  const iClass    =col('SKU Class');
+  const iLW       =col('Last Week Sales Order Units');
+  const i2W       =col('Two Weeks Ago Sales Order Units');
+  const i3W       =col('Three Weeks Ago Sales Order Units');
+  const iAvg3     =col('Avg Sales Order Units (Last 3 Weeks)');
+  const iWkFcst   =col('Weekly Forecast');
+  const iWoS      =col('Weeks of Supply');
+  const iOH       =col('Last Friday On Hand (OH)');
+  const iOO       =col('Units On Order (OO)');
+  const iStoresLW =col('No. of Stores Ordered Last week');
+  const iStores4W =col('No. of Stores Ordered Last 4 weeks');
+  const iPen4W    =col('Store Penetration - 4 Weeks');
+  const iPen8W    =col('Store Penetration - 8 Weeks');
+  const iPen12W   =col('Store Penetration - 12 Weeks');
+  const iFirstRx  =col('First Receipt Date');
+  const iLifeSku  =col('Life of SKU(Days)');
+  const iFillRate =col('Fill Rate');
+  const iOTFR     =col('On-Time Fill Rate');
+
+  const products=[];
+  rows.slice(1).forEach(row=>{
+    if(!row[iSKU]&&!row[iBrand]) return;
+    const brand  =String(row[iBrand]||'').trim();
+    const supplier=String(row[iSupplier]||'').trim().toUpperCase();
+    const skuId  =String(row[iSKU]||'').trim();
+    const vel    =typeof row[iVel]==='number'?row[iVel]:parseFloat(row[iVel])||0;
+    const lwU    =typeof row[iLW]==='number'?Math.round(row[iLW]):parseInt(row[iLW])||0;
+    const twoWkU =typeof row[i2W]==='number'?Math.round(row[i2W]):parseInt(row[i2W])||0;
+    const threeWkU=typeof row[i3W]==='number'?Math.round(row[i3W]):parseInt(row[i3W])||0;
+    const avg3   =typeof row[iAvg3]==='number'?Math.round(row[iAvg3]):parseInt(row[iAvg3])||0;
+
+    let firstRx='';
+    const rawRx=row[iFirstRx];
+    if(rawRx instanceof Date&&!isNaN(rawRx)){
+      firstRx=rawRx.getFullYear()+'-'+String(rawRx.getMonth()+1).padStart(2,'0')+'-'+String(rawRx.getDate()).padStart(2,'0');
+    } else if(typeof rawRx==='string') firstRx=rawRx.slice(0,10);
+
+    products.push({
+      skuId, brand, supplier,
+      isMera: supplier.includes('MERA'),
+      ocs:{
+        velocity: vel,
+        skuClass: String(row[iClass]||'').trim()||ocsClass(vel,firstRx),
+        lwUnits:  lwU,
+        twoWkUnits: twoWkU,
+        threeWkUnits: threeWkU,
+        avgLast3: avg3,
+        weeklyForecast: typeof row[iWkFcst]==='number'?Math.round(row[iWkFcst]):null,
+        weeksOfSupply: typeof row[iWoS]==='number'?parseFloat(row[iWoS].toFixed(1)):null,
+        onHand: typeof row[iOH]==='number'?Math.round(row[iOH]):null,
+        onOrder: typeof row[iOO]==='number'?Math.round(row[iOO]):null,
+        storesLW: typeof row[iStoresLW]==='number'?Math.round(row[iStoresLW]):null,
+        storesL4W: typeof row[iStores4W]==='number'?Math.round(row[iStores4W]):null,
+        penPct4W: typeof row[iPen4W]==='number'?parseFloat((row[iPen4W]*100).toFixed(2)):null,
+        penPct8W: typeof row[iPen8W]==='number'?parseFloat((row[iPen8W]*100).toFixed(2)):null,
+        penPct12W: typeof row[iPen12W]==='number'?parseFloat((row[iPen12W]*100).toFixed(2)):null,
+        fillRate: typeof row[iFillRate]==='number'?parseFloat((row[iFillRate]*100).toFixed(1)):null,
+        onTimeFillRate: typeof row[iOTFR]==='number'?parseFloat((row[iOTFR]*100).toFixed(1)):null,
+        firstReceipt: firstRx,
+        lifeOfSku: typeof row[iLifeSku]==='number'?Math.round(row[iLifeSku]):null,
+      }
+    });
+  });
+  return products;
+}
+
 function parseExcelSalesData(buffer, existingProdName){
   const XLSX = window.XLSX;
   if(!XLSX) throw new Error('SheetJS not loaded. Please refresh the page.');
@@ -2341,11 +2430,11 @@ function parseExcelSalesData(buffer, existingProdName){
 
 /* ── Update SKU Modal ── */
 function UpdateSKUModal({prodName, currentProd, onUpdate, onClose}){
-  const [step,setStep]     = React.useState('upload'); // upload | preview | done
+  const [step,setStep]     = React.useState('upload'); // upload | preview | replen | done
   const [parsed,setParsed] = React.useState(null);
+  const [replenData,setReplenData] = React.useState(null);
   const [err,setErr]       = React.useState('');
   const [busy,setBusy]     = React.useState(false);
-  const [mergeMode,setMergeMode] = React.useState('replace'); // replace | append
   const fileRef = React.useRef();
 
   const handleFile=async(file)=>{
@@ -2354,9 +2443,19 @@ function UpdateSKUModal({prodName, currentProd, onUpdate, onClose}){
     setBusy(true); setErr('');
     try{
       const buf = await file.arrayBuffer();
-      const result = parseExcelSalesData(buf, prodName);
-      setParsed(result);
-      setStep('preview');
+      const XLSX=window.XLSX;
+      const wb=XLSX.read(buf,{type:'array',cellDates:true});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      const rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:true});
+      if(isReplenishmentFormat(rows)){
+        const products=parseReplenishmentData(buf);
+        setReplenData(products);
+        setStep('replen');
+      } else {
+        const result=parseExcelSalesData(buf,prodName);
+        setParsed(result);
+        setStep('preview');
+      }
     }catch(e){
       setErr(e.message);
     }
@@ -2506,6 +2605,45 @@ function UpdateSKUModal({prodName, currentProd, onUpdate, onClose}){
           )
         ),
 
+        /* ── Step: Replenishment ── */
+        step==='replen'&&replenData&&el('div',null,
+          el('div',{style:{background:'var(--info-bg)',border:'1px solid var(--info)',borderRadius:8,padding:'10px 14px',marginBottom:14,fontSize:12,color:'var(--info)'}},
+            el('i',{className:'ti ti-info-circle',style:{marginRight:6}}),
+            'OCS Replenishment Report detected. Select a product to update its velocity and OCS data.'
+          ),
+          el('div',{style:{marginBottom:14}},
+            replenData.map((p,i)=>el('div',{
+              key:i,
+              onClick:()=>{
+                onUpdate({...currentProd,ocs:{...currentProd.ocs,...p.ocs}});
+                setStep('done');
+                setTimeout(onClose,1200);
+              },
+              style:{
+                padding:'10px 14px',border:'1px solid var(--bdr)',borderRadius:'var(--rs)',
+                marginBottom:6,cursor:'pointer',background:'var(--bg2)',
+                transition:'border-color .1s'
+              }
+            },
+              el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:4}},
+                el('div',null,
+                  el('span',{style:{fontSize:11,fontWeight:700,color:'var(--accent)',marginRight:8}},p.brand),
+                  el('span',{style:{fontSize:11,color:'var(--text2)'}},p.skuId)
+                ),
+                p.isMera&&el('span',{style:{fontSize:9,background:'var(--ok-bg)',color:'var(--ok)',border:'1px solid var(--ok-dim)',borderRadius:3,padding:'1px 6px',fontWeight:700}},'MERA')
+              ),
+              el('div',{style:{display:'flex',gap:16,fontSize:11,color:'var(--text3)',flexWrap:'wrap'}},
+                el('span',null,'Vel: ',el('strong',{style:{color:'var(--text)'}},p.ocs.velocity.toFixed(4))),
+                el('span',null,'LW: ',el('strong',{style:{color:'var(--text)'}},p.ocs.lwUnits,' units')),
+                el('span',null,'Stores 4W: ',el('strong',{style:{color:'var(--text)'}},p.ocs.storesL4W||'—')),
+                el('span',null,'Pen 4W: ',el('strong',{style:{color:'var(--text)'}},p.ocs.penPct4W!=null?(p.ocs.penPct4W.toFixed(1)+'%'):'—'))
+              )
+            ))
+          ),
+          el('button',{onClick:()=>setStep('upload'),className:'btn',style:{fontSize:12}},
+            el('i',{className:'ti ti-arrow-left'}),' Back'
+          )
+        ),
         /* ── Step: Done ── */
         step==='done'&&el('div',{style:{textAlign:'center',padding:'20px 0'}},
           el('i',{className:'ti ti-circle-check',style:{fontSize:48,color:'var(--ok)',display:'block',marginBottom:12}}),
