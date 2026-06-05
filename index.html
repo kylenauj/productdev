@@ -1105,6 +1105,97 @@ const CITY_COORDS = {
   "Stoney Creek":[43.210,-79.750],"Orangeville":[43.919,-80.094],"Milton":[43.516,-79.883],
   "Stouffville":[43.967,-79.250],"Uxbridge":[44.100,-79.117],"Keswick":[44.250,-79.450]
 };
+// Region colours — match RegionBar panel exactly
+const REGION_COLOURS = {
+  'Toronto':                       'var(--info)',   // blue
+  'GTA Region (Excludes Toronto)': 'var(--ok)',     // green
+  'West Region':                   'var(--warn)',   // amber
+  'East Region':                   '#a78bfa',       // purple
+  'North Region':                  'var(--err)',    // red
+};
+
+// Map every OCS city to its OCS region label (matching the data exactly)
+const CITY_REGION = {
+  // Toronto
+  'Toronto':'Toronto','North York':'Toronto','Scarborough':'Toronto',
+  'Etobicoke':'Toronto','East York':'Toronto','York':'Toronto',
+  // GTA (Excludes Toronto)
+  'Mississauga':'GTA Region (Excludes Toronto)',
+  'Brampton':'GTA Region (Excludes Toronto)',
+  'Vaughan':'GTA Region (Excludes Toronto)',
+  'Richmond Hill':'GTA Region (Excludes Toronto)',
+  'Newmarket':'GTA Region (Excludes Toronto)',
+  'Aurora':'GTA Region (Excludes Toronto)',
+  'Markham':'GTA Region (Excludes Toronto)',
+  'Ajax':'GTA Region (Excludes Toronto)',
+  'Whitby':'GTA Region (Excludes Toronto)',
+  'Oshawa':'GTA Region (Excludes Toronto)',
+  'Pickering':'GTA Region (Excludes Toronto)',
+  'Oakville':'GTA Region (Excludes Toronto)',
+  'Burlington':'GTA Region (Excludes Toronto)',
+  'Hamilton':'GTA Region (Excludes Toronto)',
+  'Stoney Creek':'GTA Region (Excludes Toronto)',
+  'Ancaster':'GTA Region (Excludes Toronto)',
+  'Dundas':'GTA Region (Excludes Toronto)',
+  'Waterdown':'GTA Region (Excludes Toronto)',
+  'Milton':'GTA Region (Excludes Toronto)',
+  'Georgetown':'GTA Region (Excludes Toronto)',
+  'Orangeville':'GTA Region (Excludes Toronto)',
+  'Alliston':'GTA Region (Excludes Toronto)',
+  'Bradford':'GTA Region (Excludes Toronto)',
+  'Innisfil':'GTA Region (Excludes Toronto)',
+  'Barrie':'GTA Region (Excludes Toronto)',
+  'Orillia':'GTA Region (Excludes Toronto)',
+  'Collingwood':'GTA Region (Excludes Toronto)',
+  'Wasaga Beach':'GTA Region (Excludes Toronto)',
+  'Midland':'GTA Region (Excludes Toronto)',
+  'Penetanguishene':'GTA Region (Excludes Toronto)',
+  'Gravenhurst':'GTA Region (Excludes Toronto)',
+  'Bracebridge':'GTA Region (Excludes Toronto)',
+  'Huntsville':'GTA Region (Excludes Toronto)',
+  'Rama':'GTA Region (Excludes Toronto)',
+  'Stouffville':'GTA Region (Excludes Toronto)',
+  'Uxbridge':'GTA Region (Excludes Toronto)',
+  'Keswick':'GTA Region (Excludes Toronto)',
+  'Georgina':'GTA Region (Excludes Toronto)',
+  'Bowmanville':'GTA Region (Excludes Toronto)',
+  'Cobourg':'GTA Region (Excludes Toronto)',
+  'Port Hope':'GTA Region (Excludes Toronto)',
+  // West Region
+  'London':'West Region','Windsor':'West Region','Sarnia':'West Region',
+  'Chatham':'West Region','St. Catharines':'West Region','St Catharines':'West Region',
+  'Niagara Falls':'West Region','Fonthill':'West Region','Welland':'West Region',
+  'Thorold':'West Region','Beamsville':'West Region','Caledonia':'West Region',
+  'Simcoe':'West Region','Port Dover':'West Region','Tillsonburg':'West Region',
+  'Dunnville':'West Region','Amherstburg':'West Region','Kingsville':'West Region',
+  'Leamington':'West Region','Tecumseh':'West Region','Belle River':'West Region',
+  'Lakeshore':'West Region','Wallaceburg':'West Region','Tilbury':'West Region',
+  'Goderich':'West Region','Owen Sound':'West Region','Brantford':'West Region',
+  'Guelph':'West Region','Kitchener':'West Region','Waterloo':'West Region',
+  'Cambridge':'West Region','Stratford':'West Region','Woodstock':'West Region',
+  'Paris':'West Region','Listowel':'West Region','Wingham':'West Region',
+  'Peterborough':'West Region','Lindsay':'West Region','Minden':'West Region',
+  // East Region
+  'Ottawa':'East Region','Kingston':'East Region','Belleville':'East Region',
+  'Trenton':'East Region','Napanee':'East Region','Brockville':'East Region',
+  'Cornwall':'East Region','Hawkesbury':'East Region','Pembroke':'East Region',
+  'Perth':'East Region','Arnprior':'East Region','Renfrew':'East Region',
+  'Gloucester':'East Region','Kanata':'East Region','Stittsville':'East Region',
+  'Kemptville':'East Region','Casselman':'East Region','Embrun':'East Region',
+  'Rockland':'East Region','Orleans':'East Region','Vankleek Hill':'East Region',
+  'Nepean':'East Region',
+  // North Region
+  'Sudbury':'North Region','North Bay':'North Region',
+  'Sault Ste. Marie':'North Region','Sault Ste Marie':'North Region',
+  'Timmins':'North Region','Thunder Bay':'North Region','Kenora':'North Region',
+  'Dryden':'North Region','Fort Frances':'North Region','Espanola':'North Region',
+  'Chelmsford':'North Region','Hanmer':'North Region','Lively':'North Region',
+  'Val Caron':'North Region','Sturgeon Falls':'North Region',
+  'Kirkland Lake':'North Region','Iroquois Falls':'North Region',
+  'Cochrane':'North Region','Kapuskasing':'North Region','Matheson':'North Region',
+  'Elliot Lake':'North Region','Red Lake':'North Region',
+};
+
 
 const MAP_BOUNDS={w:-84.5,e:-74.0,s:41.4,n:47.5};
 const toSVG=(lat,lng,W=460,H=320)=>{
@@ -1525,16 +1616,18 @@ function OntarioMap({cityData}){
     const maxU = Math.max(...entries.map(([,v])=>v), 1);
     entries.forEach(([city,units])=>{
       const [lat,lng] = CITY_COORDS[city];
-      const r   = Math.max(5, Math.min(26, 5+(units/maxU)*21));
-      const pct = units/maxU;
-      const col = pct>0.6?'#f0c030':pct>0.3?'#5b9bd5':'#3a7abf';
+      const r   = Math.max(6, Math.min(28, 6+(units/maxU)*22));
+      const region = CITY_REGION[city] || 'Central';
+      const col  = REGION_COLOURS[region] || '#5b9bd5';
       const m = L.circleMarker([lat,lng],{
         radius:r, fillColor:col,
-        color:'rgba(255,255,255,0.5)', weight:1, fillOpacity:0.85,
+        color:'rgba(255,255,255,0.7)', weight:1.5, fillOpacity:0.85,
       })
       .bindTooltip(
-        '<b style="color:'+col+'">'+city+'</b><br>'+units.toLocaleString()+' units',
-        {direction:'top', offset:[0,-2]}
+        '<b style="color:'+col+'">'+city+'</b><br>'+
+        '<span style="color:#aaa;font-size:11px">'+region+'</span><br>'+
+        '<b>'+units.toLocaleString()+'</b> units',
+        {direction:'top', offset:[0,-4]}
       )
       .addTo(map);
       markersRef.current.push(m);
@@ -1546,8 +1639,16 @@ function OntarioMap({cityData}){
       ref:containerRef,
       style:{flex:1,minHeight:320,borderRadius:6,overflow:'hidden',border:'1px solid var(--bdr)'}
     }),
-    el('div',{style:{fontSize:10,color:'var(--text3)',textAlign:'center',marginTop:5}},
-      'Hover a city · Bubble size & colour = units sold'
+    el('div',{style:{display:'flex',flexWrap:'wrap',gap:8,marginTop:8,justifyContent:'center'}},
+      Object.entries(REGION_COLOURS).map(([region,col])=>
+        el('div',{key:region,style:{display:'flex',alignItems:'center',gap:4,fontSize:10,color:'var(--text3)'}},
+          el('div',{style:{width:9,height:9,borderRadius:'50%',background:col,flexShrink:0}}),
+          region
+        )
+      )
+    ),
+    el('div',{style:{fontSize:9,color:'var(--text4)',textAlign:'center',marginTop:4}},
+      'Bubble size = units sold · Colour = region'
     )
   );
 }
