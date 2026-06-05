@@ -1130,36 +1130,71 @@ const saveStoreCount=v=>{try{localStorage.setItem(STORE_COUNT_KEY,String(v));}ca
 let ONTARIO_STORES=getStoreCount();
 
 const ROS_CLASSES=[
-  {cls:'A',label:'Ultra Fast',min:8,   max:null, col:'#f0c030',bg:'#fff8ec',tx:'#b87000'},
-  {cls:'B',label:'Fast',      min:3,   max:8,    col:'#4dbb6a',bg:'var(--ok-bg)',tx:'var(--ok)'},
-  {cls:'C',label:'Moderate',  min:0.8, max:3,    col:'#5b9bd5',bg:'var(--info-bg)',tx:'var(--info)'},
-  {cls:'D',label:'Slow',      min:0.2, max:0.8,  col:'#e09b3d',bg:'var(--warn-bg)',tx:'var(--warn)'},
-  {cls:'E',label:'Ultra Slow',min:0,   max:0.2,  col:'#e07878',bg:'var(--err-bg)',tx:'var(--err)'},
+  {cls:'A',label:'Ultra Fast Seller',  min:8,   max:null, col:'#f0c030',bg:'#fff8ec',   tx:'#b87000'},
+  {cls:'B',label:'Fast Seller',        min:3,   max:8,    col:'#4dbb6a',bg:'var(--ok-bg)', tx:'var(--ok)'},
+  {cls:'C',label:'Moderate Seller',    min:0.8, max:3,    col:'#5b9bd5',bg:'var(--info-bg)',tx:'var(--info)'},
+  {cls:'D',label:'Slow Seller',        min:0.2, max:0.8,  col:'#e09b3d',bg:'var(--warn-bg)',tx:'var(--warn)'},
+  {cls:'E',label:'Ultra Slow Seller',  min:0,   max:0.2,  col:'#e07878',bg:'var(--err-bg)', tx:'var(--err)'},
+  {cls:'N',label:'New Product',        min:null,max:null,  col:'#a78bfa',bg:'var(--mk-light)',tx:'#7c3aed'},
 ];
+// Official OCS classification — strictly > boundary, New Product <=30 days
+const ocsClass=(vel,firstReceipt)=>{
+  if(firstReceipt){
+    const days=Math.round((TODAY_D-new Date(firstReceipt+'T00:00:00'))/86400000);
+    if(!isNaN(days)&&days<=30) return 'N';
+  }
+  if(vel>8)   return 'A';
+  if(vel>3)   return 'B';
+  if(vel>0.8) return 'C';
+  if(vel>0.2) return 'D';
+  return 'E';
+};
 const getROS=v=>ROS_CLASSES.find(r=>v>=r.min&&(r.max===null||v<r.max))||ROS_CLASSES[4];
-const nextROS=v=>{const i=ROS_CLASSES.findIndex(r=>v>=r.min&&(r.max===null||v<r.max));return i>0?ROS_CLASSES[i-1]:null;};
+const nextROS=v=>{
+  // Use only A-E for next class calc (exclude N)
+  const classes=ROS_CLASSES.filter(r=>r.cls!=='N');
+  const i=classes.findIndex(r=>v>r.min&&(r.max===null||v<=r.max));
+  if(i<=0)return null;
+  return classes[i-1];
+};
 
 /* ── Velocity Card ── */
 function VelocityCard({ocs,weekly}){
   if(!ocs||!weekly)return null;
   const CLS={
-    A:{col:'#f0c030',bg:'#fff8ec',tx:'#b87000',label:'Ultra Fast'},
-    B:{col:'#4dbb6a',bg:'var(--ok-bg)',tx:'var(--ok)',label:'Fast'},
-    C:{col:'#5b9bd5',bg:'var(--info-bg)',tx:'var(--info)',label:'Moderate'},
-    D:{col:'#e09b3d',bg:'var(--warn-bg)',tx:'var(--warn)',label:'Slow'},
-    E:{col:'#e07878',bg:'var(--err-bg)',tx:'var(--err)',label:'Ultra Slow'},
+    A:{col:'#f0c030',bg:'#fff8ec',      tx:'#b87000',    label:'Ultra Fast Seller'},
+    B:{col:'#4dbb6a',bg:'var(--ok-bg)', tx:'var(--ok)',  label:'Fast Seller'},
+    C:{col:'#5b9bd5',bg:'var(--info-bg)',tx:'var(--info)',label:'Moderate Seller'},
+    D:{col:'#e09b3d',bg:'var(--warn-bg)',tx:'var(--warn)',label:'Slow Seller'},
+    E:{col:'#e07878',bg:'var(--err-bg)', tx:'var(--err)', label:'Ultra Slow Seller'},
+    N:{col:'#a78bfa',bg:'var(--mk-light)',tx:'#7c3aed',  label:'New Product'},
   };
 
   const sorted=Object.entries(weekly).sort(([a],[b])=>a.localeCompare(b));
   const n=sorted.length;
-  const lw=n>=1?sorted[n-1][1]:0;
-  const tw=n>=2?sorted[n-2][1]:0;
-  const tr=n>=3?sorted[n-3][1]:0;
+  const lw=n>=1?sorted[n-1][1]:0;          // last week units
+  const tw=n>=2?sorted[n-2][1]:0;          // 2 weeks ago
+  const tr=n>=3?sorted[n-3][1]:0;          // 3 weeks ago
+  const fw=n>=4?sorted[n-4][1]:0;          // 4 weeks ago
+
+  // LW velocity (for display)
   const vel=lw/ONTARIO_STORES;
-  const clsKey=vel>=8?'A':vel>=3?'B':vel>=0.8?'C':vel>=0.2?'D':'E';
+
+  // L4W average velocity (for classification — more stable, matches OCS methodology)
+  const l4wWeeks=Math.min(4,n);
+  const l4wUnits=[lw,tw,tr,fw].slice(0,l4wWeeks).reduce((a,b)=>a+b,0);
+  const velL4W=l4wWeeks>0?(l4wUnits/l4wWeeks)/ONTARIO_STORES:0;
+
+  // Classify using official OCS method — strictly > thresholds, L4W avg velocity
+  // New Product flag comes from ocs.firstReceipt date
+  const clsKey=ocsClass(velL4W, ocs?.firstReceipt||null);
   const cls=CLS[clsKey];
+
+  // Units needed to reach next class (based on LW — what you need this week)
   const next=nextROS(vel);
   const unitsNeeded=next?Math.max(0,Math.ceil(next.min*ONTARIO_STORES-lw)):0;
+
+  // 3-week average for display
   const avg3=Math.round([lw,tw,tr].slice(0,Math.min(3,n)).reduce((a,b)=>a+b,0)/Math.min(3,n));
 
   const bars=[
@@ -1192,9 +1227,11 @@ function VelocityCard({ocs,weekly}){
         el('div',{style:{display:'flex',alignItems:'baseline',gap:10,marginBottom:12}},
           el('span',{style:{fontSize:36,fontWeight:900,color:cls.tx,lineHeight:1}},vel.toFixed(4)),
           el('span',{style:{fontSize:12,color:'var(--text2)'}},
-            'velocity  ·  LW ',
-            el('strong',{style:{color:'var(--text)',fontSize:14}},lw.toLocaleString()),
-            ' units ÷ '+ONTARIO_STORES.toLocaleString())
+            'LW velocity'),
+          el('span',{style:{fontSize:10,color:'var(--text3)',marginTop:3}},
+            'LW: ',el('strong',{style:{color:'var(--text)'}},lw.toLocaleString()),' units · ',
+            'L4W avg: ',el('strong',{style:{color:cls.tx}},velL4W.toFixed(4)),' · ',
+            'Class from L4W avg')
         ),
         /* 3-week bars — anchored at baseline */
         el('div',null,
@@ -3129,7 +3166,7 @@ function PostLaunchView({data}){
                 el('span',null,d.units.toLocaleString()+' units'),
                 el('span',null,d.storeCount+' stores'),
                 (()=>{
-                  const skuClass=(()=>{const sw=Object.entries(d.weekly||{}).sort(([a],[b])=>a.localeCompare(b));const lw=sw.length?sw[sw.length-1][1]:0;const v=lw/ONTARIO_STORES;return v>=8?'A':v>=3?'B':v>=0.8?'C':v>=0.2?'D':'E';})();
+                  const skuClass=(()=>{const sw=Object.entries(d.weekly||{}).sort(([a],[b])=>a.localeCompare(b));const lw=sw.length?sw[sw.length-1][1]:0;const v=lw/ONTARIO_STORES;return ocsClass(v,null);})();
                   const CLS_C={A:'#f0c030',B:'#4dbb6a',C:'#5b9bd5',D:'#e09b3d',E:'#e07878'};
                   return el('span',{style:{fontWeight:800,color:CLS_C[skuClass]||'var(--text3)',fontSize:12}},'Class '+skuClass);
                 })()
