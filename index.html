@@ -2000,7 +2000,7 @@ async function ghWrite(token,data,sha){
 }
 
 /* ── GitHub Sync Panel ── */
-function GitHubSyncPanel({data, setData, onClose, onPushed}){
+function GitHubSyncPanel({data, setData, onClose, onPushed, onPulled}){
   const conf = getGHConf();
   const [token,   setToken]   = React.useState(conf.token||GH_TOKEN_DEFAULT||'');
   const [autoRef, setAutoRef] = React.useState(conf.autoRefresh!==false);
@@ -2027,8 +2027,8 @@ function GitHubSyncPanel({data, setData, onClose, onPushed}){
       else{
         shaRef.current = result.sha;
         saveConf(token, autoRef, result.sha);
-        skipDirtyRef.current=true;
-        setData(result.data);
+        if(onPulled) onPulled(result.data);
+        else setData(result.data);
         setStatus({ok:true, msg:'Pulled! Dashboard loaded from GitHub.'});
       }
     }catch(e){ setStatus({ok:false,msg:e.message}); }
@@ -4087,7 +4087,7 @@ function App(){
       ),
 
       /* Modals */
-      showGH&&el(GitHubSyncPanel,{data,setData,onClose:()=>setShowGH(false),onPushed:()=>{dirtyRef.current=false;setIsDirty(false);}}),
+      showGH&&el(GitHubSyncPanel,{data,setData,onClose:()=>setShowGH(false),onPushed:()=>{dirtyRef.current=false;setIsDirty(false);},onPulled:d=>{skipDirtyRef.current=true;setData(d);dirtyRef.current=false;setIsDirty(false);}}),
       el('input',{ref:importRef,type:'file',accept:'.json',style:{display:'none'},onChange:e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{try{const d=JSON.parse(ev.target.result);skipDirtyRef.current=true;setData(d);}catch{alert('Invalid backup file.');}};r.readAsText(f);}}),
 
       /* Content */
