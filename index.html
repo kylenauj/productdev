@@ -372,6 +372,7 @@ pcTabs:[{id:'pc1',label:'PC#1 2026'},{id:'pc2',label:'PC#2 2026'},{id:'pc3',labe
 postLaunch:{},
 postLaunchHidden:[],
 postLaunchLastUpdated:{},
+home:{actions:[],notes:''},
 pc1:[
   {id:'bb',brand:'Litti',name:'Berry Blaze Liquid Diamonds All-in-One',shortName:'Berry Blaze AIO',launchDate:'2026-04-30',tags:['Accepted'],notes:{updates:'Branded pouches path being evaluated.',blockers:'Pouch delivery timeline risk.'},specs:{'Planned Launch Time':'Spring 2026 - ACCEPTED','Commercial Lead':'Jim','Formulation Lead':'Chi','Ops Lead':'Ian','Brand Name Internal':'Litti','Product Name Internal':'Berry Blaze Liquid Diamonds All-in-One','Manufactured by: LP Name':'Mera Cannabis Corp.','Stocking Status':'TBD','Launch Window':'April 1, 2026','Stocking Type':'Flowthrough','Initial Case Offering (FT)':'N/A','Samples Required':'100 units','Landed Cost':'$22.00','Wholesale Cost':'$27.50','MSRP':'$38.50','Margin %':'41%','Launch PO':'2400 units','Sales Target':'4,000/month','Category':'Vape - All-in-One','Product Size':'1g','Formulated Range':'85%','Label THC Range':'95-99% (98%)','Target CBD Range':'0-5%','Other Cannabinoids, Range':'N/A','Flavouring Type':'Botanical Terpenes','Flavour Description':'Berry Blaze','Biomass Input':'N/A','Formulations':'52 wt.% Distillate + 38 wt.% Liquid Diamonds + 10 wt.% Botanical Terpene','Ingredients':'Cannabis Extract, Botanical Terpenes','Target Product Image':'TBD','Target Accessory Image':'N/A','Product Primary/Hardware':'Cilicon – Nova Deli 1','Product Package/Outer':'4×6" Branded Pouch','Packaging Labels':'3.25"×4.25" front label','Accessory':'THC sticker','Master Case GTIN':'10876936002466','Retail Pack GTIN':'876936002469','Master Case Dimensions':'6×6×4','Units per Master Shipper/Case':'12','Who is responsible for Labels Sourcing?':'Mera Cannabis Corp.','Do we need new dies for labels?':'No','Vendor providing retail labels?':'Minuteman Press','Vendor providing case labels?':'MERA In-House','Action Items':'Branded China Vendor Pouches: 2–3 wks manufacture + ~45 days delivery. Path 1: Branded & hope for April. Path 2: Unbranded → branded. Path 3: ePac/local.'},
    tasks:[mk('a1','R&D','','In Progress','2025-10-01','2025-11-07'),mk('a2','Product Specs / Submission','Kyle N.','In Progress','2025-10-01','2025-11-07','',true),mk('a3','Formulation Dev','Wei','Done','2025-10-01','2025-11-07','',true),mk('a4','Sensory','Wei','Done','2025-10-01','2025-11-07','External Sensory Validation pending'),mk('a5','Packaging Dev','Kyle N.','Done','2025-10-01','2025-12-10','Review Branded option w/ Jim'),mk('a6','Financial Analysis','Aamir','Done','2025-10-01','2025-11-07','Margin confirmed 41%',true),mk('a7','Labels','Kyle N.','In Progress','2026-02-12','2026-03-04','Reach out to Chris'),mk('a8','Input','Chi','Done','2026-02-05','2026-03-04'),mk('a9','Internal Packaging','Kyle N.','Done','2025-12-10','2026-03-04'),mk('a10','External Packaging','Kyle N.','In Progress','2026-02-06','2026-03-04','Poke timeline – Zafeer'),mk('a11','Materials On Site','Jeremy','In Progress','2026-02-23','2026-03-06'),mk('a12','Samples Ready','Jeremy','Not Started','2026-03-09','2026-03-13','Fill carts first'),mk('a13','Base Marketing Materials','Cece','In Progress','2026-03-09','2026-03-13'),mk('a14','Pre-Sell / Promo','Sales Team','Not Started','2026-03-13','2026-04-14'),mk('a15','PO Received','Jeremy','Not Started','2026-04-20','2026-04-22'),mk(uid(),'Pre-Sell Communications','Kyle','Not Started','',''),mk(uid(),'Launch Eblast & Comms','Kyle','Not Started','',''),mk(uid(),'Digital Selling Assets','Kyle','Not Started','',''),mk(uid(),'Printed Marketing Materials','Kyle','Not Started','','')]},
@@ -3027,19 +3028,21 @@ function MeetingMode({product,name,vel,clsKey,clsCol,lwUnits,wowDelta,wowPct,uni
 /* ══════════════════════════════════════════
    HOME VIEW — Meeting Hub
 ══════════════════════════════════════════ */
-const HOME_KEY='au_home_v1';
-const getHomeData=()=>{try{return JSON.parse(localStorage.getItem(HOME_KEY))||{actions:[],notes:''};}catch{return {actions:[],notes:''};}};
-const saveHomeData=d=>{try{localStorage.setItem(HOME_KEY,JSON.stringify(d));}catch{}};
+const HOME_KEY='au_home_v1'; // kept for legacy migration
+const getHomeData=(data)=>data?.home||{actions:[],notes:''};
 
 function HomeView({data,setData,setView,setSels,setProdView}){
-  const [home,setHome]=React.useState(getHomeData);
+  const [home,setHome]=React.useState(()=>getHomeData(data));
   const [newAction,setNewAction]=React.useState('');
   const [newOwner,setNewOwner]=React.useState('');
   const [newDue,setNewDue]=React.useState('');
   const [editNotes,setEditNotes]=React.useState(false);
   const inputRef=React.useRef();
 
-  const save=d=>{setHome(d);saveHomeData(d);};
+  const save=d=>{
+    setHome(d);
+    setData(prev=>({...prev,home:d}));
+  };
   const addAction=()=>{
     if(!newAction.trim())return;
     const item={id:Date.now(),text:newAction.trim(),owner:newOwner.trim(),due:newDue,done:false,createdAt:new Date().toISOString()};
@@ -3672,10 +3675,11 @@ function LoginScreen({onAuth}){
       stage==='load'&&el('div',null,
         el('div',{style:{
           background:'var(--ok-bg)',border:'1px solid var(--ok-dim)',borderRadius:'var(--rs)',
-          padding:'10px 14px',marginBottom:20,fontSize:12,color:'var(--ok)',
+          padding:'10px 14px',marginBottom:16,fontSize:12,color:'var(--ok)',
           display:'flex',alignItems:'center',gap:7
-        }},el('i',{className:'ti ti-check'}),' Password accepted — load your latest data'),
+        }},el('i',{className:'ti ti-check'}),' Password accepted'),
 
+        /* Load from GitHub — primary */
         el('button',{
           onClick:loadFromGitHub,
           disabled:loading,
@@ -3684,13 +3688,13 @@ function LoginScreen({onAuth}){
             borderRadius:'var(--rs)',padding:'13px',fontSize:14,
             fontFamily:'inherit',color:'#fff',fontWeight:700,cursor:'pointer',
             display:'flex',alignItems:'center',justifyContent:'center',gap:8,
-            opacity:loading?0.6:1,marginBottom:ghErr?12:0
+            opacity:loading?0.6:1,marginBottom:10
           }
         },
           loading
             ? el('span',null,
                 el('i',{className:'ti ti-loader-2',style:{animation:'spin 1s linear infinite',marginRight:6}}),
-                'Loading from GitHub…'
+                'Loading…'
               )
             : el('span',null,
                 el('i',{className:'ti ti-cloud-download',style:{fontSize:16}}),
@@ -3698,21 +3702,33 @@ function LoginScreen({onAuth}){
               )
         ),
 
+        /* Error with retry */
         ghErr&&el('div',{style:{
-          marginTop:12,padding:'10px 14px',borderRadius:'var(--rs)',
+          marginBottom:10,padding:'10px 14px',borderRadius:'var(--rs)',
           background:'var(--err-bg)',border:'1px solid var(--err-dim)',
           fontSize:12,color:'var(--err)',display:'flex',alignItems:'flex-start',gap:7,textAlign:'left'
         }},
           el('i',{className:'ti ti-alert-circle',style:{flexShrink:0,marginTop:1}}),
-          el('div',null,
+          el('div',{style:{flex:1}},
             ghErr,
-            el('div',{style:{marginTop:6}},
-              el('button',{onClick:loadFromGitHub,style:{
-                background:'var(--err)',border:'none',borderRadius:4,
-                padding:'4px 10px',fontSize:11,color:'#fff',cursor:'pointer',fontFamily:'inherit',fontWeight:600
-              }},'Retry')
-            )
+            el('button',{onClick:loadFromGitHub,style:{
+              marginTop:6,background:'var(--err)',border:'none',borderRadius:4,
+              padding:'4px 10px',fontSize:11,color:'#fff',cursor:'pointer',
+              fontFamily:'inherit',fontWeight:600,display:'inline-block'
+            }},'Retry')
           )
+        ),
+
+        /* Fallback — enter without GitHub (always visible after first attempt) */
+        (ghErr||!loading)&&el('div',{style:{borderTop:'1px solid var(--bdr)',paddingTop:10,marginTop:4}},
+          el('button',{
+            onClick:()=>{setAuthed();onAuth(null);},
+            style:{
+              width:'100%',background:'transparent',border:'1px solid var(--bdr2)',
+              borderRadius:'var(--rs)',padding:'10px',fontSize:12,
+              fontFamily:'inherit',color:'var(--text3)',cursor:'pointer'
+            }
+          },'Enter Dashboard without syncing')
         )
       )
     )
