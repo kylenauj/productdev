@@ -3606,113 +3606,114 @@ const isAuthed=()=>{try{return localStorage.getItem(AUTH_KEY)==='1';}catch{retur
 const setAuthed=()=>{try{localStorage.setItem(AUTH_KEY,'1');}catch{}};
 
 function LoginScreen({onAuth}){
-  // Two stages: 1) password  2) load from GitHub (or skip to local)
-  const [stage,  setStage]  = React.useState('password'); // 'password' | 'load'
-  const [pw,     setPw]     = React.useState('');
-  const [err,    setErr]    = React.useState(false);
-  const [loading,setLoading]= React.useState(false);
-  const [ghStatus,setGhStatus]=React.useState(null);
+  const [stage,   setStage]  = React.useState('password');
+  const [pw,      setPw]     = React.useState('');
+  const [pwErr,   setPwErr]  = React.useState(false);
+  const [loading, setLoading]= React.useState(false);
+  const [ghErr,   setGhErr]  = React.useState('');
   const pwRef = React.useRef();
   React.useEffect(()=>{ if(stage==='password'&&pwRef.current) pwRef.current.focus(); },[stage]);
 
   const checkPw=()=>{
-    if(pw===APP_PASSWORD){
-      setErr(false);
-      setStage('load');
-    } else {
-      setErr(true);
-      setPw('');
-      if(pwRef.current) pwRef.current.focus();
-    }
+    if(pw===APP_PASSWORD){ setPwErr(false); setStage('load'); }
+    else { setPwErr(true); setPw(''); setTimeout(()=>pwRef.current?.focus(),50); }
   };
 
   const loadFromGitHub=async()=>{
-    setLoading(true); setGhStatus(null);
+    setLoading(true); setGhErr('');
     try{
-      const r=await fetch(
-        'https://raw.githubusercontent.com/'+GH_OWNER+'/'+GH_REPO+'/'+GH_BRANCH+'/'+GH_FILE+'?t='+Date.now()
-      );
-      if(!r.ok) throw new Error('HTTP '+r.status);
-      const result=await r.json();
-      if(result){
-        setGhStatus({ok:true,msg:'Loaded from GitHub!'});
-        setAuthed();
-        setTimeout(()=>onAuth(result),500);
-      } else {
-        setGhStatus({ok:false,msg:'No data file found — loading with local data.'});
-        setAuthed();
-        setTimeout(()=>onAuth(),500);
+      // Use ghRead() with the baked-in token — same as the GitHub panel uses
+      const result=await ghRead(GH_TOKEN_DEFAULT);
+      if(!result){
+        setGhErr('No data.json found in your repo yet. Push your data first from the dashboard.');
+        setLoading(false);
+        return;
       }
-    }catch(e){
-      setGhStatus({ok:false,msg:'Load error: '+e.message+' — using local data.'});
       setAuthed();
-      setTimeout(()=>onAuth(),500);
+      onAuth(result.data); // pass data directly
+    }catch(e){
+      setGhErr('GitHub error: '+e.message);
     }
     setLoading(false);
   };
-
-  const enterLocal=()=>{ setAuthed(); onAuth(); };
 
   return el('div',{style:{
     minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',
     background:'var(--bg2)',padding:20
   }},
     el('div',{style:{
-      background:'var(--bg)',border:'0.5px solid var(--bdr2)',borderRadius:16,
+      background:'var(--bg)',border:'1px solid var(--bdr2)',borderRadius:12,
       padding:'40px 36px',maxWidth:400,width:'100%',textAlign:'center',
-      boxShadow:'0 8px 40px rgba(0,0,0,0.35)'
+      boxShadow:'0 4px 24px rgba(0,0,0,.15)'
     }},
-      el('div',{style:{fontSize:11,fontWeight:700,textTransform:'uppercase',letterSpacing:'.1em',color:'var(--text3)',marginBottom:10}},'Adult Rec'),
-      el('h1',{style:{fontSize:22,fontWeight:800,letterSpacing:'-.3px',marginBottom:6}},'Product Launch Dashboard'),
-      el('div',{style:{fontSize:11,color:'var(--text3)',marginBottom:32}},'Ontario · 2026 · v1.14'),
+      el('div',{style:{fontSize:11,fontWeight:700,textTransform:'uppercase',letterSpacing:'.1em',color:'var(--text3)',marginBottom:10}},'Adult Rec · Ontario 2026'),
+      el('h1',{style:{fontSize:22,fontWeight:800,letterSpacing:'-.3px',marginBottom:28,color:'var(--text)'}},'Product Launch Dashboard'),
 
       /* ── Stage 1: Password ── */
       stage==='password'&&el('div',null,
         el('input',{
           ref:pwRef,type:'password',className:'ei',
           placeholder:'Enter password',value:pw,
-          onChange:e=>{setPw(e.target.value);setErr(false);},
+          onChange:e=>{setPw(e.target.value);setPwErr(false);},
           onKeyDown:e=>e.key==='Enter'&&checkPw(),
-          style:{fontSize:14,textAlign:'center',letterSpacing:'.1em',marginBottom:err?8:14}
+          style:{fontSize:14,textAlign:'center',marginBottom:pwErr?8:16,letterSpacing:'.05em'}
         }),
-        err&&el('div',{style:{fontSize:11,color:'var(--err)',marginBottom:10,display:'flex',alignItems:'center',justifyContent:'center',gap:4}},
-          el('i',{className:'ti ti-x'}), ' Incorrect password'
+        pwErr&&el('div',{style:{fontSize:12,color:'var(--err)',marginBottom:12,display:'flex',alignItems:'center',justifyContent:'center',gap:5}},
+          el('i',{className:'ti ti-alert-circle'}),' Incorrect password'
         ),
         el('button',{onClick:checkPw,style:{
-          width:'100%',background:'var(--info-bg)',border:'0.5px solid var(--info)',
-          borderRadius:8,padding:'12px',fontSize:13,fontFamily:'inherit',
-          color:'var(--info)',fontWeight:700,cursor:'pointer'
+          width:'100%',background:'var(--accent)',border:'none',
+          borderRadius:'var(--rs)',padding:'12px',fontSize:13,fontFamily:'inherit',
+          color:'#fff',fontWeight:700,cursor:'pointer'
         }},'Continue →')
       ),
 
-      /* ── Stage 2: Load ── */
+      /* ── Stage 2: Load from GitHub ── */
       stage==='load'&&el('div',null,
         el('div',{style:{
-          background:'var(--ok-bg)',border:'0.5px solid var(--ok)',borderRadius:8,
+          background:'var(--ok-bg)',border:'1px solid var(--ok-dim)',borderRadius:'var(--rs)',
           padding:'10px 14px',marginBottom:20,fontSize:12,color:'var(--ok)',
           display:'flex',alignItems:'center',gap:7
-        }},el('i',{className:'ti ti-check'}),' Password accepted'),
-        el('button',{onClick:loadFromGitHub,disabled:loading,style:{
-          width:'100%',background:'#111111',border:'none',borderRadius:8,
-          padding:'12px',fontSize:13,fontFamily:'inherit',color:'#fff',fontWeight:700,
-          cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',
-          gap:8,marginBottom:12,opacity:loading?0.6:1
-        }},
+        }},el('i',{className:'ti ti-check'}),' Password accepted — load your latest data'),
+
+        el('button',{
+          onClick:loadFromGitHub,
+          disabled:loading,
+          style:{
+            width:'100%',background:'#111',border:'none',
+            borderRadius:'var(--rs)',padding:'13px',fontSize:14,
+            fontFamily:'inherit',color:'#fff',fontWeight:700,cursor:'pointer',
+            display:'flex',alignItems:'center',justifyContent:'center',gap:8,
+            opacity:loading?0.6:1,marginBottom:ghErr?12:0
+          }
+        },
           loading
-            ? el('span',null,el('i',{className:'ti ti-loader-2',style:{animation:'spin 1s linear infinite',marginRight:6}}),'Loading…')
-            : el('span',null,el('i',{className:'ti ti-cloud-download'}),' Load from GitHub')
+            ? el('span',null,
+                el('i',{className:'ti ti-loader-2',style:{animation:'spin 1s linear infinite',marginRight:6}}),
+                'Loading from GitHub…'
+              )
+            : el('span',null,
+                el('i',{className:'ti ti-cloud-download',style:{fontSize:16}}),
+                ' Load from GitHub'
+              )
         ),
-        ghStatus&&el('div',{style:{
-          padding:'8px 12px',borderRadius:7,fontSize:12,marginBottom:12,
-          background:ghStatus.ok?'var(--ok-bg)':'var(--warn-bg)',
-          color:ghStatus.ok?'var(--ok)':'var(--warn)',
-          display:'flex',alignItems:'center',gap:7,textAlign:'left'
-        }},el('i',{className:'ti '+(ghStatus.ok?'ti-check':'ti-alert-circle')}),ghStatus.msg),
-        !loading&&!ghStatus?.ok&&el('button',{onClick:enterLocal,style:{
-          width:'100%',background:'transparent',border:'0.5px solid var(--bdr2)',
-          borderRadius:8,padding:'10px',fontSize:12,fontFamily:'inherit',
-          color:'var(--text2)',cursor:'pointer'
-        }},'Skip — use local data')
+
+        ghErr&&el('div',{style:{
+          marginTop:12,padding:'10px 14px',borderRadius:'var(--rs)',
+          background:'var(--err-bg)',border:'1px solid var(--err-dim)',
+          fontSize:12,color:'var(--err)',display:'flex',alignItems:'flex-start',gap:7,textAlign:'left'
+        }},
+          el('i',{className:'ti ti-alert-circle',style:{flexShrink:0,marginTop:1}}),
+          el('div',null,
+            ghErr,
+            el('div',{style:{marginTop:6}},
+              el('button',{onClick:loadFromGitHub,style:{
+                background:'var(--err)',border:'none',borderRadius:4,
+                padding:'4px 10px',fontSize:11,color:'#fff',cursor:'pointer',fontFamily:'inherit',fontWeight:600
+              }},'Retry')
+            )
+          )
+        )
       )
     )
   );
@@ -3856,7 +3857,10 @@ function App(){
 
 
   if(!authed) return el(LoginScreen,{onAuth:(ghData)=>{
-    if(ghData)setData(ghData);
+    if(ghData&&typeof ghData==='object'){
+      skipDirtyRef.current=true;
+      setData(d=>({...d,...ghData}));
+    }
     setAuthed_(true);
   }});
   // ── Macro Timeline View ──
