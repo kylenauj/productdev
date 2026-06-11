@@ -3097,13 +3097,39 @@ function HomeView({data,setData,setView,setSels,setProdView}){
       el('div',{style:{fontSize:13,color:'var(--text3)'}},new Date().toLocaleDateString('en-CA',{weekday:'long',year:'numeric',month:'long',day:'numeric'}))
     ),
 
+    /* ── Launching Soon — full width ── */
+    el('div',{style:{marginBottom:16}},
+/* Launching Soon — with jump buttons */
+      el('div',{style:{background:'var(--bg)',border:'1px solid var(--bdr)',borderRadius:'var(--r)',overflow:'hidden'}},
+          el('div',{style:{padding:'11px 14px',borderBottom:'1px solid var(--bdr)',background:'var(--bg2)',fontSize:11,fontWeight:700,textTransform:'uppercase',letterSpacing:'.07em',color:'var(--text2)',display:'flex',alignItems:'center',gap:6}},
+            el('i',{className:'ti ti-rocket',style:{color:'var(--accent)'}}),' Launching Soon'
+          ),
+          launching.length===0
+            ?el('div',{style:{padding:'16px',fontSize:12,color:'var(--text3)',textAlign:'center'}},'No launches in next 60 days')
+            :launching.map(p=>{
+              const d=getTMinus(p.launchDate);
+              const gates=getGateStatus(p.tasks);
+              const rag=getRAG(gates);
+              return el('div',{key:p.id,style:{padding:'10px 14px',borderBottom:'1px solid var(--bdr)',display:'flex',alignItems:'center',gap:10}},
+                el(RAGDot,{rag,size:8}),
+                el('div',{style:{flex:1,minWidth:0}},
+                  el('div',{style:{fontSize:12,fontWeight:700,color:'var(--text)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},p.shortName||p.name),
+                  el('div',{style:{fontSize:10,color:'var(--text3)',marginTop:1}},p.pcLabel+' · '+fmtTMinus(d))
+                ),
+                el('button',{
+                  onClick:()=>jumpTo(p.pc,p.id),
+                  className:'btn',
+                  style:{fontSize:10,padding:'3px 10px',flexShrink:0,color:'var(--accent)',borderColor:'var(--accent)',background:'var(--accent-bg)',fontWeight:600}
+                },'Go →')
+              );
+            })
+        ),
+    ),
+
     el('div',{style:{display:'grid',gridTemplateColumns:'1fr 340px',gap:16}},
 
       /* ── Left col ── */
       el('div',null,
-
-
-
         /* Action Items */
         el('div',{style:{background:'var(--bg)',border:'1px solid var(--bdr)',borderRadius:'var(--r)',overflow:'hidden',marginBottom:14}},
           el('div',{style:{padding:'11px 14px',borderBottom:'1px solid var(--bdr)',background:'var(--bg2)',display:'flex',alignItems:'center',justifyContent:'space-between'}},
@@ -3178,79 +3204,6 @@ function HomeView({data,setData,setView,setSels,setProdView}){
               el('span',{style:{fontSize:11,fontWeight:700,color:'var(--err)',background:'var(--err-bg)',borderRadius:3,padding:'2px 8px'}},count+' task'+(count>1?'s':''))
             )
           )
-        )
-      ),
-
-      /* ── Right col ── */
-      el('div',null,
-
-        /* Launching Soon — with jump buttons */
-        el('div',{style:{background:'var(--bg)',border:'1px solid var(--bdr)',borderRadius:'var(--r)',overflow:'hidden',marginBottom:14}},
-          el('div',{style:{padding:'11px 14px',borderBottom:'1px solid var(--bdr)',background:'var(--bg2)',fontSize:11,fontWeight:700,textTransform:'uppercase',letterSpacing:'.07em',color:'var(--text2)',display:'flex',alignItems:'center',gap:6}},
-            el('i',{className:'ti ti-rocket',style:{color:'var(--accent)'}}),' Launching Soon'
-          ),
-          launching.length===0
-            ?el('div',{style:{padding:'16px',fontSize:12,color:'var(--text3)',textAlign:'center'}},'No launches in next 60 days')
-            :launching.map(p=>{
-              const d=getTMinus(p.launchDate);
-              const gates=getGateStatus(p.tasks);
-              const rag=getRAG(gates);
-              return el('div',{key:p.id,style:{padding:'10px 14px',borderBottom:'1px solid var(--bdr)',display:'flex',alignItems:'center',gap:10}},
-                el(RAGDot,{rag,size:8}),
-                el('div',{style:{flex:1,minWidth:0}},
-                  el('div',{style:{fontSize:12,fontWeight:700,color:'var(--text)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},p.shortName||p.name),
-                  el('div',{style:{fontSize:10,color:'var(--text3)',marginTop:1}},p.pcLabel+' · '+fmtTMinus(d))
-                ),
-                el('button',{
-                  onClick:()=>jumpTo(p.pc,p.id),
-                  className:'btn',
-                  style:{fontSize:10,padding:'3px 10px',flexShrink:0,color:'var(--accent)',borderColor:'var(--accent)',background:'var(--accent-bg)',fontWeight:600}
-                },'Go →')
-              );
-            })
-        ),
-
-        /* Overdue by owner */
-        Object.keys(overdueByOwner).length>0&&el('div',{style:{background:'var(--bg)',border:'1px solid var(--err-dim)',borderRadius:'var(--r)',overflow:'hidden',marginTop:14}},
-          el('div',{style:{padding:'11px 14px',borderBottom:'1px solid var(--bdr)',background:'var(--err-bg)',fontSize:11,fontWeight:700,textTransform:'uppercase',letterSpacing:'.07em',color:'var(--err)',display:'flex',alignItems:'center',gap:6}},
-            el('i',{className:'ti ti-alert-triangle'}),' Overdue by Owner'
-          ),
-          Object.entries(overdueByOwner).sort(([,a],[,b])=>b-a).map(([owner,count])=>
-            el('div',{key:owner,style:{padding:'8px 14px',borderBottom:'1px solid var(--bdr)',display:'flex',alignItems:'center',justifyContent:'space-between'}},
-              el('div',{style:{fontSize:12,fontWeight:600,color:'var(--text)'}},'@'+owner),
-              el('span',{style:{fontSize:11,fontWeight:700,color:'var(--err)',background:'var(--err-bg)',borderRadius:3,padding:'2px 8px'}},count+' task'+(count>1?'s':''))
-            )
-          )
-        )
-      ),
-
-      /* ── Right col ── */
-      el('div',null,
-
-        /* PC Health */
-        el('div',{style:{background:'var(--bg)',border:'1px solid var(--bdr)',borderRadius:'var(--r)',overflow:'hidden',marginBottom:14}},
-          el('div',{style:{padding:'11px 14px',borderBottom:'1px solid var(--bdr)',background:'var(--bg2)',fontSize:11,fontWeight:700,textTransform:'uppercase',letterSpacing:'.07em',color:'var(--text2)',display:'flex',alignItems:'center',gap:6}},
-            el('i',{className:'ti ti-chart-bar',style:{color:'var(--accent)'}}),' PC Health'
-          ),
-          el('div',{style:{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:0}},
-            pcHealth.map(({tab,prods,overdue,pct,total,done})=>
-              el('div',{key:tab.id,onClick:()=>setView(tab.id),style:{
-                padding:'14px 16px',borderRight:'1px solid var(--bdr)',cursor:'pointer',transition:'background .1s'
-              },
-              onMouseEnter:e=>e.currentTarget.style.background='var(--bg2)',
-              onMouseLeave:e=>e.currentTarget.style.background='transparent'},
-                el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:6}},
-                  el('div',{style:{fontSize:12,fontWeight:700,color:'var(--text)'}},tab.label),
-                  overdue>0&&el('span',{style:{fontSize:10,color:'var(--err)',fontWeight:700,background:'var(--err-bg)',borderRadius:3,padding:'1px 6px'}},overdue+' overdue')
-                ),
-                el('div',{style:{fontSize:20,fontWeight:800,color:pct===100?'var(--ok)':pct>60?'var(--info)':'var(--warn)',marginBottom:6}},pct+'%'),
-                el('div',{style:{height:3,background:'var(--bg3)',borderRadius:2,overflow:'hidden',marginBottom:5}},
-                  el('div',{style:{height:'100%',width:pct+'%',background:pct===100?'var(--ok)':pct>60?'var(--info)':'var(--warn)',borderRadius:2}})
-                ),
-                el('div',{style:{fontSize:10,color:'var(--text3)'}},prods.length+' products · '+done+'/'+total+' tasks')
-              )
-            )
-          )
         ),
 
         /* Next gate actions */
@@ -3280,8 +3233,38 @@ function HomeView({data,setData,setView,setSels,setProdView}){
             );
           })()
         )
+      ),
+
+      /* ── Right col ── */
+      el('div',null,
+        /* PC Health */
+        el('div',{style:{background:'var(--bg)',border:'1px solid var(--bdr)',borderRadius:'var(--r)',overflow:'hidden',marginBottom:14}},
+          el('div',{style:{padding:'11px 14px',borderBottom:'1px solid var(--bdr)',background:'var(--bg2)',fontSize:11,fontWeight:700,textTransform:'uppercase',letterSpacing:'.07em',color:'var(--text2)',display:'flex',alignItems:'center',gap:6}},
+            el('i',{className:'ti ti-chart-bar',style:{color:'var(--accent)'}}),' PC Health'
+          ),
+          el('div',{style:{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:0}},
+            pcHealth.map(({tab,prods,overdue,pct,total,done})=>
+              el('div',{key:tab.id,onClick:()=>setView(tab.id),style:{
+                padding:'14px 16px',borderRight:'1px solid var(--bdr)',cursor:'pointer',transition:'background .1s'
+              },
+              onMouseEnter:e=>e.currentTarget.style.background='var(--bg2)',
+              onMouseLeave:e=>e.currentTarget.style.background='transparent'},
+                el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:6}},
+                  el('div',{style:{fontSize:12,fontWeight:700,color:'var(--text)'}},tab.label),
+                  overdue>0&&el('span',{style:{fontSize:10,color:'var(--err)',fontWeight:700,background:'var(--err-bg)',borderRadius:3,padding:'1px 6px'}},overdue+' overdue')
+                ),
+                el('div',{style:{fontSize:20,fontWeight:800,color:pct===100?'var(--ok)':pct>60?'var(--info)':'var(--warn)',marginBottom:6}},pct+'%'),
+                el('div',{style:{height:3,background:'var(--bg3)',borderRadius:2,overflow:'hidden',marginBottom:5}},
+                  el('div',{style:{height:'100%',width:pct+'%',background:pct===100?'var(--ok)':pct>60?'var(--info)':'var(--warn)',borderRadius:2}})
+                ),
+                el('div',{style:{fontSize:10,color:'var(--text3)'}},prods.length+' products · '+done+'/'+total+' tasks')
+              )
+            )
+          )
+        ),
       )
     )
+
   );
 }
 
