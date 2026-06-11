@@ -3956,7 +3956,8 @@ function App(){
   },[data,view]);
 
   // ── Workload View ──
-  const WorkloadView=(()=>{
+  const WorkloadViewComp=({data,setView,setSels,setProdView})=>{
+
     const [expandedOwner,setExpandedOwner]=React.useState(null);
 
     const allProds=data.pcTabs.flatMap(tab=>(data[tab.id]||[]).map(p=>({...p,pc:tab.id,pcLabel:tab.label})));
@@ -4135,9 +4136,8 @@ function App(){
         })
       )
     );
-  })();
-
-
+};
+WorkloadView=null; // replaced by WorkloadViewComp
   // ── Sidebar items ──
   const prods=view!=='postlaunch'&&view!=='macro'&&view!=='workload'?data[view]||[]:[];
   const prod=prods.find(p=>p.id===(sels[view]||prods[0]?.id));
@@ -4297,7 +4297,7 @@ function App(){
         view==='home'       ? el(HomeView,{data,setData,setView,setSels,setProdView}) :
         view==='postlaunch' ? el(PostLaunchView,{data,setData,addChangelogEntry}) :
         view==='macro'      ? MacroTimeline :
-        view==='workload'   ? WorkloadView :
+        view==='workload'   ? el(WorkloadViewComp,{data,setView,setSels,setProdView}) :
         el('div',null,
           el(ProductPanels,{prods,selId:prod?.id||'',setSelId,onAdd:addProd,onRemove:removeProd}),
           prodView==='summary'
