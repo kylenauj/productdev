@@ -3293,9 +3293,7 @@ function PostLaunchView({data}){
 
   // PC groupings matching the launch dashboard tabs
   const PC_GROUPS=[
-    {id:'pc1',label:'PC#1 2026'},
-    {id:'pc2',label:'PC#2 2026'},
-    {id:'pc3',label:'PC#3 2026'},
+    ...(data.pcTabs||[{id:'pc1',label:'PC#1 2026'},{id:'pc2',label:'PC#2 2026'},{id:'pc3',label:'PC#3 2026'}]),
     {id:'other',label:'Other SKUs'},
   ];
 
@@ -3876,7 +3874,26 @@ function App(){
         el('div',{style:{position:'absolute',left:todayPct+'%',top:0,bottom:0,borderLeft:'1.5px solid var(--err)',zIndex:2,pointerEvents:'none'}},
           el('span',{style:{position:'absolute',top:0,left:4,fontSize:9,color:'var(--err)',fontWeight:700,whiteSpace:'nowrap'}},'Today')
         ),
-        allProds.map((p,pi)=>{
+        // Group products by PC tab with separators
+        data.pcTabs.flatMap((tab,ti)=>{
+          const tabProds=allProds.filter(p=>p.pc===tab.label);
+          if(!tabProds.length) return [];
+          return [
+            // PC separator header
+            el('div',{key:'sep-'+tab.id,style:{
+              display:'flex',alignItems:'center',gap:10,
+              marginBottom:6,marginTop:ti>0?14:0
+            }},
+              el('div',{style:{
+                fontSize:10,fontWeight:700,textTransform:'uppercase',
+                letterSpacing:'.08em',color:'var(--accent)',
+                background:'var(--accent-bg)',border:'1px solid var(--accent-border)',
+                borderRadius:3,padding:'2px 8px',flexShrink:0,whiteSpace:'nowrap'
+              }},tab.label),
+              el('div',{style:{flex:1,height:'1px',background:'var(--bdr2)'}})
+            ),
+            // Products in this PC
+            ...tabProds.map((p,pi)=>{
           const doneCnt=p.tasks.filter(t=>t.status==='Done').length;
           const tot=p.tasks.length;
           const overdue=p.tasks.filter(t=>isOverdue(t)).length;
@@ -3900,6 +3917,8 @@ function App(){
             )
           );
         })
+          ];
+        }),
       ),
       el('div',{style:{display:'flex',gap:16,marginTop:14,flexWrap:'wrap'}},
         [['rd','R&D'],['procurement','Procurement'],['operations','Operations'],['marketing','Marketing']].map(([cat,lbl])=>
@@ -4089,7 +4108,17 @@ function App(){
         el('div',{className:'topbar2-actions'},
           el('span',{style:{fontSize:10,background:'var(--accent-bg)',color:'var(--accent)',border:'1px solid var(--accent-border)',borderRadius:'var(--rs)',padding:'2px 8px',fontWeight:700}},'v1.14'),
           el('button',{className:'btn',onClick:()=>window.print(),style:{fontSize:11}},el('i',{className:'ti ti-printer'}),' Print'),
-          el('button',{className:'btn',onClick:()=>setFullscreen(true),style:{fontSize:11}},el('i',{className:'ti ti-maximize'}))
+          el('button',{className:'btn',onClick:()=>{
+            const el2=document.documentElement;
+            if(!document.fullscreenElement){
+              el2.requestFullscreen?.()
+                .catch(()=>setFullscreen(true)); // fallback to CSS fullscreen
+            } else {
+              document.exitFullscreen?.();
+              setFullscreen(false);
+            }
+          },style:{fontSize:11}},
+          el('i',{className:'ti '+(document.fullscreenElement?'ti-minimize':'ti-maximize')}))
         )
       ),
 
