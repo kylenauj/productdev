@@ -3102,31 +3102,7 @@ function HomeView({data,setData,setView,setSels,setProdView}){
       /* ── Left col ── */
       el('div',null,
 
-        /* PC Health */
-        el('div',{style:{background:'var(--bg)',border:'1px solid var(--bdr)',borderRadius:'var(--r)',overflow:'hidden',marginBottom:14}},
-          el('div',{style:{padding:'11px 14px',borderBottom:'1px solid var(--bdr)',background:'var(--bg2)',fontSize:11,fontWeight:700,textTransform:'uppercase',letterSpacing:'.07em',color:'var(--text2)',display:'flex',alignItems:'center',gap:6}},
-            el('i',{className:'ti ti-chart-bar',style:{color:'var(--accent)'}}),' PC Health'
-          ),
-          el('div',{style:{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:0}},
-            pcHealth.map(({tab,prods,overdue,pct,total,done})=>
-              el('div',{key:tab.id,onClick:()=>setView(tab.id),style:{
-                padding:'14px 16px',borderRight:'1px solid var(--bdr)',cursor:'pointer',transition:'background .1s'
-              },
-              onMouseEnter:e=>e.currentTarget.style.background='var(--bg2)',
-              onMouseLeave:e=>e.currentTarget.style.background='transparent'},
-                el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:6}},
-                  el('div',{style:{fontSize:12,fontWeight:700,color:'var(--text)'}},tab.label),
-                  overdue>0&&el('span',{style:{fontSize:10,color:'var(--err)',fontWeight:700,background:'var(--err-bg)',borderRadius:3,padding:'1px 6px'}},overdue+' overdue')
-                ),
-                el('div',{style:{fontSize:20,fontWeight:800,color:pct===100?'var(--ok)':pct>60?'var(--info)':'var(--warn)',marginBottom:6}},pct+'%'),
-                el('div',{style:{height:3,background:'var(--bg3)',borderRadius:2,overflow:'hidden',marginBottom:5}},
-                  el('div',{style:{height:'100%',width:pct+'%',background:pct===100?'var(--ok)':pct>60?'var(--info)':'var(--warn)',borderRadius:2}})
-                ),
-                el('div',{style:{fontSize:10,color:'var(--text3)'}},prods.length+' products · '+done+'/'+total+' tasks')
-              )
-            )
-          )
-        ),
+
 
         /* Action Items */
         el('div',{style:{background:'var(--bg)',border:'1px solid var(--bdr)',borderRadius:'var(--r)',overflow:'hidden',marginBottom:14}},
@@ -3232,6 +3208,49 @@ function HomeView({data,setData,setView,setSels,setProdView}){
                 },'Go →')
               );
             })
+        ),
+
+        /* Overdue by owner */
+        Object.keys(overdueByOwner).length>0&&el('div',{style:{background:'var(--bg)',border:'1px solid var(--err-dim)',borderRadius:'var(--r)',overflow:'hidden',marginTop:14}},
+          el('div',{style:{padding:'11px 14px',borderBottom:'1px solid var(--bdr)',background:'var(--err-bg)',fontSize:11,fontWeight:700,textTransform:'uppercase',letterSpacing:'.07em',color:'var(--err)',display:'flex',alignItems:'center',gap:6}},
+            el('i',{className:'ti ti-alert-triangle'}),' Overdue by Owner'
+          ),
+          Object.entries(overdueByOwner).sort(([,a],[,b])=>b-a).map(([owner,count])=>
+            el('div',{key:owner,style:{padding:'8px 14px',borderBottom:'1px solid var(--bdr)',display:'flex',alignItems:'center',justifyContent:'space-between'}},
+              el('div',{style:{fontSize:12,fontWeight:600,color:'var(--text)'}},'@'+owner),
+              el('span',{style:{fontSize:11,fontWeight:700,color:'var(--err)',background:'var(--err-bg)',borderRadius:3,padding:'2px 8px'}},count+' task'+(count>1?'s':''))
+            )
+          )
+        )
+      ),
+
+      /* ── Right col ── */
+      el('div',null,
+
+        /* PC Health */
+        el('div',{style:{background:'var(--bg)',border:'1px solid var(--bdr)',borderRadius:'var(--r)',overflow:'hidden',marginBottom:14}},
+          el('div',{style:{padding:'11px 14px',borderBottom:'1px solid var(--bdr)',background:'var(--bg2)',fontSize:11,fontWeight:700,textTransform:'uppercase',letterSpacing:'.07em',color:'var(--text2)',display:'flex',alignItems:'center',gap:6}},
+            el('i',{className:'ti ti-chart-bar',style:{color:'var(--accent)'}}),' PC Health'
+          ),
+          el('div',{style:{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:0}},
+            pcHealth.map(({tab,prods,overdue,pct,total,done})=>
+              el('div',{key:tab.id,onClick:()=>setView(tab.id),style:{
+                padding:'14px 16px',borderRight:'1px solid var(--bdr)',cursor:'pointer',transition:'background .1s'
+              },
+              onMouseEnter:e=>e.currentTarget.style.background='var(--bg2)',
+              onMouseLeave:e=>e.currentTarget.style.background='transparent'},
+                el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:6}},
+                  el('div',{style:{fontSize:12,fontWeight:700,color:'var(--text)'}},tab.label),
+                  overdue>0&&el('span',{style:{fontSize:10,color:'var(--err)',fontWeight:700,background:'var(--err-bg)',borderRadius:3,padding:'1px 6px'}},overdue+' overdue')
+                ),
+                el('div',{style:{fontSize:20,fontWeight:800,color:pct===100?'var(--ok)':pct>60?'var(--info)':'var(--warn)',marginBottom:6}},pct+'%'),
+                el('div',{style:{height:3,background:'var(--bg3)',borderRadius:2,overflow:'hidden',marginBottom:5}},
+                  el('div',{style:{height:'100%',width:pct+'%',background:pct===100?'var(--ok)':pct>60?'var(--info)':'var(--warn)',borderRadius:2}})
+                ),
+                el('div',{style:{fontSize:10,color:'var(--text3)'}},prods.length+' products · '+done+'/'+total+' tasks')
+              )
+            )
+          )
         ),
 
         /* Next gate actions */
@@ -3932,45 +3951,187 @@ function App(){
   },[data,view]);
 
   // ── Workload View ──
-  const WorkloadView=React.useMemo(()=>{
-    const allProds=data.pcTabs.flatMap(tab=>(data[tab.id]||[]));
+  const WorkloadView=(()=>{
+    const [expandedOwner,setExpandedOwner]=React.useState(null);
+
+    const allProds=data.pcTabs.flatMap(tab=>(data[tab.id]||[]).map(p=>({...p,pc:tab.id,pcLabel:tab.label})));
+
+    // Build per-owner task list with full context
     const ownerMap={};
     allProds.forEach(p=>p.tasks.forEach(t=>{
       const o=t.owner||'Unassigned';
-      if(!ownerMap[o])ownerMap[o]={total:0,done:0,overdue:0,inProgress:0,notStarted:0};
-      ownerMap[o].total++;
-      if(t.status==='Done')ownerMap[o].done++;
-      else if(isOverdue(t))ownerMap[o].overdue++;
-      else if(t.status==='In Progress')ownerMap[o].inProgress++;
-      else ownerMap[o].notStarted++;
+      if(!ownerMap[o]) ownerMap[o]={tasks:[],done:0,overdue:0,inProgress:0,notStarted:0,dueThisWeek:0};
+      const d=ownerMap[o];
+      d.tasks.push({...t,prodName:p.shortName||p.name,prodId:p.id,pcId:p.pc,pcLabel:p.pcLabel});
+      if(t.status==='Done') d.done++;
+      else if(isOverdue(t)){d.overdue++;} 
+      else if(t.status==='In Progress') d.inProgress++;
+      else d.notStarted++;
+      // Due this week
+      if(t.end&&t.status!=='Done'){
+        const diff=Math.round((new Date(t.end+'T00:00:00')-TODAY_D)/86400000);
+        if(diff>=0&&diff<=7) d.dueThisWeek++;
+      }
     }));
-    const owners=Object.entries(ownerMap).sort(([,a],[,b])=>b.overdue-a.overdue||(b.total-b.done)-(a.total-a.done));
-    return el('div',{style:{padding:'24px'}},
-      el('div',{style:{fontSize:13,fontWeight:700,color:'var(--text)',marginBottom:16,display:'flex',alignItems:'center',gap:8}},
-        el('i',{className:'ti ti-users',style:{color:'var(--accent)'}}), 'Team Workload'
-      ),
-      el('div',{style:{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(220px,1fr))',gap:12}},
-        owners.map(([owner,d])=>el('div',{key:owner,style:{background:'var(--bg2)',border:'0.5px solid '+(d.overdue>0?'var(--err)':'var(--bdr2)'),borderRadius:'var(--r)',padding:'14px 16px'}},
-          el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:10}},
-            el('div',{style:{fontSize:13,fontWeight:700,color:'var(--text)'}},'@'+owner),
-            d.overdue>0&&el('span',{style:{fontSize:10,fontWeight:700,color:'var(--err)',background:'var(--err-bg)',borderRadius:10,padding:'2px 7px'}},d.overdue+' overdue')
-          ),
-          el('div',{style:{display:'flex',gap:6,marginBottom:10}},
-            el('div',{style:{flex:d.done,height:5,background:'var(--ok)',borderRadius:2}}),
-            el('div',{style:{flex:d.inProgress,height:5,background:'var(--info)',borderRadius:2}}),
-            el('div',{style:{flex:d.overdue,height:5,background:'var(--err)',borderRadius:2}}),
-            el('div',{style:{flex:d.notStarted,height:5,background:'var(--bg4)',borderRadius:2}})
-          ),
-          el('div',{style:{display:'flex',gap:12,fontSize:10,color:'var(--text3)'}},
-            el('span',{style:{color:'var(--ok)'}},'✓ '+d.done),
-            el('span',{style:{color:'var(--info)'}},el('i',{className:'ti ti-progress'}),' '+d.inProgress),
-            el('span',{style:{color:'var(--err)'}},'⚠ '+d.overdue),
-            el('span',null,'○ '+d.notStarted)
+
+    const owners=Object.entries(ownerMap)
+      .sort(([,a],[,b])=>b.overdue-a.overdue||b.dueThisWeek-b.notStarted-(a.dueThisWeek-a.notStarted));
+
+    // Tasks due this week across everyone
+    const dueThisWeek=allProds.flatMap(p=>p.tasks
+      .filter(t=>t.status!=='Done'&&t.end)
+      .map(t=>{
+        const diff=Math.round((new Date(t.end+'T00:00:00')-TODAY_D)/86400000);
+        return diff>=0&&diff<=7?{...t,prodName:p.shortName||p.name,prodId:p.id,pcId:p.pc,pcLabel:p.pcLabel,daysLeft:diff}:null;
+      })
+      .filter(Boolean)
+    ).sort((a,b)=>a.daysLeft-b.daysLeft);
+
+    // Overdue tasks
+    const overdueAll=allProds.flatMap(p=>p.tasks
+      .filter(t=>isOverdue(t))
+      .map(t=>({...t,prodName:p.shortName||p.name,prodId:p.id,pcId:p.pc,pcLabel:p.pcLabel}))
+    ).sort((a,b)=>(a.end||'').localeCompare(b.end||''));
+
+    const jumpTo=(pcId,prodId)=>{
+      setView(pcId); setSels(s=>({...s,[pcId]:prodId})); setProdView('detail');
+    };
+
+    const TaskRow=({t,showProd=true})=>{
+      const od=isOverdue(t);
+      const diff=t.end?Math.round((new Date(t.end+'T00:00:00')-TODAY_D)/86400000):null;
+      const urgentSoon=diff!=null&&diff>=0&&diff<=7;
+      const col=od?'var(--err)':urgentSoon?'var(--warn)':t.status==='In Progress'?'var(--info)':'var(--text3)';
+      return el('div',{style:{
+        display:'flex',alignItems:'center',gap:10,padding:'7px 14px',
+        borderBottom:'1px solid var(--bdr)',
+        background:od?'rgba(224,96,96,.03)':urgentSoon?'rgba(224,155,61,.03)':'transparent'
+      }},
+        el('div',{style:{width:8,height:8,borderRadius:'50%',background:col,flexShrink:0}}),
+        el('div',{style:{flex:1,minWidth:0}},
+          el('div',{style:{fontSize:12,color:'var(--text)',fontWeight:500,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},t.name),
+          showProd&&el('div',{style:{fontSize:10,color:'var(--text3)',marginTop:1}},
+            t.pcLabel,' · ',el('span',{style:{color:'var(--info)',cursor:'pointer'},onClick:()=>jumpTo(t.pcId,t.prodId)},t.prodName,' ↗')
           )
-        ))
+        ),
+        el('div',{style:{display:'flex',align:'center',gap:8,flexShrink:0}},
+          t.end&&el('span',{style:{fontSize:10,fontWeight:600,color:col}},
+            od?'Overdue '+(Math.abs(diff))+'d':urgentSoon?'Due in '+diff+'d':new Date(t.end+'T00:00:00').toLocaleDateString('en-CA',{month:'short',day:'numeric'})
+          ),
+          el('span',{style:{
+            fontSize:9,padding:'2px 6px',borderRadius:3,fontWeight:600,
+            background:t.status==='Done'?'var(--ok-bg)':t.status==='In Progress'?'var(--info-bg)':'var(--bg3)',
+            color:t.status==='Done'?'var(--ok)':t.status==='In Progress'?'var(--info)':'var(--text3)'
+          }},t.status)
+        )
+      );
+    };
+
+    return el('div',{style:{padding:'24px'}},
+      el('h2',{style:{fontSize:18,fontWeight:800,marginBottom:6,color:'var(--text)'}},'Team Workload'),
+      el('div',{style:{fontSize:12,color:'var(--text3)',marginBottom:20}},new Date().toLocaleDateString('en-CA',{weekday:'long',month:'long',day:'numeric'})),
+
+      el('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16,marginBottom:20}},
+
+        /* ── Overdue tasks ── */
+        el('div',{style:{background:'var(--bg)',border:'1px solid var(--err-dim)',borderRadius:'var(--r)',overflow:'hidden'}},
+          el('div',{style:{padding:'10px 14px',background:'var(--err-bg)',borderBottom:'1px solid var(--err-dim)',display:'flex',alignItems:'center',justifyContent:'space-between'}},
+            el('div',{style:{fontSize:11,fontWeight:700,textTransform:'uppercase',letterSpacing:'.07em',color:'var(--err)',display:'flex',alignItems:'center',gap:6}},
+              el('i',{className:'ti ti-alert-triangle'}), 'Overdue Tasks'
+            ),
+            el('span',{style:{fontSize:18,fontWeight:900,color:'var(--err)'}},overdueAll.length)
+          ),
+          overdueAll.length===0
+            ? el('div',{style:{padding:'16px',fontSize:12,color:'var(--ok)',textAlign:'center',display:'flex',alignItems:'center',justifyContent:'center',gap:6}},
+                el('i',{className:'ti ti-circle-check'}),' All clear!'
+              )
+            : el('div',{style:{maxHeight:280,overflowY:'auto'}},
+                overdueAll.map((t,i)=>el(TaskRow,{key:i,t}))
+              )
+        ),
+
+        /* ── Due this week ── */
+        el('div',{style:{background:'var(--bg)',border:'1px solid var(--warn-dim)',borderRadius:'var(--r)',overflow:'hidden'}},
+          el('div',{style:{padding:'10px 14px',background:'var(--warn-bg)',borderBottom:'1px solid var(--warn-dim)',display:'flex',alignItems:'center',justifyContent:'space-between'}},
+            el('div',{style:{fontSize:11,fontWeight:700,textTransform:'uppercase',letterSpacing:'.07em',color:'var(--warn)',display:'flex',alignItems:'center',gap:6}},
+              el('i',{className:'ti ti-calendar-week'}), 'Due This Week'
+            ),
+            el('span',{style:{fontSize:18,fontWeight:900,color:'var(--warn)'}},dueThisWeek.length)
+          ),
+          dueThisWeek.length===0
+            ? el('div',{style:{padding:'16px',fontSize:12,color:'var(--text3)',textAlign:'center'}},'Nothing due in next 7 days')
+            : el('div',{style:{maxHeight:280,overflowY:'auto'}},
+                dueThisWeek.map((t,i)=>el(TaskRow,{key:i,t}))
+              )
+        )
+      ),
+
+      /* ── Per-owner cards ── */
+      el('div',{style:{fontSize:11,fontWeight:700,textTransform:'uppercase',letterSpacing:'.07em',color:'var(--text3)',marginBottom:10}},'By Team Member'),
+      el('div',{style:{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(300px,1fr))',gap:10}},
+        owners.map(([owner,d])=>{
+          const isExp=expandedOwner===owner;
+          const active=d.tasks.filter(t=>t.status!=='Done');
+          const urgent=active.filter(t=>{
+            if(!t.end) return false;
+            const diff=Math.round((new Date(t.end+'T00:00:00')-TODAY_D)/86400000);
+            return diff>=0&&diff<=7;
+          });
+          const RAG=d.overdue>0?'red':urgent.length>0?'amber':'green';
+          const ragCol=RAG==='red'?'var(--err)':RAG==='amber'?'var(--warn)':'var(--ok)';
+          return el('div',{key:owner,style:{background:'var(--bg)',border:'1px solid '+(d.overdue>0?'var(--err-dim)':urgent.length>0?'var(--warn-dim)':'var(--bdr)'),borderRadius:'var(--r)',overflow:'hidden'}},
+            el('div',{
+              onClick:()=>setExpandedOwner(isExp?null:owner),
+              style:{padding:'12px 14px',cursor:'pointer',display:'flex',alignItems:'center',gap:10,background:isExp?'var(--bg2)':'var(--bg)'}
+            },
+              el('div',{style:{width:32,height:32,borderRadius:'50%',background:ragCol+'22',border:'2px solid '+ragCol,display:'flex',alignItems:'center',justifyContent:'center',fontSize:12,fontWeight:700,color:ragCol,flexShrink:0}},
+                owner.charAt(0).toUpperCase()
+              ),
+              el('div',{style:{flex:1}},
+                el('div',{style:{fontSize:13,fontWeight:700,color:'var(--text)'}},'@'+owner),
+                el('div',{style:{display:'flex',gap:10,marginTop:3,fontSize:10}},
+                  d.overdue>0&&el('span',{style:{color:'var(--err)',fontWeight:600}},d.overdue+' overdue'),
+                  urgent.length>0&&el('span',{style:{color:'var(--warn)',fontWeight:600}},urgent.length+' due soon'),
+                  el('span',{style:{color:'var(--text3)'}},d.done+'/'+d.tasks.length+' done')
+                )
+              ),
+              /* Progress ring */
+              el('div',{style:{textAlign:'right'}},
+                el('div',{style:{fontSize:18,fontWeight:800,color:ragCol}},
+                  Math.round(d.done/Math.max(d.tasks.length,1)*100)+'%'
+                ),
+                el('div',{style:{fontSize:9,color:'var(--text3)'}},d.tasks.length+' tasks')
+              ),
+              el('i',{className:'ti ti-chevron-'+(isExp?'up':'down'),style:{fontSize:12,color:'var(--text3)',flexShrink:0}})
+            ),
+            /* Progress bar */
+            el('div',{style:{height:3,background:'var(--bg3)',display:'flex'}},
+              el('div',{style:{width:(d.done/Math.max(d.tasks.length,1)*100)+'%',background:ragCol,transition:'width .3s'}}),
+              el('div',{style:{width:(d.inProgress/Math.max(d.tasks.length,1)*100)+'%',background:'var(--info)',opacity:.5}})
+            ),
+            /* Expanded task list */
+            isExp&&el('div',{style:{borderTop:'1px solid var(--bdr)'}},
+              el('div',{style:{padding:'6px 14px',background:'var(--bg2)',display:'flex',gap:16,fontSize:10}},
+                el('span',{style:{color:'var(--err)',fontWeight:600}},d.overdue+' overdue'),
+                el('span',{style:{color:'var(--info)',fontWeight:600}},d.inProgress+' in progress'),
+                el('span',{style:{color:'var(--text3)'}},d.notStarted+' not started'),
+                el('span',{style:{color:'var(--ok)',fontWeight:600}},d.done+' done')
+              ),
+              active.sort((a,b)=>{
+                const aOd=isOverdue(a)?-2:0, bOd=isOverdue(b)?-2:0;
+                const aip=a.status==='In Progress'?-1:0, bip=b.status==='In Progress'?-1:0;
+                return (aOd+aip)-(bOd+bip);
+              }).map((t,i)=>el(TaskRow,{key:i,t})),
+              d.done>0&&el('div',{style:{padding:'6px 14px',fontSize:10,color:'var(--text3)',borderTop:'1px solid var(--bdr)',fontStyle:'italic'}},
+                d.done+' completed task'+(d.done>1?'s':'')+' hidden'
+              )
+            )
+          );
+        })
       )
     );
-  },[data]);
+  })();
+
 
   // ── Sidebar items ──
   const prods=view!=='postlaunch'&&view!=='macro'&&view!=='workload'?data[view]||[]:[];
