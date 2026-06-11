@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -370,6 +369,9 @@ const BLANK_PROD=pcLabel=>({
 /* ── DATA ── */
 const INITIAL={
 pcTabs:[{id:'pc1',label:'PC#1 2026'},{id:'pc2',label:'PC#2 2026'},{id:'pc3',label:'PC#3 2026'}],
+postLaunch:{},
+postLaunchHidden:[],
+postLaunchLastUpdated:{},
 pc1:[
   {id:'bb',brand:'Litti',name:'Berry Blaze Liquid Diamonds All-in-One',shortName:'Berry Blaze AIO',launchDate:'2026-04-30',tags:['Accepted'],notes:{updates:'Branded pouches path being evaluated.',blockers:'Pouch delivery timeline risk.'},specs:{'Planned Launch Time':'Spring 2026 - ACCEPTED','Commercial Lead':'Jim','Formulation Lead':'Chi','Ops Lead':'Ian','Brand Name Internal':'Litti','Product Name Internal':'Berry Blaze Liquid Diamonds All-in-One','Manufactured by: LP Name':'Mera Cannabis Corp.','Stocking Status':'TBD','Launch Window':'April 1, 2026','Stocking Type':'Flowthrough','Initial Case Offering (FT)':'N/A','Samples Required':'100 units','Landed Cost':'$22.00','Wholesale Cost':'$27.50','MSRP':'$38.50','Margin %':'41%','Launch PO':'2400 units','Sales Target':'4,000/month','Category':'Vape - All-in-One','Product Size':'1g','Formulated Range':'85%','Label THC Range':'95-99% (98%)','Target CBD Range':'0-5%','Other Cannabinoids, Range':'N/A','Flavouring Type':'Botanical Terpenes','Flavour Description':'Berry Blaze','Biomass Input':'N/A','Formulations':'52 wt.% Distillate + 38 wt.% Liquid Diamonds + 10 wt.% Botanical Terpene','Ingredients':'Cannabis Extract, Botanical Terpenes','Target Product Image':'TBD','Target Accessory Image':'N/A','Product Primary/Hardware':'Cilicon – Nova Deli 1','Product Package/Outer':'4×6" Branded Pouch','Packaging Labels':'3.25"×4.25" front label','Accessory':'THC sticker','Master Case GTIN':'10876936002466','Retail Pack GTIN':'876936002469','Master Case Dimensions':'6×6×4','Units per Master Shipper/Case':'12','Who is responsible for Labels Sourcing?':'Mera Cannabis Corp.','Do we need new dies for labels?':'No','Vendor providing retail labels?':'Minuteman Press','Vendor providing case labels?':'MERA In-House','Action Items':'Branded China Vendor Pouches: 2–3 wks manufacture + ~45 days delivery. Path 1: Branded & hope for April. Path 2: Unbranded → branded. Path 3: ePac/local.'},
    tasks:[mk('a1','R&D','','In Progress','2025-10-01','2025-11-07'),mk('a2','Product Specs / Submission','Kyle N.','In Progress','2025-10-01','2025-11-07','',true),mk('a3','Formulation Dev','Wei','Done','2025-10-01','2025-11-07','',true),mk('a4','Sensory','Wei','Done','2025-10-01','2025-11-07','External Sensory Validation pending'),mk('a5','Packaging Dev','Kyle N.','Done','2025-10-01','2025-12-10','Review Branded option w/ Jim'),mk('a6','Financial Analysis','Aamir','Done','2025-10-01','2025-11-07','Margin confirmed 41%',true),mk('a7','Labels','Kyle N.','In Progress','2026-02-12','2026-03-04','Reach out to Chris'),mk('a8','Input','Chi','Done','2026-02-05','2026-03-04'),mk('a9','Internal Packaging','Kyle N.','Done','2025-12-10','2026-03-04'),mk('a10','External Packaging','Kyle N.','In Progress','2026-02-06','2026-03-04','Poke timeline – Zafeer'),mk('a11','Materials On Site','Jeremy','In Progress','2026-02-23','2026-03-06'),mk('a12','Samples Ready','Jeremy','Not Started','2026-03-09','2026-03-13','Fill carts first'),mk('a13','Base Marketing Materials','Cece','In Progress','2026-03-09','2026-03-13'),mk('a14','Pre-Sell / Promo','Sales Team','Not Started','2026-03-13','2026-04-14'),mk('a15','PO Received','Jeremy','Not Started','2026-04-20','2026-04-22'),mk(uid(),'Pre-Sell Communications','Kyle','Not Started','',''),mk(uid(),'Launch Eblast & Comms','Kyle','Not Started','',''),mk(uid(),'Digital Selling Assets','Kyle','Not Started','',''),mk(uid(),'Printed Marketing Materials','Kyle','Not Started','','')]},
@@ -2908,6 +2910,7 @@ const addChangelogEntry=(action,product='')=>{
   log.unshift({ts:new Date().toISOString(),action,product,user:'You'});
   if(log.length>100) log.splice(100);
   try{localStorage.setItem(CL_KEY,JSON.stringify(log));}catch{}
+  // Note: changelog also syncs via GitHub when data is pushed
 };
 
 /* ── Comments ── */
@@ -3270,27 +3273,26 @@ function HomeView({data,setData,setView,setSels,setProdView}){
 }
 
 
-function PostLaunchView({data}){
-  // data = launch dashboard data (for reading launchDate from product tasks)
+function PostLaunchView({data,setData,addChangelogEntry}){
+  // data = main dashboard data — post launch lives in data.postLaunch
+  // Merge: default SALES_DATA first, then override with any saved data
   const [salesData,setSalesData]=React.useState(()=>{
-    try{const s=localStorage.getItem('au_pl_data');return s?JSON.parse(s):SALES_DATA_DEFAULT;}
-    catch{return SALES_DATA_DEFAULT;}
+    const saved=data.postLaunch||{};
+    return Object.keys(saved).length>0?saved:SALES_DATA_DEFAULT;
   });
-  const [hidden,setHidden]=React.useState(()=>{
-    try{const s=localStorage.getItem('au_pl_hidden');return s?JSON.parse(s):[];}
-    catch{return [];}
-  });
+  const [hidden,setHidden]=React.useState(()=>data.postLaunchHidden||[]);
   const [sel,setSel]=React.useState(Object.keys(SALES_DATA_DEFAULT)[0]||'');
   const [activePC,setActivePC]=React.useState('pc1');
   const [showAddSKU,setShowAddSKU]=React.useState(false);
   const [showUpdateSKU,setShowUpdateSKU]=React.useState(false);
   const [showBulkUpload,setShowBulkUpload]=React.useState(false);
   const [showChangelog,setShowChangelog]=React.useState(false);
-  const [lastUpdated,setLastUpdated]=React.useState(()=>{
-    try{return JSON.parse(localStorage.getItem('au_pl_lastupdated')||'{}');}catch{return {};}
-  });
+  const [lastUpdated,setLastUpdated]=React.useState(()=>data.postLaunchLastUpdated||{});
 
-  const saveHidden=h=>{setHidden(h);try{localStorage.setItem('au_pl_hidden',JSON.stringify(h));}catch{}};
+  const saveHidden=h=>{
+    setHidden(h);
+    setData(d=>({...d,postLaunchHidden:h}));
+  };
   const removeProduct=name=>saveHidden([...hidden,name]);
   const restoreProduct=name=>saveHidden(hidden.filter(h=>h!==name));
 
@@ -3476,11 +3478,10 @@ function PostLaunchView({data}){
       onUpdate:updated=>{
         const next={...salesData,[sel]:updated};
         setSalesData(next);
-        try{localStorage.setItem('au_pl_data',JSON.stringify(next));}catch{}
         const lu={...lastUpdated,[sel]:new Date().toISOString()};
         setLastUpdated(lu);
-        try{localStorage.setItem('au_pl_lastupdated',JSON.stringify(lu));}catch{}
-        addChangelogEntry('Sales data updated',sel);
+        setData(d=>({...d,postLaunch:next,postLaunchLastUpdated:lu}));
+        if(addChangelogEntry) addChangelogEntry('Sales data updated',sel);
       },
       onClose:()=>setShowUpdateSKU(false)
     }),
@@ -3489,11 +3490,10 @@ function PostLaunchView({data}){
       onUpdate:(name,prod,lu)=>{
         const next={...salesData,[name]:prod};
         setSalesData(next);
-        try{localStorage.setItem('au_pl_data',JSON.stringify(next));}catch{}
         const luAll={...lastUpdated,...lu};
         setLastUpdated(luAll);
-        try{localStorage.setItem('au_pl_lastupdated',JSON.stringify(luAll));}catch{}
-        addChangelogEntry('Bulk sales data updated',Object.keys(lu).join(', '));
+        setData(d=>({...d,postLaunch:next,postLaunchLastUpdated:luAll}));
+        if(addChangelogEntry) addChangelogEntry('Bulk sales data updated',Object.keys(lu).join(', '));
       },
       onClose:()=>setShowBulkUpload(false)
     }),
@@ -3502,7 +3502,8 @@ function PostLaunchView({data}){
       onAdd:(name,prod)=>{
         const updated={...salesData,[name]:prod};
         setSalesData(updated);
-        try{localStorage.setItem('au_pl_data',JSON.stringify(updated));}catch{}
+        setData(d=>({...d,postLaunch:updated}));
+        if(addChangelogEntry) addChangelogEntry('SKU added',name);
         setSel(name);
       },
       onClose:()=>setShowAddSKU(false)
@@ -4274,7 +4275,7 @@ function App(){
       /* Content */
       el('div',{style:{flex:1}},
         view==='home'       ? el(HomeView,{data,setData,setView,setSels,setProdView}) :
-        view==='postlaunch' ? el(PostLaunchView,{data}) :
+        view==='postlaunch' ? el(PostLaunchView,{data,setData,addChangelogEntry}) :
         view==='macro'      ? MacroTimeline :
         view==='workload'   ? WorkloadView :
         el('div',null,
