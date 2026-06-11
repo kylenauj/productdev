@@ -2430,11 +2430,12 @@ function parseExcelSalesData(buffer, existingProdName){
 
 /* ── Update SKU Modal ── */
 function UpdateSKUModal({prodName, currentProd, onUpdate, onClose}){
-  const [step,setStep]     = React.useState('upload'); // upload | preview | replen | done
-  const [parsed,setParsed] = React.useState(null);
+  const [step,setStep]       = React.useState('upload'); // upload | preview | replen | done
+  const [parsed,setParsed]   = React.useState(null);
   const [replenData,setReplenData] = React.useState(null);
-  const [err,setErr]       = React.useState('');
-  const [busy,setBusy]     = React.useState(false);
+  const [mergeMode,setMergeMode]   = React.useState('replace');
+  const [err,setErr]         = React.useState('');
+  const [busy,setBusy]       = React.useState(false);
   const fileRef = React.useRef();
 
   const handleFile=async(file)=>{
@@ -2682,7 +2683,13 @@ function BulkUploadModal({salesData,onUpdate,onClose}){
       for(const pName of allNames){
         try{
           const result=parseExcelSalesData(buf,pName);
-          parsed.push({name:pName,detected:result.detectedName,data:result.data,matched:!!salesData[pName]});
+          // Try exact match first, then case-insensitive match
+          const matchedKey=Object.keys(salesData).find(k=>
+            k===pName||k.toLowerCase()===pName.toLowerCase()||
+            k.toLowerCase().includes(pName.toLowerCase().split(' ').slice(0,2).join(' '))||
+            pName.toLowerCase().includes(k.toLowerCase().split(' ').slice(0,2).join(' '))
+          );
+          parsed.push({name:matchedKey||pName,detected:result.detectedName,data:result.data,matched:!!matchedKey});
         }catch(e){
           parsed.push({name:pName,err:e.message});
         }
@@ -2694,11 +2701,11 @@ function BulkUploadModal({salesData,onUpdate,onClose}){
 
   const applyAll=()=>{
     if(!results) return;
-    const lu={};
+    const now=new Date().toISOString();
     results.filter(r=>!r.err&&r.matched).forEach(r=>{
       const existing=salesData[r.name]||{};
-      onUpdate(r.name,{...existing,...r.data,pc:existing.pc,launchDate:existing.launchDate,ocs:existing.ocs},lu);
-      lu[r.name]=new Date().toISOString();
+      const updated={...existing,...r.data,pc:existing.pc,launchDate:existing.launchDate,ocs:existing.ocs};
+      onUpdate(r.name, updated, {[r.name]:now});
     });
     onClose();
   };
