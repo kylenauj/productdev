@@ -2509,10 +2509,34 @@ function parseExcelSalesData(buffer, existingProdName){
   if(productNames.length===1){
     targetName=productNames[0];
   } else {
-    const kw=existingProdName.split(' ').slice(0,3).join(' ').toLowerCase();
-    const match=productNames.find(n=>
-      n.toLowerCase().includes(kw)||kw.includes(n.split(' ').slice(0,3).join(' ').toLowerCase())
-    );
+    const existingLower=existingProdName.toLowerCase().trim();
+    // 1. Exact match (case-insensitive) — always preferred
+    let match=productNames.find(n=>n.toLowerCase().trim()===existingLower);
+    // 2. Otherwise, require ALL significant words (>2 chars) from existingProdName
+    //    to appear in the candidate — prevents "...Blunt" matching "...Pre-Roll"
+    //    when both share a long common prefix like "Northern Lights 60+ Diamonds & Shatter Infused"
+    if(!match){
+      const sigWords=existingLower.split(/\s+/).filter(w=>w.length>2);
+      const candidates=productNames.filter(n=>{
+        const nLower=n.toLowerCase();
+        return sigWords.every(w=>nLower.includes(w));
+      });
+      if(candidates.length===1) match=candidates[0];
+      else if(candidates.length>1){
+        // Multiple candidates still match all words (e.g. true near-duplicates) —
+        // pick the one with the closest word count / length as a tiebreaker
+        match=candidates.reduce((best,c)=>
+          Math.abs(c.length-existingProdName.length)<Math.abs(best.length-existingProdName.length)?c:best
+        );
+      }
+    }
+    // 3. Last resort — old loose prefix match, only if nothing else matched
+    if(!match){
+      const kw=existingProdName.split(' ').slice(0,3).join(' ').toLowerCase();
+      match=productNames.find(n=>
+        n.toLowerCase().includes(kw)||kw.includes(n.split(' ').slice(0,3).join(' ').toLowerCase())
+      );
+    }
     if(match) targetName=match;
   }
 
