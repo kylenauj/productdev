@@ -2504,9 +2504,31 @@ function parseExcelSalesData(buffer, existingProdName){
     rows.slice(1).filter(r=>r[iName]).map(r=>String(r[iName]).trim())
   )];
 
+  // Helper: do two product names share enough significant words to be
+  // considered "the same product" (allowing for minor naming differences)?
+  const sharesSignificantWords=(a,b)=>{
+    const wordsA=a.toLowerCase().split(/\s+/).filter(w=>w.length>2);
+    const wordsB=b.toLowerCase().split(/\s+/).filter(w=>w.length>2);
+    if(!wordsA.length||!wordsB.length) return false;
+    const overlap=wordsA.filter(w=>wordsB.includes(w));
+    // Require at least half of the shorter name's significant words to overlap
+    const minLen=Math.min(wordsA.length,wordsB.length);
+    return overlap.length/minLen>=0.5;
+  };
+
   // Match to existing product name
   let targetName=existingProdName;
   if(productNames.length===1){
+    // Only one product in the file — but verify it's actually a plausible
+    // match for the SKU being updated. If it shares no real similarity
+    // (e.g. completely different product/strain), reject rather than
+    // silently applying the wrong product's data.
+    if(!sharesSignificantWords(existingProdName,productNames[0])){
+      throw new Error(
+        'This file appears to be for "'+productNames[0]+'", which does not match '+
+        '"'+existingProdName+'". Please upload the correct sales export for this SKU.'
+      );
+    }
     targetName=productNames[0];
   } else {
     const existingLower=existingProdName.toLowerCase().trim();
@@ -2537,7 +2559,19 @@ function parseExcelSalesData(buffer, existingProdName){
         n.toLowerCase().includes(kw)||kw.includes(n.split(' ').slice(0,3).join(' ').toLowerCase())
       );
     }
-    if(match) targetName=match;
+    // Final sanity check — if we found "a" match but it's not actually
+    // similar to the SKU we're updating, don't silently apply it
+    if(match&&!sharesSignificantWords(existingProdName,match)) match=null;
+
+    if(match){
+      targetName=match;
+    } else if(productNames.length>0){
+      // Nothing in the file resembles this SKU at all
+      throw new Error(
+        'No data for "'+existingProdName+'" was found in this file. '+
+        'Products in file: '+productNames.join(', ')
+      );
+    }
   }
 
   const dataRows=rows.slice(1).filter(r=>
@@ -3995,8 +4029,8 @@ function PostLaunchView({data,setData,addChangelogEntry}){
   // Use SALES_DATA_DEFAULT launchDate (first order date) as priority for milestone markers
   // Falls back to OCS firstReceipt, then dashboard launch date
   const effectiveLaunchDate=current?(
-    SALES_DATA_DEFAULT[sel]?.launchDate ||
     current?.launchDate ||
+    SALES_DATA_DEFAULT[sel]?.launchDate ||
     current?.ocs?.firstReceipt ||
     getEffectiveLaunchDate(sel,current) ||
     ''
@@ -4183,10 +4217,31 @@ function PostLaunchView({data,setData,addChangelogEntry}){
           padding:'7px 14px',fontSize:12,fontFamily:'inherit',color:'var(--text2)',
           display:'flex',alignItems:'center',gap:6
         }},el('i',{className:'ti ti-history',style:{fontSize:13}}),' Changelog'),
+        el('div',{style:{
+          display:'flex',alignItems:'center',gap:6,marginLeft:'auto',
+          background:'var(--bg)',border:'0.5px solid var(--bdr2)',borderRadius:'var(--pill)',
+          padding:'6px 12px'
+        }},
+          el('i',{className:'ti ti-rocket',style:{fontSize:13,color:'var(--accent)'}}),
+          el('span',{style:{fontSize:11,color:'var(--text3)',fontWeight:600}},'Launch Date'),
+          el('input',{
+            type:'date',
+            className:'ei',
+            value:effectiveLaunchDate||'',
+            style:{width:130,padding:'2px 6px',fontSize:12,border:'none',background:'transparent'},
+            onChange:e=>{
+              const updated={...current,launchDate:e.target.value};
+              const next={...salesData,[sel]:updated};
+              setSalesData(next);
+              setData(d=>({...d,postLaunch:next}));
+              if(addChangelogEntry) addChangelogEntry('Launch date set to '+e.target.value,sel);
+            }
+          })
+        ),
         el('button',{onClick:()=>window.print(),style:{
           background:'var(--bg)',border:'0.5px solid var(--bdr2)',borderRadius:7,cursor:'pointer',
           padding:'7px 14px',fontSize:12,fontFamily:'inherit',color:'var(--text2)',
-          display:'flex',alignItems:'center',gap:6,marginLeft:'auto'
+          display:'flex',alignItems:'center',gap:6
         }},el('i',{className:'ti ti-printer',style:{fontSize:13}}),' Print / PDF')
       ),
       (()=>{
