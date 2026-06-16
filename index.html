@@ -444,6 +444,7 @@ const BLANK_PROD=pcLabel=>({
 /* ── DATA ── */
 const INITIAL={
 pcTabs:[{id:'pc1',label:'PC#1 2026'},{id:'pc2',label:'PC#2 2026'},{id:'pc3',label:'PC#3 2026'}],
+  in_dev:[],
 postLaunch:{},
 postLaunchHidden:[],
 postLaunchLastUpdated:{},
@@ -1289,7 +1290,75 @@ function SpecsPanel({specs,onChange,prod,onProdChange}){
 }
 
 /* ── Product Detail ── */
-function ProductDetail({prod,onChange,onKbNav}){
+function MoveProductMenu({view,pcTabs,onMove}){
+  const [open,setOpen]=React.useState(false);
+  const ref=React.useRef();
+
+  React.useEffect(()=>{
+    if(!open) return;
+    const h=e=>{ if(ref.current&&!ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown',h);
+    return()=>document.removeEventListener('mousedown',h);
+  },[open]);
+
+  // Build destination list — all tabs except current
+  const tabs=[
+    {id:'in_dev',label:'In Development',icon:'ti-flask'},
+    ...pcTabs.map(t=>({id:t.id,label:t.label,icon:'ti-package'}))
+  ].filter(t=>t.id!==view);
+
+  return el('div',{ref,style:{position:'relative',display:'inline-block'}},
+    el('button',{
+      onClick:()=>setOpen(o=>!o),
+      className:'btn',
+      style:{fontSize:11,display:'flex',alignItems:'center',gap:5,
+        background:open?'var(--accent-bg)':'var(--bg)',
+        borderColor:open?'var(--accent)':'var(--bdr2)',
+        color:open?'var(--accent)':'var(--text2)'}
+    },
+      el('i',{className:'ti ti-transfer'}),
+      'Move to…',
+      el('i',{className:'ti ti-chevron-'+(open?'up':'down'),style:{fontSize:10}})
+    ),
+    open&&el('div',{style:{
+      position:'absolute',top:'calc(100% + 6px)',right:0,zIndex:400,
+      background:'var(--bg)',border:'1px solid var(--bdr2)',borderRadius:'var(--r)',
+      boxShadow:'0 8px 24px rgba(0,0,0,.2)',minWidth:200,overflow:'hidden'
+    }},
+      el('div',{style:{padding:'6px 12px',fontSize:10,fontWeight:700,
+        color:'var(--text3)',textTransform:'uppercase',letterSpacing:'.08em',
+        borderBottom:'0.5px solid var(--bdr)'}},
+        'Move product to…'
+      ),
+      tabs.map(t=>el('button',{key:t.id,
+        onClick:()=>{ onMove(t.id); setOpen(false); },
+        style:{
+          width:'100%',background:'transparent',border:'none',
+          padding:'10px 14px',cursor:'pointer',fontFamily:'inherit',
+          display:'flex',alignItems:'center',gap:10,
+          textAlign:'left',transition:'background .1s'
+        },
+        onMouseEnter:e=>e.currentTarget.style.background='var(--bg2)',
+        onMouseLeave:e=>e.currentTarget.style.background='transparent'
+      },
+        el('i',{className:'ti '+t.icon,style:{
+          fontSize:14,
+          color:t.id==='in_dev'?'var(--info)':'var(--accent)',
+          flexShrink:0
+        }}),
+        el('div',null,
+          el('div',{style:{fontSize:12,fontWeight:600,color:'var(--text)'}},t.label),
+          t.id==='in_dev'&&el('div',{style:{fontSize:10,color:'var(--text3)'}},
+            'Move back to development'
+          )
+        )
+      ))
+    )
+  );
+}
+
+
+function ProductDetail({prod,onChange,onKbNav,view,pcTabs,onMove}){
   const [sec,setSec]=useState('tasks');
   useEffect(()=>{
     const h=e=>{
@@ -1329,7 +1398,9 @@ function ProductDetail({prod,onChange,onKbNav}){
             'Launch date:',
             el('input',{type:'date',style:{font:'inherit',fontSize:12,background:'var(--bg2)',border:'0.5px solid var(--bdr2)',borderRadius:5,padding:'3px 8px',color:'var(--text)'},value:prod.launchDate||'',onChange:ev=>onChange({...prod,launchDate:ev.target.value})})
           ),
-          el('div',{style:{fontSize:11,color:'var(--text3)'}},el('i',{className:'ti ti-keyboard',style:{fontSize:11}}),' T/G/S tabs · ←→ products')
+          el('div',{style:{fontSize:11,color:'var(--text3)'}},el('i',{className:'ti ti-keyboard',style:{fontSize:11}}),' T/G/S tabs · ←→ products'),
+          /* Move to… dropdown */
+          onMove&&el(MoveProductMenu,{view,pcTabs,onMove})
         )
       )
     ),
@@ -4700,7 +4771,7 @@ function WorkloadViewComp({data,setView,setSels,setProdView}){
 
     const [expandedOwner,setExpandedOwner]=React.useState(null);
 
-    const allProds=data.pcTabs.flatMap(tab=>(data[tab.id]||[]).map(p=>({...p,pc:tab.id,pcLabel:tab.label})));
+    const allProds=[...data.pcTabs.flatMap(tab=>(data[tab.id]||[]).map(p=>({...p,pc:tab.id,pcLabel:tab.label}))), ...(data.in_dev||[]).map(p=>({...p,pc:'in_dev',pcLabel:'In Development'}))];
 
     // Build per-owner task list with full context
     const ownerMap={};
@@ -4994,6 +5065,23 @@ function App(){
     setSels(s=>({...s,[view]:p.id}));
     setProdView('detail');
   };
+
+  // Move a product from current view to another tab
+  const moveProd=(prodId,fromTab,toTab)=>{
+    setData(d=>{
+      const fromArr=d[fromTab]||[];
+      const p=fromArr.find(x=>x.id===prodId);
+      if(!p) return d;
+      const toArr=d[toTab]||[];
+      return {...d,
+        [fromTab]:fromArr.filter(x=>x.id!==prodId),
+        [toTab]:[...toArr,p]
+      };
+    });
+    setView(toTab);
+    setSels(s=>({...s,[toTab]:prodId}));
+    setProdView('detail');
+  };
   const removeProd=id=>setData(d=>({...d,[view]:(d[view]||[]).filter(p=>p.id!==id)}));
 
   const kbNav=dir=>{const idx=prods.findIndex(p=>p.id===selId);const next=prods[idx+dir];if(next)setSelId(next.id);};
@@ -5021,7 +5109,7 @@ function App(){
   };
 
   const MacroTimeline=React.useMemo(()=>{
-    const allProds=data.pcTabs.flatMap(tab=>(data[tab.id]||[]).map(p=>({...p,pc:tab.label})));
+    const allProds=[...data.pcTabs.flatMap(tab=>(data[tab.id]||[]).map(p=>({...p,pc:tab.label}))), ...(data.in_dev||[]).map(p=>({...p,pc:'In Development'}))];
     if(!allProds.length)return el('div',{style:{padding:40,color:'var(--text3)',textAlign:'center'}},'No products yet.');
     const allDates=allProds.flatMap(p=>p.tasks.flatMap(t=>[t.start,t.end].filter(Boolean)));
     if(!allDates.length)return el('div',{style:{padding:40,color:'var(--text3)',textAlign:'center'}},'No task dates set yet.');
@@ -5106,11 +5194,11 @@ function App(){
 
 
   // ── Sidebar items ──
-  const prods=view!=='postlaunch'&&view!=='macro'&&view!=='workload'&&view!=='home'&&Array.isArray(data[view])?data[view]||[]:[];
+  const prods=view!=='postlaunch'&&view!=='macro'&&view!=='workload'&&view!=='home'&&(Array.isArray(data[view])||view==='in_dev')?data[view]||[]:[];
   const prod=prods.find(p=>p.id===(sels[view]||prods[0]?.id));
   const setSelId=id=>{setSels(s=>({...s,[view]:id}));setProdView('detail');};
 
-  const totalOverdue=data.pcTabs.flatMap(t=>data[t.id]||[]).flatMap(p=>p.tasks).filter(t=>isOverdue(t)).length;
+  const totalOverdue=[...data.pcTabs.flatMap(t=>data[t.id]||[]),...(data.in_dev||[])].flatMap(p=>p.tasks).filter(t=>isOverdue(t)).length;
 
   return el('div',{style:{display:'flex',minHeight:'100vh'}},
     /* ── Sidebar ── */
@@ -5135,6 +5223,20 @@ function App(){
         /* Home — top of list, bold */
         el('button',{className:'sidebar-item '+(view==='home'?'active':''),onClick:()=>setView('home'),style:{fontWeight:700,fontSize:13}},
           el('i',{className:'ti ti-home'}), 'Home'
+        ),
+
+        /* In Development */
+        el('div',{className:'sidebar-section-label',style:{marginTop:8}},'Development'),
+        el('div',{style:{display:'flex',alignItems:'center',gap:0,borderRadius:'var(--rs)',overflow:'hidden'}},
+          el('button',{
+            className:'sidebar-item '+(view==='in_dev'?'active':''),
+            style:{flex:1,borderRadius:0},
+            onClick:()=>{setView('in_dev');setProdView('summary');}
+          },
+            el('i',{className:'ti ti-flask'}),
+            'In Development',
+            el('span',{className:'sidebar-pc-badge'},(data.in_dev||[]).length)
+          )
         ),
 
         /* Product Calls */
@@ -5270,7 +5372,7 @@ function App(){
           prodView==='summary'
             ? el(SummaryView,{prods,onSelect:id=>{setSelId(id);setProdView('detail');}})
             : prod
-              ? el(ProductDetail,{key:prod.id,prod,onChange:upd=>updProd(view,prod.id,upd),onKbNav:kbNav})
+              ? el(ProductDetail,{key:prod.id,prod,onChange:upd=>updProd(view,prod.id,upd),onKbNav:kbNav,view,pcTabs:data.pcTabs,onMove:(toTab)=>moveProd(prod.id,view,toTab)})
               : el('div',{style:{padding:'60px',textAlign:'center',color:'var(--text3)'}},
                   el('i',{className:'ti ti-package',style:{fontSize:40,display:'block',marginBottom:14,opacity:.3}}),
                   'No products yet.',el('br'),
