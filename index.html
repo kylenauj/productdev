@@ -770,8 +770,144 @@ function TMinusHero({launchDate,compact=false}){
 
 
 /* ── Product Panels ── */
-function ProductPanels({prods,selId,setSelId,onAdd,onRemove}){
+function AddProductModal({onAdd,onClose,allProds}){
+  const [name,setName]=React.useState('');
+  const [brand,setBrand]=React.useState('');
+  const [cat,setCat]=React.useState('');
+  const [manualCode,setManualCode]=React.useState('');
+  const nameRef=React.useRef();
+
+  React.useEffect(()=>{ nameRef.current?.focus(); },[]);
+
+  const CAT_OPTS=[
+    {label:'Vape',          prefix:'VA', icon:'ti-device-airpods'},
+    {label:'Pre-Roll',      prefix:'PR', icon:'ti-smoking'},
+    {label:'Infused Pre-Roll', prefix:'PR', icon:'ti-star'},
+    {label:'Concentrate',   prefix:'CN', icon:'ti-droplet'},
+    {label:'Other',         prefix:'',   icon:'ti-package'},
+  ];
+
+  const autoCode=cat&&cat!=='Other'?nextSkuCode(cat,allProds):'';
+  const displayCode=manualCode||(cat?autoCode:'');
+
+  const submit=()=>{
+    if(!name.trim()) return;
+    const p={
+      ...BLANK_PROD(''),
+      name:name.trim(),
+      shortName:name.trim().split(' ').slice(0,4).join(' '),
+      brand:brand.trim()||'',
+      skuCode:displayCode||'',
+      specs:{...BLANK_PROD('').specs, _skuCode:displayCode||'', Category:cat||''},
+    };
+    onAdd(p);
+  };
+
+  return el('div',{
+    style:{position:'fixed',inset:0,background:'rgba(20,15,10,.55)',backdropFilter:'blur(4px)',
+      zIndex:600,display:'flex',alignItems:'center',justifyContent:'center',padding:20},
+    onClick:e=>e.target===e.currentTarget&&onClose()
+  },
+    el('div',{style:{background:'var(--bg)',border:'1px solid var(--bdr2)',borderRadius:'var(--r)',
+      width:'100%',maxWidth:440,boxShadow:'0 8px 40px rgba(0,0,0,.35)'}},
+
+      /* Header */
+      el('div',{style:{padding:'14px 18px',borderBottom:'0.5px solid var(--bdr)',
+        display:'flex',alignItems:'center',justifyContent:'space-between'}},
+        el('div',{style:{fontSize:14,fontWeight:800,display:'flex',alignItems:'center',gap:8}},
+          el('i',{className:'ti ti-plus',style:{color:'var(--accent)',fontSize:16}}),
+          'Add New Product'
+        ),
+        el('button',{onClick:onClose,style:{background:'none',border:'none',cursor:'pointer',
+          color:'var(--text3)',fontSize:18}}, el('i',{className:'ti ti-x'}))
+      ),
+
+      el('div',{style:{padding:'18px'}},
+
+        /* Category picker — prominent, pick first */
+        el('div',{style:{marginBottom:16}},
+          el('label',{style:{fontSize:11,fontWeight:700,color:'var(--text2)',
+            display:'block',marginBottom:8,textTransform:'uppercase',letterSpacing:'.07em'}},
+            'Product Category'
+          ),
+          el('div',{style:{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:7}},
+            CAT_OPTS.map(o=>el('button',{key:o.label,onClick:()=>{setCat(o.label);setManualCode('');},
+              style:{
+                padding:'10px 8px',borderRadius:'var(--rs)',cursor:'pointer',
+                border:'1.5px solid '+(cat===o.label?'var(--accent)':'var(--bdr)'),
+                background:cat===o.label?'var(--accent-bg)':'var(--bg2)',
+                fontFamily:'inherit',transition:'all .12s',
+                display:'flex',flexDirection:'column',alignItems:'center',gap:5
+              }},
+              el('i',{className:'ti '+o.icon,style:{fontSize:18,color:cat===o.label?'var(--accent)':'var(--text3)'}}),
+              el('span',{style:{fontSize:10,fontWeight:700,color:cat===o.label?'var(--accent)':'var(--text2)'}}),o.label
+            ))
+          )
+        ),
+
+        /* SKU code preview */
+        cat&&el('div',{style:{
+          display:'flex',alignItems:'center',gap:10,
+          background:displayCode?'var(--accent-bg)':'var(--bg2)',
+          border:'1px solid '+(displayCode?'var(--accent-border)':'var(--bdr)'),
+          borderRadius:'var(--rs)',padding:'8px 14px',marginBottom:16
+        }},
+          el('i',{className:'ti ti-tag',style:{color:'var(--accent)',flexShrink:0}}),
+          el('span',{style:{fontSize:11,color:'var(--text3)',fontWeight:600,whiteSpace:'nowrap'}},'Mera SKU'),
+          el('span',{style:{fontSize:15,fontWeight:900,color:'var(--accent)',letterSpacing:'.07em',flex:1}},
+            displayCode||'—'),
+          el('input',{
+            type:'text',value:manualCode,
+            placeholder:'Override',
+            onChange:e=>setManualCode(e.target.value.toUpperCase()),
+            style:{width:80,fontSize:11,padding:'3px 8px',borderRadius:'var(--rs)',
+              border:'1px solid var(--bdr)',background:'var(--bg)',color:'var(--text)',
+              fontFamily:'inherit',textAlign:'center'}
+          })
+        ),
+
+        /* Product name */
+        el('div',{style:{marginBottom:12}},
+          el('label',{style:{fontSize:11,fontWeight:700,color:'var(--text2)',
+            display:'block',marginBottom:5}},'Product Name *'),
+          el('input',{ref:nameRef,className:'ei',
+            placeholder:'e.g. Watermelon Whammy Liquid Diamonds',
+            value:name,onChange:e=>setName(e.target.value),
+            onKeyDown:e=>e.key==='Enter'&&submit()})
+        ),
+
+        /* Brand */
+        el('div',{style:{marginBottom:18}},
+          el('label',{style:{fontSize:11,fontWeight:700,color:'var(--text2)',
+            display:'block',marginBottom:5}},'Brand'),
+          el('input',{className:'ei',placeholder:'e.g. LITTI.',
+            value:brand,onChange:e=>setBrand(e.target.value),
+            onKeyDown:e=>e.key==='Enter'&&submit()})
+        ),
+
+        el('div',{style:{display:'flex',gap:10}},
+          el('button',{
+            onClick:submit,
+            disabled:!name.trim(),
+            style:{flex:1,background:'var(--grad-accent)',border:'none',
+              borderRadius:'var(--pill)',padding:'11px',fontSize:13,
+              fontFamily:'inherit',color:'#fff',fontWeight:700,cursor:'pointer',
+              boxShadow:'var(--shadow-accent)',opacity:name.trim()?1:0.5}
+          },el('i',{className:'ti ti-plus'}),' Add Product'),
+          el('button',{onClick:onClose,
+            style:{background:'var(--bg2)',border:'0.5px solid var(--bdr2)',
+              borderRadius:'var(--pill)',padding:'11px 20px',fontSize:13,
+              fontFamily:'inherit',color:'var(--text2)',cursor:'pointer'}},'Cancel')
+        )
+      )
+    )
+  );
+}
+
+
+function ProductPanels({prods,selId,setSelId,onAdd,onRemove,allProds}){
   const CAT_ACCENT={rd:'var(--rd-col)',procurement:'var(--pr-col)',operations:'var(--op-col)',marketing:'var(--mk-col)'};
+  const [showAddModal,setShowAddModal]=React.useState(false);
   return el('div',{className:'prod-strip'},
     prods.map(p=>{
       const done=p.tasks.filter(t=>t.status==='Done').length,tot=p.tasks.length,pct=tot?Math.round(done/tot*100):0;
@@ -809,8 +945,9 @@ function ProductPanels({prods,selId,setSelId,onAdd,onRemove}){
       );
     }),
     el('div',{style:{flexShrink:0,display:'flex',alignItems:'center',padding:'0 14px',borderLeft:'0.5px solid var(--bdr)'}},
-      el('button',{onClick:onAdd,style:{background:'var(--bg2)',border:'0.5px dashed var(--bdr2)',borderRadius:8,padding:'8px 12px',cursor:'pointer',fontSize:12,color:'var(--text2)',display:'flex',alignItems:'center',gap:5,whiteSpace:'nowrap'}},el('i',{className:'ti ti-plus'}),' Add Product')
-    )
+      el('button',{onClick:()=>setShowAddModal(true),style:{background:'var(--bg2)',border:'0.5px dashed var(--bdr2)',borderRadius:8,padding:'8px 12px',cursor:'pointer',fontSize:12,color:'var(--text2)',display:'flex',alignItems:'center',gap:5,whiteSpace:'nowrap'}},el('i',{className:'ti ti-plus'}),' Add Product')
+    ),
+    showAddModal&&el(AddProductModal,{allProds,onAdd:(prod)=>{onAdd(prod);setShowAddModal(false);},onClose:()=>setShowAddModal(false)})
   );
 }
 
@@ -4851,8 +4988,8 @@ function App(){
     // prods/prod computed in return
 
   const updProd=(pcKey,id,upd)=>setData(d=>({...d,[pcKey]:(d[pcKey]||[]).map(p=>p.id===id?{...p,...upd}:p)}));
-  const addProd=()=>{
-    const p={...BLANK_PROD(data.pcTabs.find(t=>t.id===view)?.label||'')};
+  const addProd=(prodOverride)=>{
+    const p=prodOverride||{...BLANK_PROD(data.pcTabs.find(t=>t.id===view)?.label||'')};
     setData(d=>({...d,[view]:[...(d[view]||[]),p]}));
     setSels(s=>({...s,[view]:p.id}));
     setProdView('detail');
@@ -5129,7 +5266,7 @@ function App(){
         view==='macro'      ? MacroTimeline :
         view==='workload'   ? el(WorkloadViewComp,{data,setView,setSels,setProdView}) :
         el('div',null,
-          el(ProductPanels,{prods,selId:prod?.id||'',setSelId,onAdd:addProd,onRemove:removeProd}),
+          el(ProductPanels,{prods,selId:prod?.id||'',setSelId,onAdd:addProd,onRemove:removeProd,allProds:{...data.postLaunch,...prods.reduce((a,p)=>({...a,[p.id]:p}),{})}}),
           prodView==='summary'
             ? el(SummaryView,{prods,onSelect:id=>{setSelId(id);setProdView('detail');}})
             : prod
