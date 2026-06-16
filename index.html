@@ -425,15 +425,17 @@ const isOverdue=t=>t.end&&parseD(t.end)<TODAY_D&&t.status!=='Done';
 
 const IMAGE_FIELDS=['Target Product Image','Target Accessory Image'];
 const SPEC_SECTIONS=[
-  {key:'overview',label:'Product Overview',icon:'ti-info-circle',fields:['Planned Launch Time','Commercial Lead','Formulation Lead','Ops Lead','Brand Name Internal','Product Name Internal','Manufactured by: LP Name','Stocking Status','Launch Window','Stocking Type','Initial Case Offering (FT)','Samples Required']},
+  {key:'overview',label:'Launch Info',icon:'ti-info-circle',fields:['Planned Launch Time','Launch Window','Stocking Type','Initial Case Offering (FT)','Samples Required','Stocking Status']},
+  {key:'team',label:'Team',icon:'ti-users',fields:['Commercial Lead','Formulation Lead','Ops Lead','Manufactured by: LP Name']},
   {key:'financial',label:'Financials',icon:'ti-currency-dollar',fields:['Landed Cost','Wholesale Cost','MSRP','Launch PO']},
-  {key:'product',label:'Product Specifics',icon:'ti-flask',fields:['Category','Product Size','Formulated Range','Label THC Range','Target CBD Range','Other Cannabinoids, Range','Flavouring Type','Flavour Description','Biomass Input','Formulations','Ingredients']},
-  {key:'packaging',label:'Packaging Requirements',icon:'ti-box',fields:['Target Product Image','Target Accessory Image','Product Primary/Hardware','Product Package/Outer','Packaging Labels','Accessory','Master Case GTIN','Retail Pack GTIN','Master Case Dimensions','Units per Master Shipper/Case','Who is responsible for Labels Sourcing?','Do we need new dies for labels?','Vendor providing retail labels?','Vendor providing case labels?']},
+  {key:'product',label:'Product',icon:'ti-flask',fields:['Category','Product Size','Label THC Range','Target CBD Range','Formulated Range','Flavouring Type','Flavour Description','Biomass Input','Formulations','Ingredients']},
+  {key:'packaging',label:'Packaging',icon:'ti-box',fields:['Product Primary/Hardware','Product Package/Outer','Packaging Labels','Accessory','Master Case GTIN','Retail Pack GTIN','Master Case Dimensions','Units per Master Shipper/Case']},
+  {key:'images',label:'Images',icon:'ti-photo',fields:['Target Product Image','Target Accessory Image']},
   {key:'notes',label:'Notes',icon:'ti-notes',fields:['Additional Notes']}
 ];
 
 const BLANK_PROD=pcLabel=>({
-  id:uid(),brand:'New Brand',name:'New Product',shortName:'New Product',launchDate:'',tags:['In Progress'],
+  id:uid(),brand:'New Brand',name:'New Product',shortName:'New Product',skuCode:'',launchDate:'',tags:['In Progress'],
   notes:{updates:'',blockers:''},
   specs:{'Planned Launch Time':pcLabel,'Brand Name Internal':'','Product Name Internal':'','Manufactured by: LP Name':'Mera Cannabis Corp.','Launch Window':'TBD','Stocking Type':'Stocking > FT','Initial Case Offering (FT)':'TBD','Samples Required':'Yes','Landed Cost':'—','Wholesale Cost':'—','MSRP':'—','Margin %':'—','Category':'','Product Size':''},
   tasks:[mk(uid(),'NNCP/GTIN','Kyle','Not Started','',''),mk(uid(),'Formulation Dev','Wei','Not Started','',''),mk(uid(),'Sensory','Team','Not Started','',''),mk(uid(),'Packaging Dev','Kyle','Not Started','',''),mk(uid(),'Financial Analysis','Jim/Kyle','Not Started','',''),mk(uid(),'Labels','Kyle','Not Started','',''),mk(uid(),'Input','Wei','Not Started','',''),mk(uid(),'Internal Packaging','Kyle','Not Started','',''),mk(uid(),'External Packaging','Kyle','Not Started','',''),mk(uid(),'Materials On Site','Jeremy','Not Started','',''),mk(uid(),'Sample Run','Jeremy','Not Started','',''),mk(uid(),'Pre-Selling','Sales Team','Not Started','',''),mk(uid(),'Bulk Production','Jeremy','Not Started','',''),mk(uid(),'Production/Shipment','Jeremy','Not Started','',''),mk(uid(),'Delivery into OCS','Jeremy','Not Started','',''),mk(uid(),'Pre-Sell Communications','Kyle','Not Started','',''),mk(uid(),'Launch Eblast & Comms','Kyle','Not Started','',''),mk(uid(),'Digital Selling Assets','Kyle','Not Started','',''),mk(uid(),'Printed Marketing Materials','Kyle','Not Started','','')]
@@ -446,6 +448,7 @@ postLaunch:{},
 postLaunchHidden:[],
 postLaunchLastUpdated:{},
 home:{actions:[],notes:''},
+  skuCounters:{PR:92,VA:83,CN:54},
 pc1:[
   {id:'bb',brand:'Litti',name:'Berry Blaze Liquid Diamonds All-in-One',shortName:'Berry Blaze AIO',launchDate:'2026-04-30',tags:['Accepted'],notes:{updates:'Branded pouches path being evaluated.',blockers:'Pouch delivery timeline risk.'},specs:{'Planned Launch Time':'Spring 2026 - ACCEPTED','Commercial Lead':'Jim','Formulation Lead':'Chi','Ops Lead':'Ian','Brand Name Internal':'Litti','Product Name Internal':'Berry Blaze Liquid Diamonds All-in-One','Manufactured by: LP Name':'Mera Cannabis Corp.','Stocking Status':'TBD','Launch Window':'April 1, 2026','Stocking Type':'Flowthrough','Initial Case Offering (FT)':'N/A','Samples Required':'100 units','Landed Cost':'$22.00','Wholesale Cost':'$27.50','MSRP':'$38.50','Margin %':'41%','Launch PO':'2400 units','Sales Target':'4,000/month','Category':'Vape - All-in-One','Product Size':'1g','Formulated Range':'85%','Label THC Range':'95-99% (98%)','Target CBD Range':'0-5%','Other Cannabinoids, Range':'N/A','Flavouring Type':'Botanical Terpenes','Flavour Description':'Berry Blaze','Biomass Input':'N/A','Formulations':'52 wt.% Distillate + 38 wt.% Liquid Diamonds + 10 wt.% Botanical Terpene','Ingredients':'Cannabis Extract, Botanical Terpenes','Target Product Image':'TBD','Target Accessory Image':'N/A','Product Primary/Hardware':'Cilicon – Nova Deli 1','Product Package/Outer':'4×6" Branded Pouch','Packaging Labels':'3.25"×4.25" front label','Accessory':'THC sticker','Master Case GTIN':'10876936002466','Retail Pack GTIN':'876936002469','Master Case Dimensions':'6×6×4','Units per Master Shipper/Case':'12','Who is responsible for Labels Sourcing?':'Mera Cannabis Corp.','Do we need new dies for labels?':'No','Vendor providing retail labels?':'Minuteman Press','Vendor providing case labels?':'MERA In-House','Action Items':'Branded China Vendor Pouches: 2–3 wks manufacture + ~45 days delivery. Path 1: Branded & hope for April. Path 2: Unbranded → branded. Path 3: ePac/local.'},
    tasks:[mk('a1','R&D','','In Progress','2025-10-01','2025-11-07'),mk('a2','Product Specs / Submission','Kyle N.','In Progress','2025-10-01','2025-11-07','',true),mk('a3','Formulation Dev','Wei','Done','2025-10-01','2025-11-07','',true),mk('a4','Sensory','Wei','Done','2025-10-01','2025-11-07','External Sensory Validation pending'),mk('a5','Packaging Dev','Kyle N.','Done','2025-10-01','2025-12-10','Review Branded option w/ Jim'),mk('a6','Financial Analysis','Aamir','Done','2025-10-01','2025-11-07','Margin confirmed 41%',true),mk('a7','Labels','Kyle N.','In Progress','2026-02-12','2026-03-04','Reach out to Chris'),mk('a8','Input','Chi','Done','2026-02-05','2026-03-04'),mk('a9','Internal Packaging','Kyle N.','Done','2025-12-10','2026-03-04'),mk('a10','External Packaging','Kyle N.','In Progress','2026-02-06','2026-03-04','Poke timeline – Zafeer'),mk('a11','Materials On Site','Jeremy','In Progress','2026-02-23','2026-03-06'),mk('a12','Samples Ready','Jeremy','Not Started','2026-03-09','2026-03-13','Fill carts first'),mk('a13','Base Marketing Materials','Cece','In Progress','2026-03-09','2026-03-13'),mk('a14','Pre-Sell / Promo','Sales Team','Not Started','2026-03-13','2026-04-14'),mk('a15','PO Received','Jeremy','Not Started','2026-04-20','2026-04-22'),mk(uid(),'Pre-Sell Communications','Kyle','Not Started','',''),mk(uid(),'Launch Eblast & Comms','Kyle','Not Started','',''),mk(uid(),'Digital Selling Assets','Kyle','Not Started','',''),mk(uid(),'Printed Marketing Materials','Kyle','Not Started','','')]},
@@ -611,7 +614,10 @@ function SummaryView({prods,onSelect}){
           onMouseEnter:e=>{e.currentTarget.style.boxShadow='0 4px 16px rgba(0,0,0,.10)';e.currentTarget.style.transform='translateY(-1px)';},
           onMouseLeave:e=>{e.currentTarget.style.boxShadow='';e.currentTarget.style.transform='';}},
           overdue>0&&el('div',{style:{position:'absolute',top:10,right:10,background:'var(--err)',color:'#fff',borderRadius:10,padding:'1px 7px',fontSize:10,fontWeight:700}},overdue+' overdue'),
-          el('div',{style:{fontSize:10,color:BRAND_COL[p.brand]||'var(--info)',fontWeight:700,textTransform:'uppercase',letterSpacing:'.07em',marginBottom:4}},p.brand),
+          el('div',{style:{display:'flex',alignItems:'center',gap:6,marginBottom:4}},
+            el('div',{style:{fontSize:10,color:BRAND_COL[p.brand]||'var(--info)',fontWeight:700,textTransform:'uppercase',letterSpacing:'.07em'}},(p.brand||'').toUpperCase()),
+            p.skuCode&&el('span',{style:{fontSize:10,fontWeight:700,color:'var(--text3)'}},p.skuCode)
+          ),
           el('div',{style:{fontSize:13,fontWeight:700,lineHeight:1.35,marginBottom:10,paddingRight:overdue>0?56:0}},p.shortName),
           el('div',{style:{display:'flex',alignItems:'center',gap:10,marginBottom:12}},
             el(Ring,{rd:rdDone,pr:prDone,op:opDone,size:44}),
@@ -779,7 +785,8 @@ function ProductPanels({prods,selId,setSelId,onAdd,onRemove}){
         el('div',{onClick:()=>setSelId(p.id)},
           el('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:3}},
             el('div',{style:{fontSize:10,color:BRAND_COL[p.brand]||'var(--info)',fontWeight:700,textTransform:'uppercase',letterSpacing:'.07em',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},p.brand||'Brand'),
-            overdue>0&&el('span',{style:{fontSize:9,background:'var(--err)',color:'#fff',borderRadius:8,padding:'0 5px',fontWeight:700,flexShrink:0}},overdue+'!')
+            p.skuCode&&el('span',{style:{fontSize:9,fontWeight:800,color:'var(--text3)',marginLeft:4}},p.skuCode),
+            overdue>0&&el('span',{style:{fontSize:9,background:'var(--err)',color:'#fff',borderRadius:8,padding:'0 5px',fontWeight:700,flexShrink:0,marginLeft:'auto'},marginLeft:'auto'},overdue+'!')
           ),
           el('div',{style:{fontSize:12,fontWeight:600,lineHeight:1.3,marginBottom:6,overflow:'hidden',display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical'}},p.shortName),
           el('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:5}},
@@ -1064,40 +1071,83 @@ function ImageField({value,onChange,label}){
 }
 
 /* ── Specs ── */
-function SpecsPanel({specs,onChange}){
-  const [coll,setColl]=useState({});
-  const upd=(k,v)=>onChange({...specs,[k]:v});
-  return el('div',{className:'specs-wrap'},
-    SPEC_SECTIONS.map(sec=>el('div',{key:sec.key,className:'spec-section'},
-      el('div',{className:'spec-sec-hd',onClick:()=>setColl(c=>({...c,[sec.key]:!c[sec.key]}))},
-        el('i',{className:'ti '+sec.icon,style:{fontSize:14}}),sec.label,
-        el('i',{className:'ti '+(coll[sec.key]?'ti-chevron-right':'ti-chevron-down'),style:{fontSize:12,marginLeft:'auto'}})
-      ),
-      !coll[sec.key]&&(sec.key==='notes'
-        ? el('div',null,sec.fields.map(f=>el('div',{key:f,className:'spec-field full'},
-            el('span',{className:'spec-key'},f),
-            el(Editable,{value:specs[f]||'',onChange:v=>upd(f,v),multiline:true,style:{width:'100%'},placeholder:'Add notes…'})
-          )))
-        : el('div',null,
-            el('div',{className:'spec-img-row'},
-              IMAGE_FIELDS.filter(f=>sec.fields.includes(f)).map(f=>
-                el('div',{key:f,style:{flex:1}},
-                  el('div',{style:{fontSize:11,color:'var(--text2)',marginBottom:6,fontWeight:500}},f),
-                  el(ImageField,{value:specs[f]||'',onChange:v=>upd(f,v),label:f})
-                )
-              )
-            ),
-            el('div',{className:'spec-grid'},
-              sec.fields.filter(f=>!IMAGE_FIELDS.includes(f)).map(f=>
-                el('div',{key:f,className:'spec-field'},
-                  el('span',{className:'spec-key'},f),
-                  el(Editable,{value:specs[f]||'',onChange:v=>upd(f,v),placeholder:'—'})
-                )
-              )
-            )
-          )
+function SpecsPanel({specs,onChange,prod,onProdChange}){
+  const [coll,setColl]=useState({images:true,notes:false});
+  const upd=(k,v)=>{
+    const next={...specs,[k]:v};
+    onChange(next);
+    // Sync _skuCode back to prod.skuCode so badge shows immediately
+    if(k==='_skuCode'&&onProdChange) onProdChange({...prod,skuCode:v,specs:next});
+  };
+
+  return el('div',{style:{padding:'10px 16px 16px'}},
+    /* SKU Code — always visible at top of specs */
+    el('div',{style:{
+      display:'flex',alignItems:'center',gap:10,
+      background:'var(--accent-bg)',border:'1px solid var(--accent-border)',
+      borderRadius:'var(--rs)',padding:'8px 12px',marginBottom:10
+    }},
+      el('i',{className:'ti ti-tag',style:{color:'var(--accent)',fontSize:14,flexShrink:0}}),
+      el('span',{style:{fontSize:11,fontWeight:700,color:'var(--text2)',whiteSpace:'nowrap'}},'Mera SKU Code'),
+      el('div',{style:{flex:1}},
+        el(Editable,{
+          value:specs._skuCode||'',
+          onChange:v=>upd('_skuCode',v.toUpperCase()),
+          placeholder:'e.g. VA083',
+          style:{fontSize:14,fontWeight:900,color:'var(--accent)',letterSpacing:'.07em'}
+        })
       )
-    ))
+    ),
+    SPEC_SECTIONS.map(sec=>{
+      const isOpen=!coll[sec.key];
+      const isNotes=sec.key==='notes';
+      const isImages=sec.key==='images';
+      return el('div',{key:sec.key,style:{marginBottom:8,border:'0.5px solid var(--bdr)',borderRadius:'var(--rs)',overflow:'hidden'}},
+        /* Section header */
+        el('div',{
+          onClick:()=>setColl(c=>({...c,[sec.key]:!c[sec.key]})),
+          style:{
+            display:'flex',alignItems:'center',gap:7,padding:'7px 12px',
+            background:isOpen?'var(--bg2)':'var(--bg)',cursor:'pointer',
+            borderBottom:isOpen?'0.5px solid var(--bdr)':'none',userSelect:'none'
+          }
+        },
+          el('i',{className:'ti '+sec.icon,style:{fontSize:12,color:'var(--accent)'}}),
+          el('span',{style:{fontSize:11,fontWeight:700,color:'var(--text2)',flex:1}}),sec.label,
+          el('i',{className:'ti '+(isOpen?'ti-chevron-down':'ti-chevron-right'),style:{fontSize:11,color:'var(--text3)'}})
+        ),
+        /* Section body */
+        isOpen&&el('div',{style:{padding:'8px 12px'}},
+          isImages
+            ? el('div',{style:{display:'flex',gap:12}},
+                sec.fields.map(f=>el('div',{key:f,style:{flex:1}},
+                  el('div',{style:{fontSize:10,color:'var(--text3)',marginBottom:4}},f),
+                  el(ImageField,{value:specs[f]||'',onChange:v=>upd(f,v),label:f})
+                ))
+              )
+            : isNotes
+              ? sec.fields.map(f=>el('div',{key:f,style:{marginBottom:4}},
+                  el(Editable,{value:specs[f]||'',onChange:v=>upd(f,v),multiline:true,
+                    style:{width:'100%',fontSize:12},placeholder:'Add notes…'})
+                ))
+              : el('div',{style:{
+                  display:'grid',
+                  gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))',
+                  gap:'4px 12px'
+                }},
+                  sec.fields.map(f=>el('div',{key:f,style:{
+                    display:'flex',alignItems:'baseline',gap:6,
+                    padding:'4px 0',borderBottom:'0.5px solid var(--bdr)'
+                  }},
+                    el('span',{style:{fontSize:10,color:'var(--text3)',whiteSpace:'nowrap',minWidth:0,flex:'0 0 auto',maxWidth:120,overflow:'hidden',textOverflow:'ellipsis'}},f),
+                    el('span',{style:{fontSize:10,color:'var(--bdr2)'}},'·'),
+                    el(Editable,{value:specs[f]||'',onChange:v=>upd(f,v),
+                      placeholder:'—',style:{fontSize:11,fontWeight:600,color:'var(--text)',flex:1,minWidth:0}})
+                  ))
+                )
+        )
+      );
+    })
   );
 }
 
@@ -1126,8 +1176,13 @@ function ProductDetail({prod,onChange,onKbNav}){
       ),
       el('div',{style:{display:'flex',alignItems:'flex-start',gap:12,flexWrap:'wrap'}},
         el('div',{style:{flex:1,minWidth:0}},
-          el('div',{style:{fontSize:11,color:BRAND_COL[prod.brand]||'var(--info)',fontWeight:700,textTransform:'uppercase',letterSpacing:'.08em',marginBottom:5}},
-            el(Editable,{value:prod.brand,onChange:v=>onChange({...prod,brand:v}),style:{color:'inherit'}})
+          el('div',{style:{display:'flex',alignItems:'center',gap:8,marginBottom:5}},
+            el('div',{style:{fontSize:11,color:BRAND_COL[prod.brand]||'var(--info)',fontWeight:700,textTransform:'uppercase',letterSpacing:'.08em'}},
+              el(Editable,{value:prod.brand,onChange:v=>onChange({...prod,brand:v}),style:{color:'inherit'}})
+            ),
+            prod.skuCode&&el('span',{style:{
+              fontSize:11,fontWeight:700,color:'var(--text3)',marginLeft:2
+            }},prod.skuCode)
           ),
           el(Editable,{value:prod.name,onChange:v=>onChange({...prod,name:v,shortName:v.length>30?v.slice(0,30)+'…':v}),style:{fontSize:16,fontWeight:700,display:'block',marginBottom:8,lineHeight:1.3}}),
           el(TagEditor,{tags:prod.tags||[],onChange:tags=>onChange({...prod,tags})})
@@ -1147,7 +1202,7 @@ function ProductDetail({prod,onChange,onKbNav}){
     ),
     sec==='tasks'&&el(TasksPanel,{tasks:prod.tasks,onChange:upT,onAdd:addT,onDel:delT}),
     sec==='gantt'&&el(GanttChart,{tasks:prod.tasks,launchDate:prod.launchDate,onChange:ut=>{onChange({...prod,tasks:prod.tasks.map(t=>t.id===ut.id?ut:t)});}}),
-    sec==='specs'&&el(SpecsPanel,{specs:prod.specs,onChange:sp=>onChange({...prod,specs:sp})})
+    sec==='specs'&&el(SpecsPanel,{specs:{...prod.specs,_skuCode:prod.skuCode||prod.specs?._skuCode||''},onChange:sp=>onChange({...prod,specs:sp}),prod,onProdChange:onChange})
   );
 }
 
@@ -1160,6 +1215,7 @@ function ProductDetail({prod,onChange,onKbNav}){
 
 const SALES_DATA_DEFAULT = {
   "Berry Blaze Liquid Diamonds All-in-One":{
+    skuCode:"VA077",
     pc:"pc1",brand:"LITTI.",units:1428,orders:112,storeCount:66,launchDate:"2026-04-14",
     storeMetrics:{
       weekMetrics:{"2026-W16":{active:28,new:28,repeat:0,prevActive:0},"2026-W17":{active:22,new:16,repeat:6,prevActive:28},"2026-W18":{active:5,new:2,repeat:2,prevActive:22},"2026-W19":{active:13,new:9,repeat:2,prevActive:5},"2026-W20":{active:26,new:9,repeat:5,prevActive:13},"2026-W21":{active:5,new:2,repeat:0,prevActive:26}},
@@ -1174,6 +1230,7 @@ const SALES_DATA_DEFAULT = {
     daily:{"2026-04-14":36,"2026-04-15":72,"2026-04-16":84,"2026-04-17":180,"2026-04-20":324,"2026-04-22":12,"2026-04-24":24,"2026-04-27":24,"2026-04-28":24,"2026-05-01":36,"2026-05-04":96,"2026-05-06":24,"2026-05-08":48,"2026-05-11":132,"2026-05-12":36,"2026-05-13":48,"2026-05-14":72,"2026-05-15":84,"2026-05-19":24,"2026-05-20":12,"2026-05-21":12,"2026-05-22":24}
   },
   "Cherry Chonk Liquid Diamonds All-in-One":{
+    skuCode:"VA078",
     pc:"pc1",brand:"LITTI.",units:1200,orders:96,storeCount:57,launchDate:"2026-04-14",
     storeMetrics:{
       weekMetrics:{"2026-W16":{active:25,new:25,repeat:0,prevActive:0},"2026-W17":{active:18,new:16,repeat:2,prevActive:25},"2026-W18":{active:7,new:4,repeat:2,prevActive:18},"2026-W19":{active:13,new:6,repeat:2,prevActive:7},"2026-W20":{active:19,new:4,repeat:3,prevActive:13},"2026-W21":{active:5,new:2,repeat:2,prevActive:19}},
@@ -1188,6 +1245,7 @@ const SALES_DATA_DEFAULT = {
     daily:{"2026-04-14":24,"2026-04-15":60,"2026-04-16":96,"2026-04-17":168,"2026-04-20":228,"2026-04-22":12,"2026-04-24":36,"2026-04-27":12,"2026-04-28":24,"2026-04-29":12,"2026-05-01":48,"2026-05-04":96,"2026-05-06":12,"2026-05-07":24,"2026-05-08":48,"2026-05-11":84,"2026-05-12":12,"2026-05-13":60,"2026-05-14":48,"2026-05-15":36,"2026-05-19":12,"2026-05-20":12,"2026-05-21":24,"2026-05-22":12}
   },
   "Northern Lights 60+ Diamonds & Shatter Infused Pre-Roll":{
+    skuCode:"PR084",
     pc:"pc1",brand:"Shatterizer",units:1116,orders:75,storeCount:52,launchDate:"2026-04-21",
     storeMetrics:{
       weekMetrics:{"2026-W17":{active:6,new:6,repeat:0,prevActive:0},"2026-W18":{active:23,new:22,repeat:1,prevActive:6},"2026-W19":{active:19,new:13,repeat:5,prevActive:23},"2026-W20":{active:10,new:9,repeat:1,prevActive:19},"2026-W21":{active:7,new:2,repeat:0,prevActive:10}},
@@ -1202,6 +1260,7 @@ const SALES_DATA_DEFAULT = {
     daily:{"2026-04-21":36,"2026-04-22":12,"2026-04-23":12,"2026-04-24":36,"2026-04-27":204,"2026-04-28":48,"2026-04-29":12,"2026-04-30":72,"2026-05-01":60,"2026-05-04":240,"2026-05-05":12,"2026-05-06":72,"2026-05-07":36,"2026-05-08":36,"2026-05-11":24,"2026-05-12":24,"2026-05-13":12,"2026-05-14":48,"2026-05-15":24,"2026-05-19":12,"2026-05-21":48,"2026-05-22":36}
   },
   "10th Planet Pre-Rolls":{
+    skuCode:"PR085",
     pc:"other",brand:"Buddy Blooms",units:34956,orders:2689,storeCount:292,launchDate:"2025-11-25",
     storeMetrics:{weekMetrics:{"2026-W14":{active:72,new:4,repeat:29,prevActive:81},"2026-W15":{active:87,new:6,repeat:28,prevActive:72},"2026-W16":{active:80,new:5,repeat:36,prevActive:87},"2026-W17":{active:71,new:1,repeat:32,prevActive:80},"2026-W18":{active:73,new:2,repeat:30,prevActive:71},"2026-W19":{active:91,new:5,repeat:37,prevActive:73},"2026-W20":{active:91,new:2,repeat:42,prevActive:91},"2026-W21":{active:64,new:3,repeat:24,prevActive:91}},totalStores:292,opportunity:1403},
     ocs:{velocity:0.962264,skuClass:"D",lwUnits:1632,twoWkUnits:1728,threeWkUnits:1260,avgLast3:1540,storesL4W:265,penPct4W:15.63,penPct8W:22.06,penPct12W:25.55,onHand:2940,onOrder:4704,weeksOfSupply:2.12,firstReceipt:"2026-03-15",lifeOfSku:1531,fillRate:1.0},
@@ -1213,6 +1272,7 @@ const SALES_DATA_DEFAULT = {
     daily:{"2025-11-24":324,"2025-11-25":228,"2025-11-26":180,"2025-11-27":240,"2025-11-28":288,"2025-12-01":300,"2025-12-02":300,"2025-12-03":264,"2025-12-04":228,"2025-12-05":288,"2025-12-08":324,"2025-12-09":216,"2025-12-10":180,"2025-12-11":384,"2025-12-12":228,"2025-12-15":300,"2025-12-16":192,"2025-12-17":300,"2025-12-18":360,"2025-12-19":204,"2025-12-22":252,"2025-12-23":504,"2025-12-24":708,"2025-12-29":276,"2025-12-30":444,"2025-12-31":444,"2026-01-02":324,"2026-01-05":432,"2026-01-06":204,"2026-01-07":228,"2026-01-08":288,"2026-01-09":348,"2026-01-12":252,"2026-01-13":204,"2026-01-14":276,"2026-01-15":384,"2026-01-16":276,"2026-01-19":312,"2026-01-20":216,"2026-01-21":264,"2026-01-22":240,"2026-01-23":264,"2026-01-26":252,"2026-01-27":300,"2026-01-28":216,"2026-01-29":312,"2026-01-30":300,"2026-02-02":360,"2026-02-03":156,"2026-02-04":276,"2026-02-05":252,"2026-02-06":264,"2026-02-09":324,"2026-02-10":144,"2026-02-11":360,"2026-02-12":180,"2026-02-13":276,"2026-02-17":264,"2026-02-18":132,"2026-02-19":252,"2026-02-20":204,"2026-02-23":264,"2026-02-24":264,"2026-02-25":180,"2026-02-26":360,"2026-02-27":192,"2026-03-02":300,"2026-03-03":204,"2026-03-04":216,"2026-03-05":216,"2026-03-06":276,"2026-03-09":252,"2026-03-10":192,"2026-03-11":108,"2026-03-12":300,"2026-03-13":336,"2026-03-16":252,"2026-03-17":216,"2026-03-18":216,"2026-03-19":192,"2026-03-20":288,"2026-03-23":408,"2026-03-24":228,"2026-03-25":216,"2026-03-26":360,"2026-03-27":264,"2026-03-30":312,"2026-03-31":252,"2026-04-01":288,"2026-04-02":372,"2026-04-06":408,"2026-04-07":204,"2026-04-08":276,"2026-04-09":396,"2026-04-10":288,"2026-04-13":348,"2026-04-14":216,"2026-04-15":144,"2026-04-16":408,"2026-04-17":192,"2026-04-20":384,"2026-04-21":156,"2026-04-22":192,"2026-04-23":360,"2026-04-24":264,"2026-04-27":228,"2026-04-28":264,"2026-04-29":192,"2026-04-30":288,"2026-05-01":288,"2026-05-04":396,"2026-05-05":216,"2026-05-06":288,"2026-05-07":396,"2026-05-08":432,"2026-05-11":348,"2026-05-12":288,"2026-05-13":396,"2026-05-14":300,"2026-05-15":300,"2026-05-19":336,"2026-05-20":228,"2026-05-21":432,"2026-05-22":288}
   },
   "Grape Diamonds Pre-Roll":{
+    skuCode:"PR083",
     pc:"other",brand:"Countryside Cannabis Harvest Reserve",
     units:46968,orders:1700,storeCount:205,launchDate:"2025-11-25",
     storeMetrics:{
@@ -3037,27 +3097,92 @@ function BulkUploadModal({salesData,onUpdate,onClose}){
 
 
 /* ── Add SKU Modal ── */
-function AddSKUModal({activePC,onAdd,onClose}){
-  const [name,setName]=React.useState('');
-  const [brand,setBrand]=React.useState('');
-  const [pc,setPc]=React.useState(activePC);
-  const [launchDate,setLaunchDate]=React.useState('');
-  const [units,setUnits]=React.useState('');
-  const [storeCount,setStoreCount]=React.useState('');
-  const [err,setErr]=React.useState('');
+// Static SKU code lookup for known products (fallback when saved data lacks skuCode)
+const KNOWN_SKU_CODES={
+  'Berry Blaze Liquid Diamonds All-in-One':'VA077',
+  'Cherry Chonk Liquid Diamonds All-in-One':'VA078',
+  'Northern Lights 60+ Diamonds & Shatter Infused Pre-Roll':'PR084',
+  'Northern Lights 60+ Diamonds & Shatter Infused Blunt':'PR086',
+  'Granddaddy Purple 60+ Diamonds & Shatter Infused Pre-Roll':'PR087',
+  'Black Cherry Punch Live Rosin':'CN053',
+  "Purple Haze & Strawberry OG Mix'd Pre-Roll":'PR085',
+  '10th Planet Pre-Rolls':'PR085',
+  'Watermelon Whammy Liquid Diamonds 510 Vape Cart':'VA079',
+  'Golden Pineapple Live Resin & Liquid Diamonds All-in-One':'VA080',
+  'Black Cherry Punch Bubble Hash Infused Pre-Roll':'PR088',
+  'Cranberry Ginger Fizz 70+ Diamond Coated & Infused Pre-Roll':'PR089',
+  'Ginger Fizz Live Resin & Liquid Diamonds All-in-One':'VA081',
+  'Granddaddy Purple 60+ Diamonds & Shatter Infused Blunt':'PR090',
+  "Pushn' Peach Liquid Diamonds All-in-One":'VA082',
+  'Shatter Diamonds & Kief Triple Infused Pre-Roll Taster Pack':'PR091',
+  'Grape Diamonds Pre-Roll':'PR083',
+};
+const getSkuCode=(name,prod)=>{
+  if(prod?.skuCode) return prod.skuCode;
+  if(KNOWN_SKU_CODES[name]) return KNOWN_SKU_CODES[name];
+  // Fuzzy: find a known key where significant words overlap
+  const nl=name.toLowerCase();
+  const match=Object.keys(KNOWN_SKU_CODES).find(k=>{
+    const kl=k.toLowerCase();
+    const words=kl.split(' ').filter(w=>w.length>3);
+    return words.length>0&&words.filter(w=>nl.includes(w)).length>=Math.ceil(words.length*0.6);
+  });
+  return match?KNOWN_SKU_CODES[match]:'';
+};
 
-  const PC_OPTS=[
+// SKU prefix map per category
+const SKU_PREFIXES={
+  'Pre-Roll':'PR','Infused Pre-Roll':'PR','Vape':'VA','Concentrate':'CN','Other':'OT'
+};
+const fmtSkuCode=(prefix,n)=>prefix+String(n).padStart(3,'0');
+const nextSkuCode=(cat,allProds)=>{
+  const prefix=SKU_PREFIXES[cat]||'OT';
+  if(prefix==='OT') return '';
+  // Scan all existing products (tracker + post-launch + known codes) for highest number
+  const existing=[
+    ...Object.values(allProds||{}),
+    ...Object.values(KNOWN_SKU_CODES)
+  ].map(v=>{
+    const code=typeof v==='string'?v:(v?.skuCode||v?.specs?._skuCode||'');
+    const match=code.match(new RegExp('^'+prefix+'(\\d+)$','i'));
+    return match?parseInt(match[1],10):0;
+  });
+  const max=existing.length?Math.max(...existing):0;
+  return fmtSkuCode(prefix,max+1);
+};
+
+function AddSKUModal({activePC,onAdd,onClose,allProds}){
+  const PC_OPTS_LOCAL=[
     {id:'pc1',label:'PC#1 2026'},
     {id:'pc2',label:'PC#2 2026'},
     {id:'pc3',label:'PC#3 2026'},
     {id:'other',label:'Other SKUs'},
   ];
+  const CAT_OPTS=['Pre-Roll','Infused Pre-Roll','Vape','Concentrate','Other'];
+
+  const [name,setName]=React.useState('');
+  const [brand,setBrand]=React.useState('');
+  const [pc,setPc]=React.useState(activePC);
+  const [cat,setCat]=React.useState('Vape');
+  const [launchDate,setLaunchDate]=React.useState('');
+  const [units,setUnits]=React.useState('');
+  const [storeCount,setStoreCount]=React.useState('');
+  const [manualCode,setManualCode]=React.useState('');
+  const [err,setErr]=React.useState('');
+
+  // Auto-generate preview code when category changes
+  const autoCode=nextSkuCode(cat,allProds);
+  const displayCode=manualCode||autoCode;
 
   const handleAdd=()=>{
     if(!name.trim()){setErr('Product name is required.');return;}
+    const finalCode=displayCode;
+    // Counter auto-derived from existing products — no manual increment needed
     const newProd={
       pc,
       brand:brand.trim()||'—',
+      skuCode:finalCode,
+      category:cat,
       units:parseInt(units)||0,
       orders:0,
       storeCount:parseInt(storeCount)||0,
@@ -3070,38 +3195,36 @@ function AddSKUModal({activePC,onAdd,onClose}){
     onClose();
   };
 
-  const field=(label,input)=>el('div',{style:{marginBottom:14}},
-    el('label',{style:{fontSize:11,fontWeight:600,color:'var(--text2)',display:'block',marginBottom:5}},label),
-    input
-  );
-
   return el('div',{style:{
-    position:'fixed',inset:0,background:'rgba(0,0,0,0.35)',zIndex:600,
+    position:'fixed',inset:0,background:'rgba(20,15,10,0.55)',backdropFilter:'blur(4px)',zIndex:600,
     display:'flex',alignItems:'center',justifyContent:'center',padding:20
   },onClick:e=>e.target===e.currentTarget&&onClose()},
     el('div',{style:{
       background:'var(--bg)',border:'1px solid var(--bdr2)',borderRadius:'var(--r)',
-      width:'100%',maxWidth:480,boxShadow:'0 8px 40px rgba(0,0,0,0.4)'
+      width:'100%',maxWidth:500,boxShadow:'0 8px 40px rgba(0,0,0,0.4)'
     }},
-      /* Header */
       el('div',{style:{padding:'16px 20px',borderBottom:'0.5px solid var(--bdr)',display:'flex',alignItems:'center',justifyContent:'space-between'}},
         el('div',{style:{fontSize:15,fontWeight:800,display:'flex',alignItems:'center',gap:8}},
-          el('i',{className:'ti ti-package',style:{color:'var(--info)',fontSize:18}}), 'Add New SKU'
+          el('i',{className:'ti ti-package',style:{color:'var(--info)',fontSize:18}}),' Add New SKU'
         ),
         el('button',{onClick:onClose,style:{background:'none',border:'none',cursor:'pointer',color:'var(--text3)',fontSize:18}},
           el('i',{className:'ti ti-x'})
         )
       ),
-
       el('div',{style:{padding:'20px'}},
         el('div',{style:{background:'var(--info-bg)',border:'0.5px solid var(--info)',borderRadius:8,padding:'10px 14px',marginBottom:18,fontSize:12,color:'var(--info)'}},
           el('i',{className:'ti ti-info-circle',style:{marginRight:6}}),
-          'Add basic info now — upload sales data from Excel later using the data reload flow.'
+          'SKU code auto-generates from category. Upload sales data after adding.'
         ),
 
-        field('Product Name *',
-          el('input',{className:'ei',placeholder:'e.g. Watermelon Whammy 510 Vape',value:name,onChange:e=>setName(e.target.value),onKeyDown:e=>e.key==='Enter'&&handleAdd()})
+        /* Product name */
+        el('div',{style:{marginBottom:14}},
+          el('label',{style:{fontSize:11,fontWeight:600,color:'var(--text2)',display:'block',marginBottom:5}},'Product Name *'),
+          el('input',{className:'ei',placeholder:'e.g. Watermelon Whammy 510 Vape',value:name,
+            onChange:e=>setName(e.target.value),onKeyDown:e=>e.key==='Enter'&&handleAdd()})
         ),
+
+        /* Brand + PC */
         el('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:14}},
           el('div',null,
             el('label',{style:{fontSize:11,fontWeight:600,color:'var(--text2)',display:'block',marginBottom:5}},'Brand'),
@@ -3110,10 +3233,39 @@ function AddSKUModal({activePC,onAdd,onClose}){
           el('div',null,
             el('label',{style:{fontSize:11,fontWeight:600,color:'var(--text2)',display:'block',marginBottom:5}},'Product Call'),
             el('select',{className:'ei',value:pc,onChange:e=>setPc(e.target.value)},
-              PC_OPTS.map(o=>el('option',{key:o.id,value:o.id},o.label))
+              PC_OPTS_LOCAL.map(o=>el('option',{key:o.id,value:o.id},o.label))
             )
           )
         ),
+
+        /* Category + SKU code */
+        el('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:14}},
+          el('div',null,
+            el('label',{style:{fontSize:11,fontWeight:600,color:'var(--text2)',display:'block',marginBottom:5}},'Category'),
+            el('select',{className:'ei',value:cat,onChange:e=>{setCat(e.target.value);setManualCode('');}},
+              CAT_OPTS.map(o=>el('option',{key:o,value:o},o))
+            )
+          ),
+          el('div',null,
+            el('label',{style:{fontSize:11,fontWeight:600,color:'var(--text2)',display:'block',marginBottom:5}},
+              'Mera SKU Code',
+              displayCode&&!manualCode&&el('span',{style:{fontSize:10,color:'var(--ok)',marginLeft:6,fontWeight:400}},'auto')
+            ),
+            el('div',{style:{display:'flex',gap:6,alignItems:'center'}},
+              el('div',{style:{
+                background:manualCode?'var(--bg)':'var(--accent-bg)',
+                border:'1px solid '+(manualCode?'var(--bdr2)':'var(--accent-border)'),
+                borderRadius:'var(--rs)',padding:'7px 12px',fontSize:14,fontWeight:800,
+                color:manualCode?'var(--text)':'var(--accent)',letterSpacing:'.05em',minWidth:80,textAlign:'center'
+              }},displayCode||'—'),
+              el('input',{className:'ei',placeholder:'Override',value:manualCode,
+                onChange:e=>setManualCode(e.target.value.toUpperCase()),
+                style:{fontSize:11,width:90}})
+            )
+          )
+        ),
+
+        /* Launch date + units + stores */
         el('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:12,marginBottom:14}},
           el('div',null,
             el('label',{style:{fontSize:11,fontWeight:600,color:'var(--text2)',display:'block',marginBottom:5}},'Launch Date'),
@@ -3128,26 +3280,25 @@ function AddSKUModal({activePC,onAdd,onClose}){
             el('input',{className:'ei',type:'number',placeholder:'0',value:storeCount,onChange:e=>setStoreCount(e.target.value)})
           )
         ),
+
         err&&el('div',{style:{fontSize:12,color:'var(--err)',marginBottom:10,display:'flex',alignItems:'center',gap:5}},
           el('i',{className:'ti ti-alert-circle'}),err
         ),
         el('div',{style:{display:'flex',gap:10}},
           el('button',{onClick:handleAdd,style:{
-            flex:1,background:'var(--info)',border:'none',borderRadius:8,
+            flex:1,background:'var(--grad-accent)',border:'none',borderRadius:'var(--pill)',
             padding:'11px',fontSize:13,fontFamily:'inherit',color:'#fff',
-            fontWeight:700,cursor:'pointer'
+            fontWeight:700,cursor:'pointer',boxShadow:'var(--shadow-accent)'
           }},el('i',{className:'ti ti-plus'}),' Add SKU'),
           el('button',{onClick:onClose,style:{
-            background:'var(--bg2)',border:'0.5px solid var(--bdr2)',borderRadius:8,
-            padding:'11px 20px',fontSize:13,fontFamily:'inherit',color:'var(--text2)',
-            cursor:'pointer'
+            background:'var(--bg2)',border:'0.5px solid var(--bdr2)',borderRadius:'var(--pill)',
+            padding:'11px 20px',fontSize:13,fontFamily:'inherit',color:'var(--text2)',cursor:'pointer'
           }},'Cancel')
         )
       )
     )
   );
 }
-
 
 
 /* ══════════════════════════════════════════
@@ -3944,7 +4095,11 @@ function PostLaunchView({data,setData,addChangelogEntry}){
     return Object.keys(saved).length>0?saved:SALES_DATA_DEFAULT;
   });
   const [hidden,setHidden]=React.useState(()=>data.postLaunchHidden||[]);
-  const [sel,setSel]=React.useState(Object.keys(SALES_DATA_DEFAULT)[0]||'');
+  const [sel,setSel]=React.useState(()=>{
+    const saved=data.postLaunch||{};
+    const src=Object.keys(saved).length>0?saved:SALES_DATA_DEFAULT;
+    return Object.keys(src)[0]||'';
+  });
   const [activePC,setActivePC]=React.useState('pc1');
   const [showAddSKU,setShowAddSKU]=React.useState(false);
   const [showUpdateSKU,setShowUpdateSKU]=React.useState(false);
@@ -4093,7 +4248,15 @@ function PostLaunchView({data,setData,addChangelogEntry}){
               boxShadow:isOn?'0 0 0 1px var(--info)':'none',transition:'all .12s'
             }},
               el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:4}},
-                el('div',{style:{fontSize:10,color:isOn?'var(--info)':'var(--text3)',fontWeight:700,textTransform:'uppercase',letterSpacing:'.07em'}},d.brand),
+                el('div',{style:{display:'flex',alignItems:'center',gap:5}},
+                  el('div',{style:{fontSize:10,color:isOn?'var(--info)':'var(--text3)',fontWeight:700,textTransform:'uppercase',letterSpacing:'.07em'}},d.brand),
+                  getSkuCode(name,d)&&el('span',{style:{
+                    fontSize:9,fontWeight:800,
+                    background:isOn?'var(--info)':'var(--bg3)',
+                    color:isOn?'#fff':'var(--text3)',
+                    borderRadius:'var(--pill)',padding:'1px 6px',letterSpacing:'.04em'
+                  }},getSkuCode(name,d))
+                ),
                 (()=>{
                   const sw=Object.entries(d.weekly||{}).sort(([a],[b])=>a.localeCompare(b));
                   const lw=sw.length>=1?sw[sw.length-1][1]:0;
@@ -4196,11 +4359,12 @@ function PostLaunchView({data,setData,addChangelogEntry}){
     }),
     showAddSKU&&el(AddSKUModal,{
       activePC,
+      allProds:{...data.postLaunch,...(data.pc1||[]).reduce((a,p)=>({...a,[p.id]:p}),{}),...(data.pc2||[]).reduce((a,p)=>({...a,[p.id]:p}),{}),...(data.pc3||[]).reduce((a,p)=>({...a,[p.id]:p}),{})},
       onAdd:(name,prod)=>{
         const updated={...salesData,[name]:prod};
         setSalesData(updated);
         setData(d=>({...d,postLaunch:updated}));
-        if(addChangelogEntry) addChangelogEntry('SKU added',name);
+        if(addChangelogEntry) addChangelogEntry('SKU added: '+(prod.skuCode||name),name);
         setSel(name);
       },
       onClose:()=>setShowAddSKU(false)
@@ -4218,7 +4382,31 @@ function PostLaunchView({data,setData,addChangelogEntry}){
           display:'flex',alignItems:'center',gap:6
         }},el('i',{className:'ti ti-history',style:{fontSize:13}}),' Changelog'),
         el('div',{style:{
-          display:'flex',alignItems:'center',gap:6,marginLeft:'auto',
+          display:'flex',alignItems:'center',gap:6,
+          background:'var(--grad-accent)',borderRadius:'var(--pill)',
+          padding:'5px 6px 5px 14px',boxShadow:'var(--shadow-accent)'
+        }},
+          el('i',{className:'ti ti-tag',style:{fontSize:12,color:'rgba(255,255,255,.8)'}}),
+          el('span',{style:{fontSize:11,color:'rgba(255,255,255,.7)',fontWeight:600}},'SKU'),
+          el('input',{
+            type:'text',
+            value:getSkuCode(sel,current),
+            placeholder:'e.g. VA083',
+            onChange:e=>{
+              const updated={...current,skuCode:e.target.value.toUpperCase()};
+              const next={...salesData,[sel]:updated};
+              setSalesData(next);
+              setData(d=>({...d,postLaunch:next}));
+            },
+            style:{
+              width:72,background:'rgba(255,255,255,.2)',border:'none',outline:'none',
+              borderRadius:'var(--rs)',padding:'3px 8px',fontSize:13,fontWeight:900,
+              color:'#fff',letterSpacing:'.06em',fontFamily:'inherit',textAlign:'center'
+            }
+          })
+        ),
+        el('div',{style:{
+          display:'flex',alignItems:'center',gap:6,marginLeft:getSkuCode(sel,current)?0:'auto',
           background:'var(--bg)',border:'0.5px solid var(--bdr2)',borderRadius:'var(--pill)',
           padding:'6px 12px'
         }},
