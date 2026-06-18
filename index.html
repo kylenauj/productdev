@@ -780,29 +780,24 @@ function generateProductPDF(prod, pcLabel) {
   const now = new Date().toLocaleDateString('en-CA', {year:'numeric',month:'long',day:'numeric'});
   const sp = prod.specs || {};
   const tag = prod.tags?.[0] || 'In Progress';
-
   const tagMap = {
     'Accepted':'#16a34a','Rejected':'#dc2626','In Progress':'#d97706',
     'Launched':'#16a34a','At Risk':'#dc2626','On Track':'#16a34a',
     'Delayed':'#dc2626','Pending':'#d97706','High Priority':'#dc2626','Approved':'#16a34a'
   };
-  const tagColor = tagMap[tag] || '#d97706';
 
-  // Helper: render a spec row, skip if blank
   const row = (label, value) => {
     if (!value || value === '—' || value === '') return '';
     return `<tr>
-      <td style="padding:7px 14px;font-size:11px;color:#6b7280;width:42%;border-bottom:0.5px solid #f3f4f6;font-weight:500">${label}</td>
+      <td style="padding:7px 14px;font-size:11px;color:#6b7280;width:42%;border-bottom:0.5px solid #f3f4f6;font-weight:500;vertical-align:top">${label}</td>
       <td style="padding:7px 14px;font-size:11px;color:#111827;font-weight:600;border-bottom:0.5px solid #f3f4f6">${value}</td>
     </tr>`;
   };
 
-  // Section card HTML
   const card = (title, accentColor, rows) => {
     const content = rows.join('');
     if (!content) return '';
-    return `
-    <div style="border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.05);break-inside:avoid">
+    return `<div style="border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.05);break-inside:avoid;page-break-inside:avoid;margin-bottom:14px">
       <div style="padding:9px 14px;background:#f9fafb;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;gap:8px">
         <div style="width:10px;height:10px;border-radius:50%;background:${accentColor};flex-shrink:0"></div>
         <span style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.09em;color:#6b7280">${title}</span>
@@ -811,147 +806,126 @@ function generateProductPDF(prod, pcLabel) {
     </div>`;
   };
 
+  // Build left + right columns as separate HTML strings
+  const leftCol =
+    card('Product Overview', '#e8622a', [
+      row('Brand Name Internal',   sp['Brand Name Internal'] || prod.brand),
+      row('Product Name Internal', sp['Product Name Internal'] || prod.name),
+      row('Manufactured By',       sp['Manufactured by: LP Name']),
+      row('Launch Window',         sp['Launch Window']),
+      row('Planned Launch Time',   sp['Planned Launch Time']),
+      row('Stocking Type',         sp['Stocking Type']),
+      row('Initial Case Offering', sp['Initial Case Offering (FT)']),
+      row('Samples Required',      sp['Samples Required']),
+      row('Stocking Status',       sp['Stocking Status']),
+    ]) +
+    card('Product Specifications', '#3dba8a', [
+      row('Category',              sp['Category']),
+      row('Product Size',          sp['Product Size']),
+      row('Formulated Range',      sp['Formulated Range']),
+      row('Label THC Range',       sp['Label THC Range']),
+      row('Target CBD Range',      sp['Target CBD Range']),
+      row('Other Cannabinoids',    sp['Other Cannabinoids, Range']),
+      row('Flavouring Type',       sp['Flavouring Type']),
+      row('Flavour Description',   sp['Flavour Description']),
+      row('Biomass Input',         sp['Biomass Input']),
+      row('Formulations',          sp['Formulations']),
+      row('Ingredients',           sp['Ingredients']),
+    ]);
+
+  const rightCol =
+    card('Financials', '#d4944a', [
+      row('Landed Cost',           sp['Landed Cost']),
+      row('Wholesale Cost',        sp['Wholesale Cost']),
+      row('MSRP',                  sp['MSRP']),
+      row('Launch PO',             sp['Launch PO']),
+    ]) +
+    card('Packaging & GTINs', '#6b7280', [
+      row('Product Primary/Hardware', sp['Product Primary/Hardware']),
+      row('Product Package/Outer', sp['Product Package/Outer']),
+      row('Packaging Labels',      sp['Packaging Labels']),
+      row('Accessory',             sp['Accessory']),
+      row('Retail Pack GTIN',      sp['Retail Pack GTIN']),
+      row('Master Case GTIN',      sp['Master Case GTIN']),
+      row('Master Case Dimensions',sp['Master Case Dimensions']),
+      row('Units per Case',        sp['Units per Master Shipper/Case']),
+      row('Labels Sourcing',       sp['Who is responsible for Labels Sourcing?']),
+      row('New Dies Required',     sp['Do we need new dies for labels?']),
+      row('Retail Label Vendor',   sp['Vendor providing retail labels?']),
+      row('Case Label Vendor',     sp['Vendor providing case labels?']),
+    ]) +
+    card('Team', '#9370e8', [
+      row('Commercial Lead',       sp['Commercial Lead']),
+      row('Formulation Lead',      sp['Formulation Lead']),
+      row('Ops Lead',              sp['Ops Lead']),
+    ]);
+
   const HTML = `<!DOCTYPE html>
 <html>
 <head>
 <meta charset="UTF-8">
-<title>${prod.name} — Product Specification Sheet</title>
+<title>${prod.name} — Spec Sheet</title>
 <style>
-  @page { size: 8.5in 11in; margin: 0; }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
-    width: 8.5in; min-height: 11in; background: #fff;
-    -webkit-print-color-adjust: exact; print-color-adjust: exact;
-    color: #111827;
+  @page {
+    size: 8.5in 11in;
+    margin: 0.55in 0.5in 0.65in 0.5in;
+    @bottom-left   { content: "Mera Cannabis Corp. — Confidential"; font-size:8px; color:#9ca3af; font-family:Arial,sans-serif; }
+    @bottom-center { content: "${prod.name}${prod.skuCode ? ' · '+prod.skuCode : ''}"; font-size:8px; color:#9ca3af; font-family:Arial,sans-serif; }
+    @bottom-right  { content: "Generated ${now}"; font-size:8px; color:#9ca3af; font-family:Arial,sans-serif; }
   }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body {
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;
+    background:#fff; color:#111827;
+    -webkit-print-color-adjust:exact; print-color-adjust:exact;
+  }
+  /* header stays on every page if content is long */
+  .page-header { break-inside:avoid; page-break-inside:avoid; }
+  .cols { display:grid; grid-template-columns:1fr 1fr; gap:14px; align-items:start; }
+  /* prevent any single card from splitting across pages */
+  .card { break-inside:avoid; page-break-inside:avoid; }
   @media print { .no-print { display:none!important; } }
+  @media screen {
+    body { max-width:8.5in; margin:0 auto; padding:0.5in; }
+  }
 </style>
 </head>
 <body>
 
-<!-- PRINT BUTTON -->
+<!-- SAVE BUTTON (screen only) -->
 <div class="no-print" style="position:fixed;top:14px;right:14px;z-index:999;display:flex;gap:8px">
   <button onclick="window.print()" style="background:linear-gradient(135deg,#ff9a5a,#e8622a);color:#fff;border:none;border-radius:999px;padding:9px 20px;font-size:12px;font-weight:700;cursor:pointer;box-shadow:0 2px 10px rgba(232,98,42,.4)">↓ Save as PDF</button>
   <button onclick="window.close()" style="background:#f3f4f6;color:#6b7280;border:none;border-radius:999px;padding:9px 14px;font-size:12px;cursor:pointer">✕</button>
 </div>
 
-<!-- HEADER BANNER -->
-<div style="background:linear-gradient(135deg,#ff9a5a 0%,#e8622a 55%,#c94f1a 100%);padding:32px 44px 26px;color:#fff;position:relative;overflow:hidden">
-  <!-- decorative circles -->
-  <div style="position:absolute;right:-30px;top:-40px;width:190px;height:190px;border-radius:50%;background:rgba(255,255,255,.07)"></div>
-  <div style="position:absolute;right:80px;bottom:-50px;width:140px;height:140px;border-radius:50%;background:rgba(255,255,255,.05)"></div>
-
-  <div style="position:relative;display:flex;justify-content:space-between;align-items:flex-start">
+<!-- HEADER (orange gradient banner) -->
+<div class="page-header" style="background:linear-gradient(135deg,#ff9a5a 0%,#e8622a 55%,#c94f1a 100%);padding:28px 32px 22px;color:#fff;border-radius:12px;position:relative;overflow:hidden;margin-bottom:6px">
+  <div style="position:absolute;right:-24px;top:-36px;width:170px;height:170px;border-radius:50%;background:rgba(255,255,255,.07)"></div>
+  <div style="position:absolute;right:70px;bottom:-44px;width:130px;height:130px;border-radius:50%;background:rgba(255,255,255,.05)"></div>
+  <div style="position:relative;display:flex;justify-content:space-between;align-items:flex-start;gap:20px">
     <div>
-      <div style="font-size:9px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;opacity:.8;margin-bottom:6px">
-        Mera Cannabis Corp.&nbsp;&nbsp;·&nbsp;&nbsp;Product Specification Sheet&nbsp;&nbsp;·&nbsp;&nbsp;${pcLabel||''}
+      <div style="font-size:9px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;opacity:.75;margin-bottom:4px">
+        Mera Cannabis Corp.&nbsp;·&nbsp;Product Specification Sheet&nbsp;·&nbsp;${pcLabel||''}
       </div>
-      <div style="font-size:9px;opacity:.7;margin-bottom:10px">${prod.brand||''}</div>
-      <div style="font-size:26px;font-weight:900;line-height:1.15;max-width:440px;text-shadow:0 1px 4px rgba(0,0,0,.15)">${prod.name}</div>
+      <!-- BRAND — large & bold -->
+      <div style="font-size:18px;font-weight:900;letter-spacing:.06em;text-transform:uppercase;opacity:.9;margin-bottom:6px;text-shadow:0 1px 3px rgba(0,0,0,.2)">${prod.brand||''}</div>
+      <div style="font-size:24px;font-weight:900;line-height:1.2;max-width:420px;text-shadow:0 1px 4px rgba(0,0,0,.15)">${prod.name}</div>
     </div>
-    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;flex-shrink:0">
-      ${prod.skuCode ? `
-      <div style="background:rgba(255,255,255,.25);border:1.5px solid rgba(255,255,255,.5);border-radius:999px;padding:5px 18px;font-size:14px;font-weight:900;letter-spacing:.1em">${prod.skuCode}</div>` : ''}
-      <div style="background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.35);border-radius:999px;padding:4px 14px;font-size:10px;font-weight:700;color:rgba(255,255,255,.9)">${tag}</div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:7px;flex-shrink:0">
+      ${prod.skuCode ? `<div style="background:rgba(255,255,255,.25);border:1.5px solid rgba(255,255,255,.5);border-radius:999px;padding:5px 18px;font-size:14px;font-weight:900;letter-spacing:.1em">${prod.skuCode}</div>` : ''}
+      <div style="background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.35);border-radius:999px;padding:4px 14px;font-size:10px;font-weight:700">${tag}</div>
       <div style="font-size:9px;opacity:.65;text-align:right">${prod.launchDate ? 'Launch: '+prod.launchDate : 'Launch TBD'}</div>
     </div>
   </div>
 </div>
 
-<!-- ORANGE ACCENT LINE -->
-<div style="height:3px;background:linear-gradient(90deg,#e8622a,#ffab85,transparent)"></div>
+<!-- ACCENT LINE -->
+<div style="height:3px;background:linear-gradient(90deg,#e8622a,#ffab85,transparent);margin-bottom:18px"></div>
 
-<!-- BODY -->
-<div style="padding:24px 36px 80px;display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start">
-
-  <!-- LEFT COLUMN -->
-  <div style="display:flex;flex-direction:column;gap:14px">
-
-    ${card('Product Overview', '#e8622a', [
-      row('Brand Name Internal',    sp['Brand Name Internal']||prod.brand),
-      row('Product Name Internal',  sp['Product Name Internal']||prod.name),
-      row('Manufactured By',        sp['Manufactured by: LP Name']),
-      row('Launch Window',          sp['Launch Window']),
-      row('Planned Launch Time',    sp['Planned Launch Time']),
-      row('Stocking Type',          sp['Stocking Type']),
-      row('Initial Case Offering',  sp['Initial Case Offering (FT)']),
-      row('Samples Required',       sp['Samples Required']),
-      row('Stocking Status',        sp['Stocking Status']),
-    ])}
-
-    ${card('Product Specifications', '#3dba8a', [
-      row('Category',               sp['Category']),
-      row('Product Size',           sp['Product Size']),
-      row('Formulated Range',       sp['Formulated Range']),
-      row('Label THC Range',        sp['Label THC Range']),
-      row('Target CBD Range',       sp['Target CBD Range']),
-      row('Other Cannabinoids',     sp['Other Cannabinoids, Range']),
-      row('Flavouring Type',        sp['Flavouring Type']),
-      row('Flavour Description',    sp['Flavour Description']),
-      row('Biomass Input',          sp['Biomass Input']),
-      row('Formulations',           sp['Formulations']),
-      row('Ingredients',            sp['Ingredients']),
-    ])}
-
-  </div>
-
-  <!-- RIGHT COLUMN -->
-  <div style="display:flex;flex-direction:column;gap:14px">
-
-    ${card('Financials', '#d4944a', [
-      row('Landed Cost',            sp['Landed Cost']),
-      row('Wholesale Cost',         sp['Wholesale Cost']),
-      row('MSRP',                   sp['MSRP']),
-
-      row('Launch PO',              sp['Launch PO']),
-    ])}
-
-    ${card('Packaging & GTINs', '#6b7280', [
-      row('Product Primary/Hardware', sp['Product Primary/Hardware']),
-      row('Product Package/Outer',  sp['Product Package/Outer']),
-      row('Packaging Labels',       sp['Packaging Labels']),
-      row('Accessory',              sp['Accessory']),
-      row('Retail Pack GTIN',       sp['Retail Pack GTIN']),
-      row('Master Case GTIN',       sp['Master Case GTIN']),
-      row('Master Case Dimensions', sp['Master Case Dimensions']),
-      row('Units per Case',         sp['Units per Master Shipper/Case']),
-      row('Labels Sourcing',        sp['Who is responsible for Labels Sourcing?']),
-      row('New Dies Required',      sp['Do we need new dies for labels?']),
-      row('Retail Label Vendor',    sp['Vendor providing retail labels?']),
-      row('Case Label Vendor',      sp['Vendor providing case labels?']),
-    ])}
-
-    ${card('Team', '#9370e8', [
-      row('Commercial Lead',        sp['Commercial Lead']),
-      row('Formulation Lead',       sp['Formulation Lead']),
-      row('Ops Lead',               sp['Ops Lead']),
-    ])}
-
-    ${(prod.notes?.updates||prod.notes?.blockers) ? `
-    <div style="border:1px solid #fed7aa;border-radius:10px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.05)">
-      <div style="padding:9px 14px;background:#fffbf5;border-bottom:1px solid #fed7aa;display:flex;align-items:center;gap:8px">
-        <div style="width:10px;height:10px;border-radius:50%;background:#d97706;flex-shrink:0"></div>
-        <span style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.09em;color:#92400e">Notes</span>
-      </div>
-      <div style="padding:12px 14px;display:flex;flex-direction:column;gap:8px">
-        ${prod.notes?.updates?`<div><div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:#d97706;margin-bottom:3px">Updates</div><div style="font-size:11px;color:#92400e;line-height:1.5">${prod.notes.updates}</div></div>`:''}
-        ${prod.notes?.blockers?`<div><div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:#dc2626;margin-bottom:3px">Blockers</div><div style="font-size:11px;color:#dc2626;line-height:1.5">${prod.notes.blockers}</div></div>`:''}
-      </div>
-    </div>` : ''}
-
-  </div>
-
-</div>
-
-<!-- FOOTER -->
-<div style="position:fixed;bottom:0;left:0;right:0;height:36px;background:#fff;border-top:0.5px solid #e5e7eb;display:flex;align-items:center;justify-content:space-between;padding:0 36px">
-  <span style="font-size:8.5px;color:#9ca3af;font-weight:600;text-transform:uppercase;letter-spacing:.08em">Mera Cannabis Corp. — Confidential</span>
-  <div style="display:flex;align-items:center;gap:8px">
-    ${prod.skuCode?`<span style="font-size:9px;font-weight:800;color:#e8622a;background:#fff5f0;border:1px solid #fed7b8;border-radius:999px;padding:2px 10px">${prod.skuCode}</span>`:''}
-    <span style="font-size:8.5px;color:#9ca3af">${prod.name}</span>
-  </div>
-  <span style="font-size:8.5px;color:#9ca3af">Generated ${now}</span>
+<!-- TWO-COLUMN SPEC CONTENT -->
+<div class="cols">
+  <div>${leftCol}</div>
+  <div>${rightCol}</div>
 </div>
 
 </body>
@@ -1169,12 +1143,11 @@ function NotesRow({notes,onChange,launchDate,tasks}){
 
 /* ── Gantt ── */
 function GanttChart({tasks,launchDate,onChange}){
-  // ALL hooks must be before any early returns (React rule)
   const [zoom,setZoom]=useState(1);
   const [drag,setDrag]=useState(null);
   const containerRef=React.useRef();
 
-  // Drag effect — placed before early return to satisfy hook rules
+  // Drag effect — ALL hooks before early return
   React.useEffect(()=>{
     if(!drag) return;
     const dateAddDays=(dateStr,days)=>{
@@ -1199,34 +1172,61 @@ function GanttChart({tasks,launchDate,onChange}){
     return()=>{ window.removeEventListener('mousemove',onMove); window.removeEventListener('mouseup',onUp); };
   },[drag,tasks,onChange]);
 
-  const LW=134,dated=tasks.filter(t=>t.start&&t.end);
-  if(!dated.length)return el('div',{style:{padding:'28px 20px',color:'var(--text2)',fontSize:13,textAlign:'center'}},
+  const LW=148, dated=tasks.filter(t=>t.start&&t.end);
+  if(!dated.length) return el('div',{style:{padding:'28px 20px',color:'var(--text2)',fontSize:13,textAlign:'center'}},
     el('i',{className:'ti ti-calendar-off',style:{fontSize:28,display:'block',marginBottom:8,opacity:.4}}),
     'Add start and end dates to tasks to see the Gantt chart.');
 
   const ds=dated.flatMap(t=>[parseD(t.start),parseD(t.end)]);
-  if(launchDate&&parseD(launchDate))ds.push(parseD(launchDate));
-  let mn=new Date(Math.min(...ds));mn.setDate(1);
-  let mx=new Date(Math.max(...ds));mx.setMonth(mx.getMonth()+1);mx.setDate(0);
+  if(launchDate&&parseD(launchDate)) ds.push(parseD(launchDate));
+  let mn=new Date(Math.min(...ds)); mn.setDate(1);
+  let mx=new Date(Math.max(...ds)); mx.setMonth(mx.getMonth()+1); mx.setDate(0);
   const tot=mx-mn;
   const pL=d=>Math.max(0,Math.min(100,(parseD(d)-mn)/tot*100));
   const pW=(s,e)=>Math.max(0.2,(parseD(e)-parseD(s))/tot*100);
-  const tdP=(TODAY_D-mn)/tot*100,showTd=tdP>=0&&tdP<=100;
+  const tdP=(TODAY_D-mn)/tot*100, showTd=tdP>=0&&tdP<=100;
   const lP=launchDate&&parseD(launchDate)?pL(launchDate):null;
-  const months=[];const dd=new Date(mn);
-  while(dd<=mx){months.push({l:dd.toLocaleString('en-CA',{month:'short'}),y:String(dd.getFullYear()).slice(2),p:(dd-mn)/tot*100});dd.setMonth(dd.getMonth()+1);}
-  const BW=Math.round(680*zoom);
-  const pxPerDay=BW/(tot/86400000);
 
-  // Date math helpers
+  const BW=Math.round(780*zoom);
+  const pxPerDay=BW/(tot/86400000);
+  const totalDays=Math.round(tot/86400000);
+
+  // Build week markers (every Monday)
+  const weeks=[];
+  const cur=new Date(mn);
+  // advance to first Monday
+  while(cur.getDay()!==1) cur.setDate(cur.getDate()+1);
+  while(cur<=mx){
+    const p=(cur-mn)/tot*100;
+    const label='W'+String(Math.ceil((cur-new Date(cur.getFullYear(),0,1))/86400000/7)+1).padStart(2,'0');
+    weeks.push({date:new Date(cur),p,label,x:p/100*BW});
+    cur.setDate(cur.getDate()+7);
+  }
+
+  // Month labels
+  const months=[];
+  const dd=new Date(mn);
+  while(dd<=mx){
+    months.push({
+      l:dd.toLocaleString('en-CA',{month:'short'}),
+      y:String(dd.getFullYear()).slice(2),
+      p:(dd-mn)/tot*100
+    });
+    dd.setMonth(dd.getMonth()+1);
+  }
+
+  // Alternating week bands (even/odd)
+  const weekBands=weeks.map((wk,i)=>{
+    const nextX = i+1<weeks.length ? weeks[i+1].x : BW;
+    return {x:wk.x, w:nextX-wk.x, even:i%2===0};
+  });
+
   const dateAddDays=(dateStr,days)=>{
     const d=new Date(dateStr+'T00:00:00');
     d.setDate(d.getDate()+Math.round(days));
     return d.toISOString().slice(0,10);
   };
-  const pxToDays=px=>px/pxPerDay;
 
-  // Drag handler — effect is defined above (before early return)
   const handleMouseDown=(e,taskId,type)=>{
     e.preventDefault(); e.stopPropagation();
     const t=tasks.find(t=>t.id===taskId);
@@ -1242,72 +1242,143 @@ function GanttChart({tasks,launchDate,onChange}){
     background:'rgba(255,255,255,.25)',borderRadius:2,
   };
 
+  // Row height
+  const ROW_H=30;
+
   return el('div',{className:'gantt-wrap'},
+    /* Toolbar */
     el('div',{className:'gantt-toolbar'},
-      el('button',{className:'gantt-btn',onClick:()=>setZoom(z=>Math.min(z+0.3,3))},el('i',{className:'ti ti-zoom-in'}),' In'),
-      el('button',{className:'gantt-btn',onClick:()=>setZoom(z=>Math.max(z-0.3,0.5))},el('i',{className:'ti ti-zoom-out'}),' Out'),
+      el('button',{className:'gantt-btn',onClick:()=>setZoom(z=>Math.min(z+0.4,4))},el('i',{className:'ti ti-zoom-in'}),' In'),
+      el('button',{className:'gantt-btn',onClick:()=>setZoom(z=>Math.max(z-0.4,0.5))},el('i',{className:'ti ti-zoom-out'}),' Out'),
       el('button',{className:'gantt-btn',onClick:()=>setZoom(1)},el('i',{className:'ti ti-refresh'}),' Reset'),
+      el('span',{style:{fontSize:10,color:'var(--text3)',marginLeft:8}},totalDays+' days · '+weeks.length+' weeks'),
       drag&&el('span',{style:{fontSize:11,color:'var(--accent)',fontWeight:600,marginLeft:8}},
         el('i',{className:'ti ti-drag-drop',style:{marginRight:4}}),'Dragging…'
       ),
-      el('span',{style:{fontSize:11,color:'var(--text3)',marginLeft:6}},
-        showTd?el('span',null,el('span',{style:{color:'var(--err)',fontWeight:700}},'┃'),' Today  '):'',
-        lP!==null?el('span',null,el('span',{style:{color:'var(--ok)',fontWeight:700}},'┃'),' Launch'):'')
+      el('span',{style:{marginLeft:'auto',display:'flex',alignItems:'center',gap:10,fontSize:10,color:'var(--text3)'}},
+        showTd&&el('span',null,el('span',{style:{color:'var(--err)',fontWeight:700,marginRight:3}},'━'),'Today'),
+        lP!==null&&el('span',null,el('span',{style:{color:'var(--ok)',fontWeight:700,marginRight:3}},'━'),'Launch')
+      )
     ),
+
     el('div',{ref:containerRef,style:{overflowX:'auto',cursor:drag?'grabbing':'default'}},
       el('div',{style:{minWidth:LW+BW}},
-        el('div',{style:{display:'flex',marginBottom:4}},
-          el('div',{style:{width:LW,flexShrink:0}}),
-          el('div',{style:{width:BW,flex:'none',position:'relative',height:22}},
-            months.map((mo,i)=>el('span',{key:i,style:{position:'absolute',left:(mo.p/100*BW)+'px',transform:'translateX(-50%)',fontSize:10,color:'var(--text3)',userSelect:'none',whiteSpace:'nowrap'}},mo.l+' \''+mo.y))
+
+        /* ── HEADER ROW ── */
+        el('div',{style:{display:'flex',borderBottom:'1px solid var(--bdr)',marginBottom:0,position:'sticky',top:0,background:'var(--bg)',zIndex:20}},
+          /* Label column header */
+          el('div',{style:{width:LW,flexShrink:0,padding:'4px 8px',fontSize:10,fontWeight:700,color:'var(--text3)',textTransform:'uppercase',letterSpacing:'.06em',borderRight:'1px solid var(--bdr)'}},'Task'),
+          /* Timeline header */
+          el('div',{style:{width:BW,flex:'none',position:'relative'}},
+            /* Month row */
+            el('div',{style:{height:18,position:'relative',borderBottom:'0.5px solid var(--bdr)',background:'var(--bg2)'}},
+              months.map((mo,i)=>el('div',{key:i,style:{
+                position:'absolute',left:(mo.p/100*BW)+'px',top:0,bottom:0,
+                display:'flex',alignItems:'center',paddingLeft:6,
+                borderLeft:'1px solid var(--bdr)',
+                fontSize:10,fontWeight:700,color:'var(--text2)',
+                whiteSpace:'nowrap',userSelect:'none'
+              }},mo.l+' \''+mo.y))
+            ),
+            /* Week row */
+            el('div',{style:{height:16,position:'relative',borderBottom:'1px solid var(--bdr)',background:'var(--bg2)'}},
+              weeks.map((wk,i)=>el('div',{key:i,style:{
+                position:'absolute',left:wk.x+'px',top:0,bottom:0,
+                borderLeft:'1px solid var(--bdr2)',
+                display:'flex',alignItems:'center',paddingLeft:3,
+                fontSize:8,color:'var(--text3)',whiteSpace:'nowrap',userSelect:'none',
+                fontWeight:600,letterSpacing:'.03em'
+              }},i%2===0?wk.label:''))
+            )
           )
         ),
+
+        /* ── TASK ROWS ── */
         groups.map(g=>el('div',{key:g.id},
-          el('div',{className:'gantt-cat-hd',style:{background:g.light,color:g.text}},el('i',{className:'ti ti-circle-filled',style:{fontSize:8}}),g.label),
+          /* Gate header */
+          el('div',{className:'gantt-cat-hd',style:{
+            background:g.light,color:g.text,
+            display:'flex',alignItems:'center',gap:6,
+            padding:'4px 8px',fontSize:10,fontWeight:700,
+            textTransform:'uppercase',letterSpacing:'.06em',
+            position:'sticky',left:0
+          }},
+            el('i',{className:'ti ti-circle-filled',style:{fontSize:8}}),g.label
+          ),
+
           g.items.map(t=>{
-            const l=pL(t.start),w=pW(t.start,t.end),col=barC(t.cat,t.status),od=isOverdue(t);
+            const l=pL(t.start), w=pW(t.start,t.end);
+            const col=barC(t.cat,t.status), od=isOverdue(t);
             const isDragging=drag&&drag.taskId===t.id;
-            return el('div',{key:t.id,style:{display:'flex',alignItems:'center',marginBottom:5}},
-              el('div',{style:{width:LW,flexShrink:0,fontSize:11,paddingRight:8,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',color:od?'var(--err)':'var(--text2)',fontWeight:od?600:'normal'}},
-                (t.atRisk||od)&&el('i',{className:'ti ti-alert-triangle',style:{fontSize:10,color:'var(--err)',marginRight:2}}),t.name
+            const barPx=Math.max(8,w/100*BW);
+
+            return el('div',{key:t.id,style:{display:'flex',alignItems:'center',height:ROW_H,borderBottom:'0.5px solid var(--bdr)'}},
+              /* Task label */
+              el('div',{style:{
+                width:LW,flexShrink:0,fontSize:11,paddingRight:8,paddingLeft:8,
+                overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',
+                color:od?'var(--err)':'var(--text2)',fontWeight:od?600:'normal',
+                borderRight:'1px solid var(--bdr)',height:'100%',
+                display:'flex',alignItems:'center',gap:4
+              }},
+                od&&el('i',{className:'ti ti-alert-triangle',style:{fontSize:10,color:'var(--err)',flexShrink:0}}),
+                el('span',{style:{overflow:'hidden',textOverflow:'ellipsis'}},t.name)
               ),
-              el('div',{style:{width:BW,flex:'none',position:'relative',height:28}},
-                showTd&&el('div',{style:{position:'absolute',left:(tdP/100*BW)+'px',top:-2,bottom:-2,width:2,background:'var(--err)',zIndex:3,opacity:.85}}),
-                lP!==null&&el('div',{style:{position:'absolute',left:(lP/100*BW)+'px',top:-2,bottom:-2,width:2,background:'var(--ok)',zIndex:3}}),
+
+              /* Bar area */
+              el('div',{style:{width:BW,flex:'none',position:'relative',height:'100%'}},
+
+                /* Alternating week bands */
+                weekBands.map((wb,i)=>el('div',{key:i,style:{
+                  position:'absolute',left:wb.x+'px',top:0,bottom:0,width:wb.w+'px',
+                  background:wb.even?'transparent':'rgba(0,0,0,.018)',
+                  pointerEvents:'none'
+                }})),
+
+                /* Week separator lines */
+                weeks.map((wk,i)=>el('div',{key:i,style:{
+                  position:'absolute',left:wk.x+'px',top:0,bottom:0,
+                  width:1,background:'var(--bdr)',opacity:.5,pointerEvents:'none'
+                }})),
+
+                /* Today line */
+                showTd&&el('div',{style:{position:'absolute',left:(tdP/100*BW)+'px',top:0,bottom:0,width:2,background:'var(--err)',zIndex:3,opacity:.85}}),
+
+                /* Launch line */
+                lP!==null&&el('div',{style:{position:'absolute',left:(lP/100*BW)+'px',top:0,bottom:0,width:2,background:'var(--ok)',zIndex:3}}),
+
+                /* Task bar */
                 el('div',{
-                  title:t.name+' | '+t.status+'\n'+fmtD(t.start)+' → '+fmtD(t.end)+(od?'\n⚠ OVERDUE':'')+(t.notes?'\n'+t.notes:''),
+                  title:t.name+'\n'+fmtD(t.start)+' → '+fmtD(t.end)+' ('+Math.round((parseD(t.end)-parseD(t.start))/86400000)+' days)'+(od?'\n⚠ OVERDUE':'')+(t.owner?'\n@'+t.owner:''),
                   className:'gantt-bar',
                   style:{
                     left:(l/100*BW)+'px',
-                    width:Math.max(8,w/100*BW)+'px',
-                    background:od?'var(--grad-err)':`linear-gradient(180deg, ${col}f5 0%, ${col}c0 100%)`,
+                    width:barPx+'px',
+                    top:'50%',transform:'translateY(-50%)',
+                    background:od?'var(--grad-err)':`linear-gradient(180deg,${col}f5 0%,${col}c0 100%)`,
                     boxShadow:'0 1px 4px '+(od?'rgba(192,57,43,.3)':col+'40'),
                     outline:isDragging?'2px solid var(--accent)':od?'2px solid var(--err)':'none',
-                    cursor:'grab',
-                    userSelect:'none',
+                    cursor:'grab',userSelect:'none',
                     opacity:isDragging?0.85:1,
-                    boxShadow:isDragging?'0 2px 12px rgba(0,0,0,.3)':'none',
+                    height:22
                   },
                   onMouseDown:e=>handleMouseDown(e,t.id,'move')
                 },
-                  /* Left resize handle */
-                  el('div',{
-                    style:{...handleStyle,left:0,borderRadius:'2px 0 0 2px'},
-                    onMouseDown:e=>handleMouseDown(e,t.id,'left')
-                  },el('i',{style:{fontSize:7,color:'rgba(255,255,255,.7)',pointerEvents:'none'}},'\u2551')),
-                  /* Label */
-                  w*BW/100>60&&el('span',{style:{fontSize:10,fontWeight:600,color:od?'#fff':barT(t.cat,t.status),whiteSpace:'nowrap',overflow:'hidden',pointerEvents:'none',padding:'0 10px'}},t.name),
-                  /* Right resize handle */
-                  el('div',{
-                    style:{...handleStyle,right:0,borderRadius:'0 2px 2px 0'},
-                    onMouseDown:e=>handleMouseDown(e,t.id,'right')
-                  },el('i',{style:{fontSize:7,color:'rgba(255,255,255,.7)',pointerEvents:'none'}},'\u2551'))
+                  el('div',{style:{...handleStyle,left:0,borderRadius:'2px 0 0 2px'},onMouseDown:e=>handleMouseDown(e,t.id,'left')},
+                    el('i',{style:{fontSize:7,color:'rgba(255,255,255,.7)',pointerEvents:'none'}},'\u2551')
+                  ),
+                  barPx>60&&el('span',{style:{fontSize:9,fontWeight:600,color:od?'#fff':barT(t.cat,t.status),whiteSpace:'nowrap',overflow:'hidden',pointerEvents:'none',padding:'0 10px',textOverflow:'ellipsis',maxWidth:(barPx-20)+'px',display:'block'}},t.name),
+                  el('div',{style:{...handleStyle,right:0,borderRadius:'0 2px 2px 0'},onMouseDown:e=>handleMouseDown(e,t.id,'right')},
+                    el('i',{style:{fontSize:7,color:'rgba(255,255,255,.7)',pointerEvents:'none'}},'\u2551')
+                  )
                 )
               )
             );
           })
         )),
-        el('div',{style:{display:'flex',gap:12,marginTop:14,paddingLeft:LW,flexWrap:'wrap'}},
+
+        /* Legend */
+        el('div',{style:{display:'flex',gap:12,marginTop:10,paddingLeft:LW,flexWrap:'wrap',paddingBottom:4}},
           CAT_ORDER.flatMap(cid=>['Done','In Progress','Not Started'].map(st=>el('div',{key:cid+st,style:{display:'flex',alignItems:'center',gap:4}},
             el('div',{style:{width:11,height:11,borderRadius:3,background:barC(cid,st)}}),
             el('span',{style:{fontSize:10,color:'var(--text2)'}},CAT[cid].label.split(' ')[0]+' – '+st)
@@ -1316,15 +1387,16 @@ function GanttChart({tasks,launchDate,onChange}){
             el('div',{style:{width:11,height:11,borderRadius:3,background:'var(--err)'}}),
             el('span',{style:{fontSize:10,color:'var(--text2)'}},'Overdue')
           ),
-          el('div',{style:{display:'flex',alignItems:'center',gap:4,marginLeft:16,paddingLeft:16,borderLeft:'1px solid var(--bdr)'}},
+          el('div',{style:{display:'flex',alignItems:'center',gap:4,marginLeft:12,paddingLeft:12,borderLeft:'1px solid var(--bdr)'}},
             el('i',{className:'ti ti-drag-drop',style:{fontSize:11,color:'var(--text3)'}}),
-            el('span',{style:{fontSize:10,color:'var(--text3)'}},'Drag bar to move · Drag edges to resize')
+            el('span',{style:{fontSize:10,color:'var(--text3)'}},'Drag bar · Drag edges to resize')
           )
         )
       )
     )
   );
 }
+
 
 function TasksPanel({tasks,onChange,onAdd,onDel}){
   const [coll,setColl]=useState({});
