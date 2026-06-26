@@ -1023,23 +1023,18 @@ function FunnelView({data, setData}){
                 el('i',{className:'ti ti-x'})
               )
             ),
-            /* Status — small select */
-            el('div',{style:{...cellStyle,width:110,flexShrink:0,padding:'0 8px'}},
-              el('select',{
+            /* Status — plain editable */
+            el('div',{style:{...cellStyle,width:110,flexShrink:0}},
+              el(Editable,{
                 value:row.status||'',
-                onChange:e=>saveIdea(row.id,'status',e.target.value),
+                onChange:v=>saveIdea(row.id,'status',v),
+                placeholder:'Y / PC#5…',
                 style:{
                   fontFamily:'var(--mono)',fontSize:9,fontWeight:700,
                   background:statCol+'18',color:statCol,
-                  border:'1px solid '+statCol+'33',borderRadius:4,
-                  padding:'2px 4px',cursor:'pointer',width:'100%',
-                  outline:'none'
+                  borderRadius:4,padding:'2px 6px',width:'100%'
                 }
-              },
-                ['','Y','PC#4','PC#5','PC#5/6','PC#5?','Future','Ask Wei','Ask Wei/Mariah'].map(s=>
-                  el('option',{key:s,value:s},s||'—')
-                )
-              )
+              })
             ),
             /* Category — select */
             el('div',{style:{...cellStyle,width:130,flexShrink:0,padding:'0 8px'}},
@@ -1241,11 +1236,10 @@ function PCOverview({prods, pcLabel, onSelect, onUpdateProd}){
       ),
       /* BODY ROWS */
       el('tbody',null,
-        tableRows.map(({row,sectionHeader},ri)=>{
+        tableRows.flatMap(({row,sectionHeader},ri)=>{
           const secStyle=SEC_STYLE[row.section]||{bg:'var(--surface-warm)',color:'var(--fg-2)'};
-          return el('div',{key:row.key,style:{display:'contents'}},
-            /* Section header row */
-            sectionHeader&&el('tr',null,
+          const rows=[];
+          if(sectionHeader) rows.push(el('tr',{key:row.key+'_sec'},
               el('td',{colSpan:prods.length+1,style:{
                 background:secStyle.bg,
                 padding:'5px 12px',
@@ -1266,9 +1260,9 @@ function PCOverview({prods, pcLabel, onSelect, onUpdateProd}){
                 ),
                 row.section
               )
-            ),
-            /* Data row */
-            el('tr',{style:{
+            )
+          );
+          rows.push(el('tr',{key:row.key+'_data',style:{
               background:ri%2===0?'var(--bg)':'var(--surface)'
             }},
               /* Label cell */
@@ -1313,6 +1307,7 @@ function PCOverview({prods, pcLabel, onSelect, onUpdateProd}){
               })
             )
           );
+          return rows;
         })
       )
     )
@@ -2040,7 +2035,7 @@ function ImportExcelModal({onImport,onClose,existingData}){
 
 
 
-function AddProductModal({onAdd,onClose,allProds}){
+function AddProductModal({onAdd,onClose,allProds,isDevTab}){
   const [name,setName]=React.useState('');
   const [brand,setBrand]=React.useState('');
   const [cat,setCat]=React.useState('');
@@ -2116,7 +2111,7 @@ function AddProductModal({onAdd,onClose,allProds}){
         ),
 
         /* SKU code preview — only show when NOT adding to In Development */
-        cat&&activePC!=='in_dev'&&el('div',{style:{
+        cat&&!isDevTab&&el('div',{style:{
           display:'flex',alignItems:'center',gap:10,
           background:displayCode?'var(--accent-bg)':'var(--bg2)',
           border:'1px solid '+(displayCode?'var(--accent-border)':'var(--bdr)'),
@@ -2224,7 +2219,7 @@ function ProductPanels({prods,selId,setSelId,onAdd,onRemove,allProds,isDevTab}){
     el('div',{style:{flexShrink:0,display:'flex',alignItems:'center',padding:'0 14px',borderLeft:'0.5px solid var(--bdr)'}},
       el('button',{onClick:()=>setShowAddModal(true),style:{background:'var(--bg2)',border:'0.5px dashed var(--bdr2)',borderRadius:8,padding:'8px 12px',cursor:'pointer',fontSize:12,color:'var(--text2)',display:'flex',alignItems:'center',gap:5,whiteSpace:'nowrap'}},el('i',{className:'ti ti-plus'}),' Add Product')
     ),
-    showAddModal&&el(AddProductModal,{allProds,onAdd:(prod)=>{onAdd(prod);setShowAddModal(false);},onClose:()=>setShowAddModal(false)})
+    showAddModal&&el(AddProductModal,{allProds,isDevTab,onAdd:(prod)=>{onAdd(prod);setShowAddModal(false);},onClose:()=>setShowAddModal(false)})
   );
 }
 
@@ -5173,7 +5168,7 @@ function AddSKUModal({activePC,onAdd,onClose,allProds}){
 
   const handleAdd=()=>{
     if(!name.trim()){setErr('Product name is required.');return;}
-    const finalCode=activePC==='in_dev'?'':displayCode;
+    const finalCode=isDevTab?'':displayCode;
     // Counter auto-derived from existing products — no manual increment needed
     const newProd={
       pc,
