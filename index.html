@@ -681,6 +681,7 @@ const BLANK_PROD=pcLabel=>({
 const INITIAL={
 pcTabs:[{id:'pc1',label:'PC#1 2026'},{id:'pc2',label:'PC#2 2026'},{id:'pc3',label:'PC#3 2026'}],
   in_dev:[],
+  funnel:null,
 postLaunch:{},
 postLaunchHidden:[],
 postLaunchLastUpdated:{},
@@ -830,6 +831,260 @@ function Ring({rd,pr,op,size=48}){
 
 /* ── Summary View ── */
 
+
+/* ══════════════════════════════════════════
+   PRODUCT FUNNEL VIEW
+   Brainstorming / pipeline ideas
+   ══════════════════════════════════════════ */
+
+const FUNNEL_INITIAL = [
+  // Pre-Roll
+  {id:'f001',cat:'Pre-Roll',          status:'Y',              brand:'Buddy Blooms',                    name:'Rainbow Chip (Hybrid) Pre-Rolls 10x0.5g',                          format:'10x0.5g',  potency:'28-32%',  notes:'New 10 pack to build for 2027 sales'},
+  {id:'f002',cat:'Pre-Roll',          status:'Y',              brand:'Countryside Harvest Reserve',     name:"Dante's Inferno / Purple Punch / Animal Kush / Strawberry OG",      format:'1g OR 2x1g',potency:'28-32%', notes:'Copy Countryside Grape-Diamonds model'},
+  {id:'f003',cat:'Pre-Roll',          status:'PC#5/6',         brand:'Buddy Blooms',                    name:"10th Planet & Ethos Glue Best Buds Mix'd Pre-Rolls",                format:'10x0.5g',  potency:'28-32%',  notes:'2nd multi pack! Might want to wait to market test 1st one.'},
+  // Infused Pre-Roll
+  {id:'f004',cat:'Infused Pre-Roll',  status:'Y',              brand:'Countryside Classics',            name:'Honey Oil Infused Pre-Rolls',                                       format:'3x0.5g',   potency:'0.46',    notes:'What about a Strawberry OG (or Purple Haze) honey oil infuse?'},
+  {id:'f005',cat:'Infused Pre-Roll',  status:'Y',              brand:'Greazy',                          name:'Golden Pineapple Live Resin Infused and Diamond Coated Pre-Rolls',  format:'5x0.5g',   potency:'0.4',     notes:'Change to 5x0.5g @ 40% THC for lower extract % and larger promo'},
+  {id:'f006',cat:'Infused Pre-Roll',  status:'PC#5',           brand:'Buddy Blooms',                    name:'Rainbow Chip Bubble Hash Infused Pre-Rolls',                        format:'5x0.5g',   potency:'0.4',     notes:''},
+  {id:'f007',cat:'Infused Pre-Roll',  status:'PC#5/6',         brand:'Greazy',                          name:'Black Cherry Punk Diamonds & Sauce Infused Pre-Roll',               format:'1g',       potency:'0.498',   notes:'Copy mac 10 or upgrade to ceramic tip to compete in higher-end'},
+  {id:'f008',cat:'Infused Pre-Roll',  status:'Future',         brand:'Countryside Classics',            name:'Banana Hammock Live Resin Infused Pre-Rolls',                       format:'5x0.5g',   potency:'0.4',     notes:'Idea to bring back Countryside'},
+  {id:'f009',cat:'Infused Pre-Roll',  status:'',               brand:'LITTI.',                          name:'Watermelon Whammy Caviar & Diamond Infused Pre-Rolls',              format:'5x0.5g',   potency:'0.4',     notes:'Change to 5x0.5g @ 40% THC'},
+  // Vapes
+  {id:'f010',cat:'Vape',              status:'Y',              brand:'Shatterizer',                     name:'Northern Lights Liquid Shatter All-in-One Vape',                    format:'1g',       potency:'TBD',     notes:'Liquid shatter — confirm with Matt & Val'},
+  {id:'f011',cat:'Vape',              status:'Y',              brand:'Shatterizer',                     name:'Rockstar Liquid Shatter All-in-One Vape',                           format:'1g',       potency:'TBD',     notes:'Liquid shatter — confirm with Matt & Val'},
+  {id:'f012',cat:'Vape',              status:'Y',              brand:'LITTI.',                          name:'Raspberry Lemonade Liquid Diamonds 510 Vape Cart',                  format:'1g',       potency:'0.98',    notes:'Popular flavour — mixed with lemonade. Strawberry Lemonade?'},
+  {id:'f013',cat:'Vape',              status:'Y',              brand:'Greazy',                          name:'Purple Mango Live Resin & Liquid Diamonds All-in-One',              format:'1g',       potency:'0.931',   notes:'Popular flavour — purple haze X mango flavour'},
+  {id:'f014',cat:'Vape',              status:'PC#5/6',         brand:'LITTI.',                          name:'Strawberry Kiwi Liquid Diamonds All-in-One',                        format:'1g',       potency:'0.98',    notes:'Popular flavour — mixed with opportunity flavour'},
+  {id:'f015',cat:'Vape',              status:'PC#5/6',         brand:'Greazy',                          name:'Golden Pineapple Live Resin & Liquid Diamonds 510 Vape Cart',       format:'1g',       potency:'0.931',   notes:'Extension into 510. Test sales in AIO first'},
+  {id:'f016',cat:'Vape',              status:'Future',         brand:'LITTI.',                          name:"Nanna's Baked Banana's Liquid Diamonds 510 Vape Cart",              format:'1g',       potency:'0.98',    notes:'Opportunity flavour'},
+  {id:'f017',cat:'Vape',              status:'Ask Wei/Mariah', brand:'Greazy',                          name:'Black Cherry Punch Live Rosin All-in-One',                          format:'1g',       potency:'',        notes:'What is status of R&D?'},
+  {id:'f018',cat:'Vape',              status:'',               brand:'Greazy',                          name:'Blackberry — Ginger Ale / Dirty Soda / Iced Tea',                   format:'1g',       potency:'0.931',   notes:'Dirty Soda is really fun, opportunity flavour'},
+  // Concentrates
+  {id:'f019',cat:'Concentrate',       status:'PC#5?',          brand:'Greazy',                          name:'Rainbow Chip Live Rosin',                                           format:'1g',       potency:'',        notes:"Jeremy's suggestion based on harvest for window 2, Dec launch"},
+  {id:'f020',cat:'Concentrate',       status:'Ask Wei',        brand:'Ellevia',                         name:'Black Cherry Funk - RSO - Sativa',                                  format:'1g',       potency:'63-71%',  notes:'Top terpenes of RSO must correlate to cultivar selected.'},
+  {id:'f021',cat:'Concentrate',       status:'Ask Wei',        brand:'Ellevia',                         name:'Purple Haze - RSO - Indica',                                        format:'1g',       potency:'63-71%',  notes:'Top terpenes of RSO must correlate to cultivar selected.'},
+  {id:'f022',cat:'Concentrate',       status:'Ask Wei',        brand:'Ellevia',                         name:'RSO - Boosted!',                                                    format:'1g',       potency:'80-88%',  notes:''},
+  {id:'f023',cat:'Concentrate',       status:'',               brand:'Countryside Classics',            name:'Strawberry OG Honey Oil - Sativa',                                  format:'1g',       potency:'',        notes:'Relist of Greazy hash oil — idea to bring back Countryside'},
+  {id:'f024',cat:'Concentrate',       status:'',               brand:'Countryside Classics',            name:'Purple Haze Honey Oil - Indica',                                    format:'1g',       potency:'',        notes:'Relist of Greazy hash oil — idea to bring back Countryside'},
+  {id:'f025',cat:'Concentrate',       status:'',               brand:'Greazy',                          name:'Live Resin',                                                        format:'1g',       potency:'',        notes:'Low cost / high margin — copy Big Steal model'},
+];
+
+const FUNNEL_CATS = ['Pre-Roll','Infused Pre-Roll','Vape','Concentrate'];
+const FUNNEL_CAT_COL = {'Pre-Roll':'var(--cat-pre)','Infused Pre-Roll':'var(--cat-infused)','Vape':'var(--cat-vape)','Concentrate':'var(--cat-extract)'};
+const FUNNEL_STATUS_COL = {
+  'Y':'#16a34a','PC#5':'#2563eb','PC#5/6':'#7c3aed','PC#5?':'#7c3aed',
+  'PC#4':'#e8622a','Future':'#6b7280','Ask Wei':'#d97706','Ask Wei/Mariah':'#d97706',
+  '':'#9ca3af'
+};
+
+function FunnelView({data, setData}){
+  const [ideas, setIdeas] = React.useState(()=>data.funnel||FUNNEL_INITIAL);
+  const [filterCat, setFilterCat] = React.useState('All');
+  const [showAddRow, setShowAddRow] = React.useState(false);
+  const [newRow, setNewRow] = React.useState({cat:'Pre-Roll',status:'',brand:'',name:'',format:'',potency:'',notes:''});
+  const [editId, setEditId] = React.useState(null);
+  const [sortCol, setSortCol] = React.useState('cat');
+
+  // Persist to data
+  React.useEffect(()=>{
+    setData(d=>({...d,funnel:ideas}));
+  },[ideas]);
+
+  const saveIdea = (id, field, val) => {
+    setIdeas(prev=>prev.map(r=>r.id===id?{...r,[field]:val}:r));
+  };
+
+  const deleteIdea = id => {
+    if(confirm('Remove this idea?')) setIdeas(prev=>prev.filter(r=>r.id!==id));
+  };
+
+  const addIdea = () => {
+    if(!newRow.name.trim()) return;
+    setIdeas(prev=>[...prev,{...newRow,id:'f'+Date.now()}]);
+    setNewRow({cat:'Pre-Roll',status:'',brand:'',name:'',format:'',potency:'',notes:''});
+    setShowAddRow(false);
+  };
+
+  const visible = filterCat==='All' ? ideas : ideas.filter(r=>r.cat===filterCat);
+
+  const COLS = [
+    {key:'status', label:'Status',    w:110},
+    {key:'cat',    label:'Category',  w:130},
+    {key:'brand',  label:'Brand',     w:150},
+    {key:'name',   label:'Product Name', w:null}, // flex
+    {key:'format', label:'Format',    w:90},
+    {key:'potency',label:'Potency',   w:90},
+    {key:'notes',  label:'Notes',     w:240},
+  ];
+
+  const cellStyle = {
+    padding:'0 10px',
+    borderBottom:'1px solid var(--border-soft)',
+    borderRight:'1px solid var(--border-soft)',
+    display:'flex',alignItems:'center',
+    minHeight:36,
+  };
+
+  return el('div',{style:{display:'flex',flexDirection:'column',height:'100%',overflow:'hidden'}},
+
+    /* ── Header bar ── */
+    el('div',{style:{
+      display:'flex',alignItems:'center',gap:10,padding:'12px 20px',
+      background:'var(--surface-warm)',borderBottom:'1px solid var(--border)',flexShrink:0,flexWrap:'wrap'
+    }},
+      el('div',{style:{fontFamily:'var(--font-body)',fontSize:15,fontWeight:700,color:'var(--fg)',display:'flex',alignItems:'center',gap:8}},
+        el('i',{className:'ti ti-bulb',style:{color:'var(--accent)',fontSize:16}}),
+        'Product Funnel'
+      ),
+      el('div',{style:{fontFamily:'var(--mono)',fontSize:10,color:'var(--muted)',marginLeft:4}},
+        ideas.length+' ideas'
+      ),
+      el('div',{style:{marginLeft:'auto',display:'flex',gap:6,alignItems:'center',flexWrap:'wrap'}},
+        /* Category filter pills */
+        ['All',...FUNNEL_CATS].map(c=>el('button',{key:c,onClick:()=>setFilterCat(c),style:{
+          fontFamily:'var(--mono)',fontSize:10,fontWeight:700,
+          padding:'4px 12px',borderRadius:'var(--pill)',cursor:'pointer',
+          border:'1px solid '+(filterCat===c?'var(--accent)':'var(--border)'),
+          background:filterCat===c?'var(--accent)':'var(--surface)',
+          color:filterCat===c?'#fff':FUNNEL_CAT_COL[c]||'var(--muted)'
+        }},c)),
+        el('button',{
+          onClick:()=>setShowAddRow(t=>!t),
+          className:'btn',
+          style:{background:showAddRow?'var(--accent)':'',color:showAddRow?'#fff':'',border:showAddRow?'none':'',fontSize:11,marginLeft:8}
+        },el('i',{className:'ti ti-plus'}),' Add Idea')
+      )
+    ),
+
+    /* ── Table ── */
+    el('div',{style:{flex:1,overflowY:'auto',overflowX:'auto'}},
+      el('div',{style:{minWidth:900}},
+
+        /* Column headers */
+        el('div',{style:{
+          display:'flex',background:'var(--surface-warm)',
+          borderBottom:'2px solid var(--border)',
+          position:'sticky',top:0,zIndex:5
+        }},
+          el('div',{style:{width:36,flexShrink:0,borderRight:'1px solid var(--border)'}}), // actions col
+          COLS.map(col=>el('div',{key:col.key,style:{
+            width:col.w?col.w+'px':undefined,flex:col.w?undefined:1,
+            padding:'8px 10px',
+            fontFamily:'var(--mono)',fontSize:9,fontWeight:700,
+            textTransform:'uppercase',letterSpacing:'.1em',color:'var(--muted)',
+            borderRight:'1px solid var(--border)',flexShrink:0,
+            cursor:'pointer',userSelect:'none'
+          },onClick:()=>setSortCol(col.key)},
+            col.label,
+            sortCol===col.key&&el('i',{className:'ti ti-chevron-down',style:{fontSize:9,marginLeft:4}})
+          ))
+        ),
+
+        /* Add row */
+        showAddRow&&el('div',{style:{display:'flex',background:'var(--accent-bg)',borderBottom:'1px solid var(--accent-border)'}},
+          el('div',{style:{width:36,flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center'}}),
+          COLS.map(col=>el('div',{key:col.key,style:{
+            width:col.w?col.w+'px':undefined,flex:col.w?undefined:1,
+            padding:'4px 6px',flexShrink:0,borderRight:'1px solid var(--border-soft)'
+          }},
+            col.key==='cat'
+              ? el('select',{className:'ei',value:newRow.cat,onChange:e=>setNewRow(r=>({...r,cat:e.target.value})),style:{fontSize:11}},
+                  FUNNEL_CATS.map(c=>el('option',{key:c,value:c},c))
+                )
+              : col.key==='status'
+              ? el('input',{className:'ei',value:newRow.status,onChange:e=>setNewRow(r=>({...r,status:e.target.value})),placeholder:'Y / PC#5…',style:{fontSize:11}})
+              : el('input',{className:'ei',value:newRow[col.key]||'',
+                  onChange:e=>setNewRow(r=>({...r,[col.key]:e.target.value})),
+                  placeholder:col.label,
+                  onKeyDown:e=>e.key==='Enter'&&addIdea(),
+                  style:{fontSize:11}
+                })
+          )),
+          el('div',{style:{display:'flex',alignItems:'center',gap:6,padding:'4px 8px',flexShrink:0}},
+            el('button',{onClick:addIdea,style:{background:'var(--accent)',border:'none',borderRadius:6,padding:'5px 12px',color:'#fff',cursor:'pointer',fontSize:11,fontFamily:'inherit',fontWeight:700}},'Add'),
+            el('button',{onClick:()=>setShowAddRow(false),style:{background:'transparent',border:'none',cursor:'pointer',color:'var(--muted)',fontSize:13}},'✕')
+          )
+        ),
+
+        /* Data rows */
+        visible.map((row,ri)=>{
+          const catCol=FUNNEL_CAT_COL[row.cat]||'var(--muted)';
+          const statCol=FUNNEL_STATUS_COL[row.status]||'#9ca3af';
+          const isEdit=editId===row.id;
+          return el('div',{key:row.id,style:{
+            display:'flex',
+            background:ri%2===0?'var(--bg)':'var(--surface)',
+            transition:'background 150ms'
+          },
+          onMouseEnter:e=>e.currentTarget.style.background='color-mix(in srgb,var(--accent) 4%,var(--bg))',
+          onMouseLeave:e=>e.currentTarget.style.background=ri%2===0?'var(--bg)':'var(--surface)'
+          },
+            /* Delete button */
+            el('div',{style:{width:36,flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',borderRight:'1px solid var(--border-soft)'}},
+              el('button',{onClick:()=>deleteIdea(row.id),style:{background:'none',border:'none',cursor:'pointer',color:'var(--muted)',fontSize:12,opacity:.4,padding:4}},
+                el('i',{className:'ti ti-trash'})
+              )
+            ),
+            /* Status */
+            el('div',{style:{...cellStyle,width:110,flexShrink:0}},
+              isEdit
+                ? el('input',{className:'ei',defaultValue:row.status,onBlur:e=>saveIdea(row.id,'status',e.target.value),autoFocus:false,style:{fontSize:10,width:'100%'}})
+                : el('span',{
+                    onClick:()=>setEditId(row.id+'_status'),
+                    style:{
+                      fontFamily:'var(--mono)',fontSize:9,fontWeight:700,
+                      background:statCol+'18',color:statCol,
+                      borderRadius:4,padding:'2px 8px',cursor:'pointer',whiteSpace:'nowrap'
+                    }
+                  },row.status||'—')
+            ),
+            /* Category */
+            el('div',{style:{...cellStyle,width:130,flexShrink:0}},
+              el('span',{style:{
+                fontFamily:'var(--mono)',fontSize:9,fontWeight:700,
+                background:catCol+'18',color:catCol,
+                borderRadius:4,padding:'2px 8px',whiteSpace:'nowrap'
+              }},row.cat)
+            ),
+            /* Other cols */
+            ['brand','name','format','potency','notes'].map((key,ki)=>{
+              const col=COLS.find(c=>c.key===key);
+              return el('div',{key,style:{
+                ...cellStyle,
+                width:col.w?col.w+'px':undefined,
+                flex:col.w?undefined:1,
+                flexShrink:col.w?0:undefined
+              }},
+                el('span',{
+                  contentEditable:true,suppressContentEditableWarning:true,
+                  onBlur:e=>saveIdea(row.id,key,e.target.innerText.trim()),
+                  style:{
+                    fontSize:key==='name'?12:11,
+                    fontWeight:key==='name'?600:400,
+                    color:key==='name'?'var(--fg)':'var(--fg-2)',
+                    outline:'none',
+                    cursor:'text',width:'100%',
+                    fontFamily:['format','potency'].includes(key)?'var(--mono)':'inherit',
+                    lineHeight:1.4
+                  }
+                },row[key]||'')
+              );
+            })
+          );
+        }),
+
+        /* Empty state */
+        visible.length===0&&el('div',{style:{padding:'40px',textAlign:'center',color:'var(--muted)'}},
+          el('i',{className:'ti ti-bulb-off',style:{fontSize:28,display:'block',marginBottom:8,opacity:.4}}),
+          'No ideas in this category yet. Click "+ Add Idea" to start.'
+        )
+      )
+    )
+  );
+}
+
+
+
 function PCOverview({prods, pcLabel, onSelect, onUpdateProd}){
   if(!prods||!prods.length) return el('div',{style:{padding:40,textAlign:'center',color:'var(--muted)'}},
     el('i',{className:'ti ti-package-off',style:{fontSize:32,display:'block',marginBottom:8,opacity:.4}}),
@@ -976,7 +1231,7 @@ function PCOverview({prods, pcLabel, onSelect, onUpdateProd}){
       el('tbody',null,
         tableRows.map(({row,sectionHeader},ri)=>{
           const secStyle=SEC_STYLE[row.section]||{bg:'var(--surface-warm)',color:'var(--fg-2)'};
-          return el(React.Fragment,{key:row.key},
+          return el('div',{key:row.key,style:{display:'contents'}},
             /* Section header row */
             sectionHeader&&el('tr',null,
               el('td',{colSpan:prods.length+1,style:{
@@ -1401,313 +1656,249 @@ function generateProductPDF(prod, pcLabel) {
 
 
 
+
 /* ══════════════════════════════════════════
-   EXCEL IMPORT MODAL
+   EXCEL IMPORT MODAL v2
    Parses Mera Product Development Tracker
    ══════════════════════════════════════════ */
 
-// Field name normalisations (Excel typos → dashboard field names)
-const FIELD_MAP = {
-  'categroy':                        'Category',
-  'inital case offering (ft)':       'Initial Case Offering (FT)',
-  'prouduct primary/hardware':       'Product Primary/Hardware',
-  'product primary/hardware':        'Product Primary/Hardware',
-  'product package/outter':          'Product Package/Outer',
-  'accesory':                        'Accessory',
-  'label thc range':                 'Label THC Range',
-  'brand name internal':             'Brand Name Internal',
-  'product name internal':           'Product Name Internal',
-  'manufactured by: lp name':        'Manufactured by: LP Name',
-  'manufactured by: lp name ':       'Manufactured by: LP Name',
-  'commercial lead':                 'Commercial Lead',
-  'formulation lead':                'Formulation Lead',
-  'ops lead':                        'Ops Lead',
-  'planned launch time':             'Planned Launch Time',
-  'launch window':                   'Launch Window',
-  'stocking type':                   'Stocking Type',
-  'stocking status':                 'Stocking Status',
-  'samples required':                'Samples Required',
-  'landed cost':                     'Landed Cost',
-  'wholesale cost':                  'Wholesale Cost',
-  'msrp':                            'MSRP',
-  'launch po':                       'Launch PO',
-  'label thc range ':                'Label THC Range',
-  'target cbd range':                'Target CBD Range',
-  'other cannabinoids, range':       'Other Cannabinoids, Range',
-  'flavouring type':                 'Flavouring Type',
-  'flavour description':             'Flavour Description',
-  'biomass input ':                  'Biomass Input',
-  'biomass input':                   'Biomass Input',
-  'formulations':                    'Formulations',
-  'ingredients':                     'Ingredients',
-  'target product image':            'Target Product Image',
-  'target accessory image':          'Target Accessory Image',
-  'packaging labels':                'Packaging Labels',
-  'master case gtin':                'Master Case GTIN',
-  'retail pack gtin':                'Retail Pack GTIN',
-  'master case dimensions ':         'Master Case Dimensions',
-  'master case dimensions':          'Master Case Dimensions',
-  'units per master shipper/case':   'Units per Master Shipper/Case',
-  'who is responsible for labels sourcing?': 'Who is responsible for Labels Sourcing?',
-  'do we need new dies for labels?': 'Do we need new dies for labels?',
-  'vendor providing retail labels?': 'Vendor providing retail labels?',
-  'vendor providing case labels?':   'Vendor providing case labels?',
-  'formulated range':                'Formulated Range',
-  'product size':                    'Product Size',
-  'product package/outer':           'Product Package/Outer',
+const IMPORT_FIELD_MAP = {
+  'categroy':'Category','inital case offering (ft)':'Initial Case Offering (FT)',
+  'prouduct primary/hardware':'Product Primary/Hardware',
+  'product package/outter':'Product Package/Outer',
+  'accesory':'Accessory','label thc range ':'Label THC Range',
+  'biomass input ':'Biomass Input','master case dimensions ':'Master Case Dimensions',
+  'manufactured by: lp name ':'Manufactured by: LP Name',
 };
-
-const normField = k => {
+const importNormField = k=>{
   if(!k) return null;
-  const lk = String(k).toLowerCase().trim();
-  return FIELD_MAP[lk] || (k ? String(k).trim() : null);
+  const lk=String(k).toLowerCase().trim();
+  return IMPORT_FIELD_MAP[lk]||String(k).trim()||null;
 };
-
-// Known skip rows that aren't spec fields
-const SKIP_ROWS = new Set([
-  'product specifics','packaging requirements','status','notes',
-  'key updates','blockers','key update','blocker',''
-]);
-
-// Status mapping
-const TAG_MAP = {
-  'accepted':     'Accepted',
-  'rejected':     'Rejected',
-  'in progress':  'In Progress',
-  'cancelled':    'Cancelled',
-  'on track':     'On Track',
-  'at risk':      'At Risk',
-  'launched':     'Launched',
-};
-const normalizeTag = v => {
+const IMPORT_SKIP=new Set(['product specifics','packaging requirements','status','notes','key update','key updates','blocker','blockers','','status ']);
+const importNormTag=v=>{
   if(!v) return 'In Progress';
-  const lv = String(v).toLowerCase().trim();
-  for(const [k,tag] of Object.entries(TAG_MAP)) if(lv.includes(k)) return tag;
+  const lv=String(v).toLowerCase();
+  if(lv.includes('accept')) return 'Accepted';
+  if(lv.includes('reject')) return 'Rejected';
+  if(lv.includes('cancel')) return 'Cancelled';
+  if(lv.includes('launch')) return 'Launched';
+  if(lv.includes('risk')) return 'At Risk';
+  if(lv.includes('progress')) return 'In Progress';
   return 'In Progress';
 };
+const IMPORT_SHEET_PC={'PC#1 2026':'pc1','PC#2 2026':'pc2','PC#3 2026':'pc3','PC#4 2026':'pc4','In Development':'in_dev'};
 
-// Sheet name → dashboard PC tab id mapping
-const SHEET_TO_PC = {
-  'PC#1 2026': 'pc1', 'PC#2 2026': 'pc2',
-  'PC#3 2026': 'pc3', 'PC#4 2026': 'pc4',
-  'In Development': 'in_dev',
-};
+function parseTrackerWorkbook(wb){
+  const XLSX=window.XLSX;
+  const results={};
+  const targets=['PC#1 2026','PC#2 2026','PC#3 2026','PC#4 2026','In Development'];
 
-function parseExcelTracker(workbook) {
-  const XLSX = window.XLSX;
-  const results = {};
+  for(const shName of targets){
+    if(!wb.SheetNames.includes(shName)) continue;
+    const ws=wb.Sheets[shName];
+    if(!ws) continue;
 
-  const targetSheets = ['PC#1 2026','PC#2 2026','PC#3 2026','PC#4 2026','In Development'];
+    // Convert to row arrays — raw:true keeps numbers as numbers
+    const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:null,raw:true});
+    if(!rows.length) continue;
 
-  for(const shName of targetSheets) {
-    if(!workbook.SheetNames.includes(shName)) continue;
-    const ws = workbook.Sheets[shName];
-    const rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:null, raw:false});
-
-    // Find "Product Name Internal" row — tells us which columns have products
-    let prodNameRowIdx = rows.findIndex(r => r[0] && String(r[0]).toLowerCase().trim() === 'product name internal');
-    if(prodNameRowIdx < 0) {
-      // try alternate
-      prodNameRowIdx = rows.findIndex(r => r[0] && String(r[0]).toLowerCase().trim() === 'product name internal ');
+    // Find "Product Name Internal" row
+    let prodRow=-1;
+    for(let i=0;i<rows.length;i++){
+      const v=rows[i][0];
+      if(v&&String(v).trim().toLowerCase().startsWith('product name internal')){
+        prodRow=i; break;
+      }
     }
-    if(prodNameRowIdx < 0) continue;
+    if(prodRow<0) continue;
 
-    // Product columns: any column > 0 with a non-empty product name
-    const prodCols = rows[prodNameRowIdx]
-      .map((v,j) => ({j, name: v ? String(v).trim() : null}))
-      .filter(x => x.j > 0 && x.name && x.name.length > 1 && !x.name.toLowerCase().includes('product name'));
-
+    // Product columns = any column > 0 with a non-empty string in that row
+    const prodCols=[];
+    const prow=rows[prodRow];
+    for(let j=1;j<(prow.length||30);j++){
+      const v=prow[j];
+      if(v&&String(v).trim().length>1) prodCols.push(j);
+    }
     if(!prodCols.length) continue;
 
-    // Find Status row (row with col 0 = 'Status' or earlier row containing per-product status)
-    // In PC#1: status is per-col in row 0 ("Spring 2026 - ACCEPTED")
-    // In PC#4: status is in row 1 col 1 as category, and col 2+ as individual statuses
-    // Strategy: look for a row where col 0 = 'Status' OR where values matching status keywords appear for prod cols
-    let statusRowIdx = rows.findIndex(r => r[0] && String(r[0]).toLowerCase().trim() === 'status');
-    if(statusRowIdx < 0) {
-      // Look for first row with status-like values in product columns
-      statusRowIdx = rows.findIndex((r,i) => i < prodNameRowIdx && prodCols.some(pc => {
-        const v = r[pc.j] ? String(r[pc.j]).toLowerCase() : '';
-        return v.includes('accepted')||v.includes('rejected')||v.includes('progress')||v.includes('cancelled');
-      }));
-    }
-    // Also check row 0 (Planned Launch Time row sometimes has status for PC#1)
-    if(statusRowIdx < 0 && rows[0]) {
-      const hasStatus = prodCols.some(pc => {
-        const v = rows[0][pc.j] ? String(rows[0][pc.j]).toLowerCase() : '';
-        return v.includes('accepted')||v.includes('rejected')||v.includes('cancelled');
-      });
-      if(hasStatus) statusRowIdx = 0;
-    }
-
     // Find brand row
-    const brandRowIdx = rows.findIndex(r => r[0] && String(r[0]).toLowerCase().trim() === 'brand name internal');
-
-    // Find updates row (if any)
-    const updatesRowIdx = rows.findIndex(r => r[0] && String(r[0]).toLowerCase().includes('key update'));
-    const blockersRowIdx = rows.findIndex(r => r[0] && String(r[0]).toLowerCase().includes('blocker'));
-
-    // Build a field→row index map for all spec rows
-    const fieldRows = {};
-    rows.forEach((row, i) => {
-      if(i === prodNameRowIdx || i === brandRowIdx) return;
-      const fieldKey = row[0] ? String(row[0]).trim() : null;
-      if(!fieldKey) return;
-      const norm = normField(fieldKey);
-      if(norm && !SKIP_ROWS.has(fieldKey.toLowerCase())) {
-        fieldRows[norm] = i;
+    let brandRow=-1;
+    for(let i=0;i<rows.length;i++){
+      if(rows[i][0]&&String(rows[i][0]).trim().toLowerCase().startsWith('brand name internal')){
+        brandRow=i; break;
       }
-    });
+    }
 
-    // Build products
-    const pcId = SHEET_TO_PC[shName] || 'in_dev';
-    results[shName] = { pcId, products: [] };
-
-    for(const {j, name} of prodCols) {
-      // Name
-      const cleanName = name.split('\n')[0].trim();
-
-      // Brand
-      const brand = brandRowIdx >= 0 && rows[brandRowIdx][j]
-        ? String(rows[brandRowIdx][j]).trim() : '';
-
-      // Status
-      let status = 'In Progress';
-      if(statusRowIdx >= 0 && rows[statusRowIdx][j]) {
-        status = normalizeTag(rows[statusRowIdx][j]);
+    // Find status — look for row where product cols have status-like values
+    // or row 0/1 where col 0 is "Status" or "Planned Launch Time" with status values
+    let statusRow=-1;
+    for(let i=0;i<Math.min(prodRow,5);i++){
+      const hasStat=prodCols.some(j=>{
+        const v=rows[i][j]?String(rows[i][j]).toLowerCase():'';
+        return v.includes('accept')||v.includes('reject')||v.includes('cancel')||v.includes('progress');
+      });
+      if(hasStat){statusRow=i;break;}
+    }
+    // Also check a row with col[0]='Status'
+    if(statusRow<0){
+      for(let i=0;i<prodRow;i++){
+        if(rows[i][0]&&String(rows[i][0]).toLowerCase().trim()==='status'){statusRow=i;break;}
       }
+    }
 
-      // Specs
-      const specs = {};
-      for(const [fieldName, rowIdx] of Object.entries(fieldRows)) {
-        const raw = rows[rowIdx][j];
-        if(raw !== null && raw !== undefined && String(raw).trim()) {
-          // Format currency
-          if(['Landed Cost','Wholesale Cost','MSRP'].includes(fieldName) && !isNaN(parseFloat(raw))) {
-            specs[fieldName] = '$'+parseFloat(raw).toFixed(2);
-          } else {
-            specs[fieldName] = String(raw).trim();
-          }
+    // Find updates / blockers rows
+    let updRow=-1,blkRow=-1;
+    for(let i=0;i<rows.length;i++){
+      const v=rows[i][0]?String(rows[i][0]).toLowerCase().trim():'';
+      if(v.includes('key update')&&updRow<0) updRow=i;
+      if(v.includes('blocker')&&blkRow<0) blkRow=i;
+    }
+
+    // Build field→rowIndex map (spec rows only)
+    const fieldRows={};
+    for(let i=0;i<rows.length;i++){
+      if(i===prodRow||i===brandRow) continue;
+      const raw=rows[i][0];
+      if(!raw) continue;
+      const sk=String(raw).trim().toLowerCase();
+      if(IMPORT_SKIP.has(sk)) continue;
+      const norm=importNormField(raw);
+      if(norm) fieldRows[norm]=i;
+    }
+
+    const pcId=IMPORT_SHEET_PC[shName]||'in_dev';
+    results[shName]={pcId,products:[]};
+
+    for(const j of prodCols){
+      const nameRaw=rows[prodRow][j];
+      if(!nameRaw) continue;
+      const name=String(nameRaw).split('\n')[0].trim();
+      if(!name||name.length<2) continue;
+
+      const brand=brandRow>=0&&rows[brandRow][j]?String(rows[brandRow][j]).trim():'';
+      const status=statusRow>=0&&rows[statusRow][j]?importNormTag(rows[statusRow][j]):'In Progress';
+      const updates=updRow>=0&&rows[updRow][j]?String(rows[updRow][j]).trim():'';
+      const blockers=blkRow>=0&&rows[blkRow][j]?String(rows[blkRow][j]).trim():'';
+
+      const specs={};
+      for(const [field,ri] of Object.entries(fieldRows)){
+        const raw=rows[ri][j];
+        if(raw===null||raw===undefined) continue;
+        const sv=String(raw).trim();
+        if(!sv) continue;
+        if(['Landed Cost','Wholesale Cost','MSRP'].includes(field)&&!isNaN(parseFloat(sv))){
+          specs[field]='$'+parseFloat(sv).toFixed(2);
+        } else {
+          specs[field]=sv;
         }
       }
 
-      // Notes
-      const updates = updatesRowIdx >= 0 && rows[updatesRowIdx][j]
-        ? String(rows[updatesRowIdx][j]).trim() : '';
-      const blockers = blockersRowIdx >= 0 && rows[blockersRowIdx][j]
-        ? String(rows[blockersRowIdx][j]).trim() : '';
-
-      results[shName].products.push({
-        name: cleanName,
-        shortName: cleanName.split(' ').slice(0,5).join(' '),
-        brand,
-        status,
-        specs,
-        notes: { updates, blockers },
-      });
+      results[shName].products.push({name,shortName:name.split(' ').slice(0,5).join(' '),brand,status,specs,notes:{updates,blockers}});
     }
   }
   return results;
 }
 
-/* ── Import Modal Component ── */
-function ImportExcelModal({onImport, onClose, existingData}) {
-  const [stage, setStage] = React.useState('upload'); // upload | preview | done
-  const [parsed, setParsed] = React.useState(null);
-  const [selected, setSelected] = React.useState({});
-  const [busy, setBusy] = React.useState(false);
-  const [err, setErr] = React.useState('');
-  const fileRef = React.useRef();
+function ImportExcelModal({onImport,onClose,existingData}){
+  const [stage,setStage]=React.useState('upload');
+  const [parsed,setParsed]=React.useState(null);
+  const [selected,setSelected]=React.useState({});
+  const [busy,setBusy]=React.useState(false);
+  const [err,setErr]=React.useState('');
+  const [dragging,setDragging]=React.useState(false);
+  const fileRef=React.useRef();
 
-  const handleFile = async (file) => {
+  const processFile=async file=>{
     if(!file) return;
+    if(!file.name.match(/\.xlsx?$/i)){setErr('Please upload an Excel file (.xlsx)');return;}
     setBusy(true); setErr('');
-    try {
-      const buf = await file.arrayBuffer();
-      const XLSX = window.XLSX;
-      if(!XLSX) throw new Error('SheetJS not loaded');
-      const wb = XLSX.read(buf, {type:'array', cellText:true, cellDates:false});
-      const result = parseExcelTracker(wb);
-      const totalProds = Object.values(result).reduce((s,sh)=>s+sh.products.length,0);
-      if(!totalProds) throw new Error('No products found. Make sure you uploaded the Product Development Tracker.');
+    try{
+      const buf=await file.arrayBuffer();
+      const XLSX=window.XLSX;
+      if(!XLSX){setErr('SheetJS not loaded — check internet connection');setBusy(false);return;}
+      const wb=XLSX.read(new Uint8Array(buf),{type:'array'});
+      console.log('Sheets found:',wb.SheetNames);
+      const result=parseTrackerWorkbook(wb);
+      console.log('Parse result:',result);
+      const total=Object.values(result).reduce((s,sh)=>s+sh.products.length,0);
+      if(!total){
+        setErr('No products found. Check the file is the Product Development Tracker and has PC#1/PC#2/PC#3/PC#4/In Development sheets.');
+        setBusy(false); return;
+      }
+      const sel={};
+      Object.keys(result).forEach(sh=>{sel[sh]=true;});
       setParsed(result);
-      // Pre-select all sheets
-      const sel = {};
-      Object.keys(result).forEach(sh => { sel[sh] = true; });
       setSelected(sel);
       setStage('preview');
-    } catch(e) {
-      setErr(e.message);
+    }catch(e){
+      console.error('Import error:',e);
+      setErr('Error: '+e.message);
     }
     setBusy(false);
   };
 
-  const totalSelected = parsed
-    ? Object.entries(selected).filter(([,v])=>v).reduce((s,[sh])=>s+(parsed[sh]?.products?.length||0),0)
-    : 0;
+  const onDrop=e=>{
+    e.preventDefault(); setDragging(false);
+    const file=e.dataTransfer?.files?.[0];
+    if(file) processFile(file);
+  };
 
-  const doImport = () => {
+  const totalSelected=parsed
+    ?Object.entries(selected).filter(([,v])=>v).reduce((s,[sh])=>s+(parsed[sh]?.products?.length||0),0)
+    :0;
+
+  const doImport=()=>{
     if(!parsed) return;
-    // Build new data updates
-    const updates = {};
-    // Ensure pc4 tab exists
-    let pcTabs = [...(existingData.pcTabs||[])];
-    if(!pcTabs.find(t=>t.id==='pc4')) {
-      pcTabs = [...pcTabs, {id:'pc4',label:'PC#4 2026'}];
-    }
+    const updates={};
+    let pcTabs=[...(existingData.pcTabs||[])];
+    if(!pcTabs.find(t=>t.id==='pc4')) pcTabs=[...pcTabs,{id:'pc4',label:'PC#4 2026'}];
 
-    for(const [shName, sheet] of Object.entries(parsed)) {
+    let added=0;
+    for(const [shName,sheet] of Object.entries(parsed)){
       if(!selected[shName]) continue;
-      const pcId = sheet.pcId;
-
-      const newProds = sheet.products.map(p => ({
-        id: uid(),
-        name: p.name,
-        shortName: p.shortName,
-        brand: p.brand,
-        skuCode: '',
-        launchDate: '',
-        tags: [p.status],
-        notes: p.notes,
-        specs: p.specs,
-        tasks: [...BLANK_PROD('').tasks], // give default tasks
-      }));
-
-      // Add-only: skip products whose name already exists
-      const existing = existingData[pcId]||[];
-      const existingNames = new Set(existing.map(p=>p.name.toLowerCase().trim()));
-      const toAdd = newProds.filter(p=>!existingNames.has(p.name.toLowerCase().trim()));
-      updates[pcId] = [...existing, ...toAdd];
+      const pcId=sheet.pcId;
+      const existing=updates[pcId]||(existingData[pcId]||[]);
+      const existingNames=new Set(existing.map(p=>p.name.toLowerCase().trim()));
+      const toAdd=sheet.products
+        .filter(p=>!existingNames.has(p.name.toLowerCase().trim()))
+        .map(p=>({
+          id:uid(),name:p.name,shortName:p.shortName,brand:p.brand,
+          skuCode:'',launchDate:'',tags:[p.status],
+          notes:p.notes,specs:p.specs,
+          tasks:[...BLANK_PROD('').tasks]
+        }));
+      updates[pcId]=[...existing,...toAdd];
+      added+=toAdd.length;
     }
-
-    onImport({...updates, pcTabs});
+    onImport({...updates,pcTabs});
+    alert(`✓ Imported ${added} new product${added===1?'':'s'}. Products already in the dashboard were skipped.`);
     onClose();
   };
 
-  const S = {
-    overlay:{position:'fixed',inset:0,background:'rgba(0,0,0,.65)',backdropFilter:'blur(4px)',
+  return el('div',{
+    style:{position:'fixed',inset:0,background:'rgba(0,0,0,.65)',backdropFilter:'blur(4px)',
       zIndex:700,display:'flex',alignItems:'center',justifyContent:'center',padding:20},
-    box:{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:'var(--radius-lg)',
-      width:'100%',maxWidth:580,maxHeight:'88vh',display:'flex',flexDirection:'column',
-      boxShadow:'0 24px 64px rgba(0,0,0,.5)'},
-    hd:{padding:'16px 20px',borderBottom:'1px solid var(--border)',background:'var(--surface-warm)',
-      borderRadius:'var(--radius-lg) var(--radius-lg) 0 0',
-      display:'flex',alignItems:'center',justifyContent:'space-between'},
-    body:{padding:'20px',overflowY:'auto',flex:1},
-  };
-
-  return el('div',{style:S.overlay,onClick:e=>e.target===e.currentTarget&&onClose()},
-    el('div',{style:S.box},
-
+    onClick:e=>e.target===e.currentTarget&&onClose()
+  },
+    el('div',{style:{
+      background:'var(--surface)',border:'1px solid var(--border)',borderRadius:'var(--radius-lg)',
+      width:'100%',maxWidth:560,maxHeight:'88vh',display:'flex',flexDirection:'column',
+      boxShadow:'0 24px 64px rgba(0,0,0,.5)'
+    }},
       /* Header */
-      el('div',{style:S.hd},
+      el('div',{style:{
+        padding:'16px 20px',borderBottom:'1px solid var(--border)',
+        background:'var(--surface-warm)',borderRadius:'var(--radius-lg) var(--radius-lg) 0 0',
+        display:'flex',alignItems:'center',justifyContent:'space-between'
+      }},
         el('div',null,
           el('div',{style:{fontSize:15,fontWeight:700,color:'var(--fg)',display:'flex',alignItems:'center',gap:8}},
             el('i',{className:'ti ti-file-import',style:{color:'var(--accent)',fontSize:17}}),
-            'Import from Product Development Tracker'
+            'Import from Excel Tracker'
           ),
           el('div',{style:{fontFamily:'var(--mono)',fontSize:10,color:'var(--muted)',marginTop:3,textTransform:'uppercase',letterSpacing:'.07em'}},
-            stage==='preview' ? 'Select sheets to import' : 'Upload your Excel tracker'
+            stage==='upload'?'Upload your Product Development Tracker':'Select sheets — add-only, never overwrites'
           )
         ),
         el('button',{onClick:onClose,style:{background:'none',border:'none',cursor:'pointer',color:'var(--muted)',fontSize:18}},
@@ -1715,78 +1906,90 @@ function ImportExcelModal({onImport, onClose, existingData}) {
         )
       ),
 
-      el('div',{style:S.body},
+      /* Body */
+      el('div',{style:{padding:'20px',overflowY:'auto',flex:1}},
 
         /* Upload stage */
         stage==='upload'&&el('div',null,
           el('div',{
-            onClick:()=>fileRef.current?.click(),
+            onClick:()=>fileRef.current&&fileRef.current.click(),
+            onDragOver:e=>{e.preventDefault();setDragging(true);},
+            onDragLeave:()=>setDragging(false),
+            onDrop,
             style:{
-              border:'2px dashed var(--border)',borderRadius:'var(--radius-md)',
-              padding:'40px 20px',textAlign:'center',cursor:'pointer',
-              background:'var(--surface-warm)',transition:'border-color 150ms'
-            },
-            onMouseEnter:e=>e.currentTarget.style.borderColor='var(--accent)',
-            onMouseLeave:e=>e.currentTarget.style.borderColor='var(--border)'
+              border:'2px dashed '+(dragging?'var(--accent)':'var(--border)'),
+              borderRadius:'var(--radius-md)',
+              padding:'44px 20px',textAlign:'center',cursor:'pointer',
+              background:dragging?'var(--accent-bg)':'var(--surface-warm)',
+              transition:'all 150ms'
+            }
           },
-            el('i',{className:'ti ti-table-import',style:{fontSize:40,color:'var(--accent)',display:'block',marginBottom:12}}),
-            el('div',{style:{fontSize:14,fontWeight:600,color:'var(--fg)',marginBottom:6}},'Drop Excel file or click to browse'),
-            el('div',{style:{fontFamily:'var(--mono)',fontSize:11,color:'var(--muted)'}},'2026-06-25 - Product Development Tracker.xlsx'),
-            busy&&el('div',{style:{marginTop:12,color:'var(--accent)',fontSize:12}},
-              el('i',{className:'ti ti-loader-2',style:{animation:'spin 1s linear infinite',marginRight:6}}),
-              'Parsing…'
-            ),
-            err&&el('div',{style:{marginTop:12,color:'var(--danger)',fontSize:12,fontFamily:'var(--mono)'}},err)
+            busy
+              ? el('div',null,
+                  el('i',{className:'ti ti-loader-2',style:{fontSize:36,color:'var(--accent)',display:'block',marginBottom:10,animation:'spin 1s linear infinite'}}),
+                  el('div',{style:{color:'var(--muted)',fontSize:13}},'Parsing file…')
+                )
+              : el('div',null,
+                  el('i',{className:'ti ti-table-import',style:{fontSize:42,color:'var(--accent)',display:'block',marginBottom:12}}),
+                  el('div',{style:{fontSize:14,fontWeight:600,color:'var(--fg)',marginBottom:6}},'Drop Excel file here or click to browse'),
+                  el('div',{style:{fontFamily:'var(--mono)',fontSize:11,color:'var(--muted)',marginBottom:4}},'Product Development Tracker.xlsx'),
+                  el('div',{style:{fontFamily:'var(--mono)',fontSize:10,color:'var(--muted)',opacity:.7}},'Imports: PC#1 · PC#2 · PC#3 · PC#4 · In Development')
+                )
           ),
-          el('input',{ref:fileRef,type:'file',accept:'.xlsx,.xls',style:{display:'none'},
-            onChange:e=>handleFile(e.target.files[0])})
+          err&&el('div',{style:{
+            marginTop:12,padding:'10px 14px',borderRadius:8,
+            background:'var(--err-bg)',border:'1px solid var(--err)',
+            color:'var(--err)',fontSize:12,fontFamily:'var(--mono)'
+          }},el('i',{className:'ti ti-alert-circle',style:{marginRight:6}}),err),
+          el('input',{
+            ref:fileRef,type:'file',accept:'.xlsx,.xls',
+            style:{display:'none'},
+            onChange:e=>{const f=e.target.files&&e.target.files[0];if(f)processFile(f);}
+          })
         ),
 
         /* Preview stage */
         stage==='preview'&&parsed&&el('div',null,
-
-          /* Info banner — add-only, never overwrites */
           el('div',{style:{
             display:'flex',alignItems:'center',gap:8,marginBottom:16,
             background:'rgba(61,220,138,.1)',border:'1px solid rgba(61,220,138,.25)',
-            borderRadius:8,padding:'9px 13px',
-            fontFamily:'var(--mono)',fontSize:11,color:'var(--success)'
+            borderRadius:8,padding:'9px 13px',fontSize:12,color:'var(--success)'
           }},
-            el('i',{className:'ti ti-shield-check',style:{fontSize:14,flexShrink:0}}),
+            el('i',{className:'ti ti-shield-check',style:{fontSize:15,flexShrink:0}}),
             el('span',null,
-              el('strong',null,'Add-only mode: '),
-              'Products already in the dashboard (matched by name) will never be overwritten.'
+              el('strong',null,'Add-only: '),
+              'Products already in the dashboard will be skipped.'
             )
           ),
-
-          /* Sheet selection */
-          el('div',{style:{fontFamily:'var(--mono)',fontSize:9,fontWeight:700,textTransform:'uppercase',letterSpacing:'.1em',color:'var(--muted)',marginBottom:8}},'Sheets'),
+          el('div',{style:{fontFamily:'var(--mono)',fontSize:9,fontWeight:700,textTransform:'uppercase',letterSpacing:'.1em',color:'var(--muted)',marginBottom:8}},'Sheets to import'),
           Object.entries(parsed).map(([shName,sheet])=>
-            el('div',{key:shName,onClick:()=>setSelected(s=>({...s,[shName]:!s[shName]})),style:{
-              display:'flex',alignItems:'center',gap:10,padding:'10px 12px',
-              marginBottom:6,borderRadius:8,cursor:'pointer',
-              border:'1px solid '+(selected[shName]?'var(--accent)':'var(--border)'),
-              background:selected[shName]?'var(--accent-bg)':'var(--surface-warm)',
-              transition:'all 150ms'
-            }},
+            el('div',{key:shName,
+              onClick:()=>setSelected(s=>({...s,[shName]:!s[shName]})),
+              style:{
+                display:'flex',alignItems:'center',gap:10,padding:'10px 12px',
+                marginBottom:6,borderRadius:8,cursor:'pointer',
+                border:'1px solid '+(selected[shName]?'var(--accent)':'var(--border)'),
+                background:selected[shName]?'var(--accent-bg)':'var(--surface-warm)',
+                transition:'all 150ms'
+              }
+            },
               el('div',{style:{
                 width:18,height:18,borderRadius:5,flexShrink:0,
                 border:'2px solid '+(selected[shName]?'var(--accent)':'var(--border)'),
                 background:selected[shName]?'var(--accent)':'transparent',
-                display:'flex',alignItems:'center',justifyContent:'center'
+                display:'flex',alignItems:'center',justifyContent:'center',transition:'all 150ms'
               }},selected[shName]&&el('i',{className:'ti ti-check',style:{fontSize:10,color:'#fff'}})),
-              el('div',{style:{flex:1}},
-                el('div',{style:{fontSize:12,fontWeight:600,color:selected[shName]?'var(--fg)':'var(--fg-2)'}},shName),
-                el('div',{style:{fontFamily:'var(--mono)',fontSize:9,color:'var(--muted)',marginTop:2}},
-                  sheet.products.length+' products: ',
-                  sheet.products.slice(0,3).map(p=>p.shortName).join(', '),
-                  sheet.products.length>3?` +${sheet.products.length-3} more`:''
+              el('div',{style:{flex:1,minWidth:0}},
+                el('div',{style:{fontSize:12,fontWeight:600,color:'var(--fg)',marginBottom:2}},shName),
+                el('div',{style:{fontFamily:'var(--mono)',fontSize:10,color:'var(--muted)',
+                  overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},
+                  sheet.products.map(p=>p.shortName).join(' · ')
                 )
               ),
               el('span',{style:{
                 fontFamily:'var(--mono)',fontSize:10,fontWeight:700,
                 background:'var(--surface)',border:'1px solid var(--border)',
-                borderRadius:4,padding:'2px 8px',color:'var(--muted)'
+                borderRadius:4,padding:'2px 8px',color:'var(--muted)',flexShrink:0
               }},sheet.products.length+' SKUs')
             )
           )
@@ -1799,18 +2002,19 @@ function ImportExcelModal({onImport, onClose, existingData}) {
           background:'var(--surface-warm)',border:'1px solid var(--border)',borderRadius:8,
           padding:'9px 18px',fontSize:13,fontFamily:'inherit',color:'var(--fg-2)',cursor:'pointer'
         }},'Cancel'),
-        stage==='preview'&&el('button',{onClick:()=>setStage('upload'),style:{
+        stage==='preview'&&el('button',{onClick:()=>{setStage('upload');setErr('');},style:{
           background:'var(--surface-warm)',border:'1px solid var(--border)',borderRadius:8,
-          padding:'9px 18px',fontSize:13,fontFamily:'inherit',color:'var(--fg-2)',cursor:'pointer'
+          padding:'9px 14px',fontSize:13,fontFamily:'inherit',color:'var(--fg-2)',cursor:'pointer'
         }},el('i',{className:'ti ti-arrow-left'}),' Back'),
         stage==='preview'&&el('button',{
           onClick:doImport,
           disabled:totalSelected===0,
           style:{
-            background:totalSelected?'var(--accent)':'var(--surface-warm)',border:'none',borderRadius:8,
-            padding:'9px 18px',fontSize:13,fontFamily:'inherit',
+            background:totalSelected?'var(--accent)':'var(--surface-warm)',
+            border:'none',borderRadius:8,padding:'9px 20px',fontSize:13,
+            fontFamily:'inherit',fontWeight:700,
             color:totalSelected?'#fff':'var(--muted)',
-            fontWeight:700,cursor:totalSelected?'pointer':'not-allowed',
+            cursor:totalSelected?'pointer':'not-allowed',
             display:'flex',alignItems:'center',gap:7
           }
         },
@@ -1821,6 +2025,7 @@ function ImportExcelModal({onImport, onClose, existingData}) {
     )
   );
 }
+
 
 
 function AddProductModal({onAdd,onClose,allProds}){
@@ -2208,6 +2413,8 @@ function GanttChart({tasks,launchDate,onChange}){
   const [zoom,setZoom]=useState(1);
   const [drag,setDrag]=useState(null);
   const [containerWidth,setContainerWidth]=useState(0);
+  const [showAddTask,setShowAddTask]=useState(false);
+  const [addTaskCat,setAddTaskCat]=useState('rd');
   const containerRef=React.useRef();
 
   // Re-measure on resize so chart fills available space
@@ -2329,6 +2536,12 @@ function GanttChart({tasks,launchDate,onChange}){
       drag&&el('span',{style:{fontSize:11,color:'var(--accent)',fontWeight:600,marginLeft:8}},
         el('i',{className:'ti ti-drag-drop',style:{marginRight:4}}),'Dragging…'
       ),
+      el('button',{
+        className:'btn',
+        onClick:()=>setShowAddTask(t=>!t),
+        style:{marginLeft:'auto',background:showAddTask?'var(--accent)':'',
+          color:showAddTask?'#fff':'',border:showAddTask?'none':'',fontSize:11}
+      },el('i',{className:'ti ti-plus'}),' Add Task'),
       el('span',{style:{marginLeft:'auto',display:'flex',alignItems:'center',gap:10,fontSize:10,color:'var(--text3)'}},
         showTd&&el('span',null,el('span',{style:{color:'var(--err)',fontWeight:700,marginRight:3}},'━'),'Today'),
         lP!==null&&el('span',null,el('span',{style:{color:'var(--ok)',fontWeight:700,marginRight:3}},'━'),'Launch')
@@ -2337,6 +2550,70 @@ function GanttChart({tasks,launchDate,onChange}){
 
     el('div',{ref:containerRef,style:{overflowX:'auto',cursor:drag?'grabbing':'default'}},
       el('div',{style:{minWidth:LW+BW}},
+
+        /* ── Add Task inline form ── */
+        showAddTask&&el('div',{style:{
+          display:'flex',alignItems:'center',gap:8,padding:'10px 16px',
+          background:'var(--accent-bg)',borderBottom:'1px solid var(--accent-border)',
+          flexWrap:'wrap'
+        }},
+          el('span',{style:{fontFamily:'var(--mono)',fontSize:10,fontWeight:700,color:'var(--accent)',textTransform:'uppercase',letterSpacing:'.07em'}},
+            '+ New Task'
+          ),
+          el('input',{
+            id:'gantt-task-name',
+            className:'ei',placeholder:'Task name…',
+            style:{flex:2,minWidth:160,fontSize:12},
+            onKeyDown:e=>{
+              if(e.key==='Enter'){
+                const nm=e.target.value.trim();
+                if(nm&&onChange){
+                  const start=new Date().toISOString().slice(0,10);
+                  const end=new Date(Date.now()+14*86400000).toISOString().slice(0,10);
+                  const nt={id:uid(),name:nm,cat:addTaskCat,status:'Not Started',owner:'',start,end};
+                  onChange&&onChange(nt,'add');
+                  e.target.value='';
+                }
+              }
+            }
+          }),
+          el('select',{
+            className:'ei',value:addTaskCat,
+            onChange:e=>setAddTaskCat(e.target.value),
+            style:{flex:1,minWidth:120,fontSize:11}
+          },
+            CAT_ORDER.map(c=>el('option',{key:c,value:c},CAT[c].label))
+          ),
+          el('input',{
+            type:'date',className:'ei',
+            style:{flex:'0 0 130px',fontSize:11},
+            placeholder:'Start date',
+            onChange:e=>document.getElementById('gantt-start-tmp')&&(document.getElementById('gantt-start-tmp').value=e.target.value)
+          }),
+          el('span',{style:{color:'var(--muted)',fontSize:11}},'→'),
+          el('input',{
+            type:'date',className:'ei',
+            style:{flex:'0 0 130px',fontSize:11},
+            placeholder:'End date',
+            onChange:e=>document.getElementById('gantt-end-tmp')&&(document.getElementById('gantt-end-tmp').value=e.target.value)
+          }),
+          el('button',{
+            className:'btn',
+            style:{background:'var(--accent)',color:'#fff',border:'none',fontSize:11},
+            onClick:()=>{
+              const nm=document.getElementById('gantt-task-name')?.value?.trim();
+              if(nm&&onChange){
+                const dateInputs=document.querySelectorAll('[placeholder="Start date"],[placeholder="End date"]');
+                const start=dateInputs[0]?.value||new Date().toISOString().slice(0,10);
+                const end=dateInputs[1]?.value||new Date(Date.now()+14*86400000).toISOString().slice(0,10);
+                const nt={id:uid(),name:nm,cat:addTaskCat,status:'Not Started',owner:'',start,end};
+                onChange&&onChange(nt,'add');
+                if(document.getElementById('gantt-task-name')) document.getElementById('gantt-task-name').value='';
+              }
+            }
+          },el('i',{className:'ti ti-plus'}),' Add'),
+          el('button',{className:'btn',style:{fontSize:11},onClick:()=>setShowAddTask(false)},'✕')
+        ),
 
         /* ── HEADER ROW ── */
         el('div',{style:{display:'flex',borderBottom:'1px solid var(--bdr)',marginBottom:0,position:'sticky',top:0,background:'var(--bg)',zIndex:20}},
@@ -2895,7 +3172,13 @@ function ProductDetail({prod,onChange,onKbNav,view,pcTabs,onMove,allProds,onCopy
       [['tasks','Tasks'],['gantt','Gantt'],['specs','Specs']].map(([id,lbl])=>el('button',{key:id,className:'stab '+(sec===id?'on':''),onClick:()=>setSec(id)},lbl))
     ),
     sec==='tasks'&&el(TasksPanel,{tasks:prod.tasks,onChange:upT,onAdd:addT,onDel:delT}),
-    sec==='gantt'&&el(GanttChart,{tasks:prod.tasks,launchDate:prod.launchDate,onChange:ut=>{onChange({...prod,tasks:prod.tasks.map(t=>t.id===ut.id?ut:t)});}}),
+    sec==='gantt'&&el(GanttChart,{tasks:prod.tasks,launchDate:prod.launchDate,onChange:(ut,action)=>{
+      if(action==='add'){
+        onChange({...prod,tasks:[...prod.tasks,ut]});
+      } else {
+        onChange({...prod,tasks:prod.tasks.map(t=>t.id===ut.id?ut:t)});
+      }
+    }}),
     showCopyDates&&el(CopyDatesModal,{
       sourceProd:prod,
       allProds:allProds||[],
@@ -6059,15 +6342,7 @@ function PostLaunchView({data,setData,addChangelogEntry}){
       },
       onClose:()=>setShowBulkUpload(false)
     }),
-    showImport&&el(ImportExcelModal,{
-      existingData:data,
-      onImport:updates=>{
-        setData(d=>({...d,...updates}));
-        setIsDirty(true);
-        dirtyRef.current=true;
-      },
-      onClose:()=>setShowImport(false)
-    }),
+
     showAddSKU&&el(AddSKUModal,{
       activePC,
       allProds:{...data.postLaunch,...(data.pc1||[]).reduce((a,p)=>({...a,[p.id]:p}),{}),...(data.pc2||[]).reduce((a,p)=>({...a,[p.id]:p}),{}),...(data.pc3||[]).reduce((a,p)=>({...a,[p.id]:p}),{})},
@@ -6749,6 +7024,17 @@ function App(){
         el('div',{className:'sidebar-section-label',style:{marginTop:8}},'Development'),
         el('div',{style:{display:'flex',alignItems:'center',gap:0,borderRadius:'var(--rs)',overflow:'hidden'}},
           el('button',{
+            className:'sidebar-item '+(view==='funnel'?'active':''),
+            style:{flex:1,borderRadius:0},
+            onClick:()=>setView('funnel')
+          },
+            el('i',{className:'ti ti-bulb'}),
+            'Product Funnel',
+            el('span',{className:'sidebar-pc-badge'},(data.funnel||FUNNEL_INITIAL).length)
+          )
+        ),
+        el('div',{style:{display:'flex',alignItems:'center',gap:0,borderRadius:'var(--rs)',overflow:'hidden'}},
+          el('button',{
             className:'sidebar-item '+(view==='in_dev'?'active':''),
             style:{flex:1,borderRadius:0},
             onClick:()=>{setView('in_dev');setProdView('overview');}
@@ -6860,6 +7146,7 @@ function App(){
       el('div',{className:'topbar2'},
         el('span',{className:'topbar2-title'},
           view==='home'?'Home':
+          view==='funnel'?'Product Funnel':
           view==='postlaunch'?'Post Launch Analytics':
           view==='macro'?'Macro Timeline':
           view==='workload'?'Team Workload':
@@ -6884,12 +7171,22 @@ function App(){
       ),
 
       /* Modals */
+      showImport&&el(ImportExcelModal,{
+        existingData:data,
+        onImport:updates=>{
+          setData(d=>({...d,...updates}));
+          setIsDirty(true);
+          dirtyRef.current=true;
+        },
+        onClose:()=>setShowImport(false)
+      }),
       showGH&&el(GitHubSyncPanel,{data,setData,onClose:()=>setShowGH(false),onPushed:()=>{dirtyRef.current=false;setIsDirty(false);},onPulled:d=>{skipDirtyRef.current=true;setData(d);dirtyRef.current=false;setIsDirty(false);}}),
       el('input',{ref:importRef,type:'file',accept:'.json',style:{display:'none'},onChange:e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{try{const d=JSON.parse(ev.target.result);skipDirtyRef.current=true;setData(d);}catch{alert('Invalid backup file.');}};r.readAsText(f);}}),
 
       /* Content */
       el('div',{style:{flex:1}},
         view==='home'       ? el(HomeView,{data,setData,setView,setSels,setProdView}) :
+        view==='funnel'     ? el(FunnelView,{data,setData}) :
         view==='postlaunch' ? el(PostLaunchView,{data,setData,addChangelogEntry}) :
         view==='macro'      ? MacroTimeline :
         view==='workload'   ? el(WorkloadViewComp,{data,setView,setSels,setProdView}) :
