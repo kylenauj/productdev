@@ -829,6 +829,230 @@ function Ring({rd,pr,op,size=48}){
 }
 
 /* ── Summary View ── */
+
+function PCOverview({prods, pcLabel, onSelect, onUpdateProd}){
+  if(!prods||!prods.length) return el('div',{style:{padding:40,textAlign:'center',color:'var(--muted)'}},
+    el('i',{className:'ti ti-package-off',style:{fontSize:32,display:'block',marginBottom:8,opacity:.4}}),
+    'No products in this product call yet.'
+  );
+
+  const sp=p=>p.specs||{};
+
+  // Rows to show — label : getter function
+  const ROWS=[
+    {section:'Status',    key:'status',   label:'Status',          get:p=>(p.tags||[]).join(', ')},
+    {section:'Status',    key:'sku',      label:'Mera SKU',        get:p=>p.skuCode||getSkuCode(p.name,p)||''},
+    {section:'Status',    key:'launch',   label:'Launch Date',     get:p=>p.launchDate||''},
+    {section:'Updates',   key:'updates',  label:'Key Updates',     get:p=>p.notes?.updates||'', multiline:true},
+    {section:'Updates',   key:'blockers', label:'Blockers',        get:p=>p.notes?.blockers||'', multiline:true, isBlocker:true},
+    {section:'Launch',    key:'planned',  label:'Planned Launch',  get:p=>sp(p)['Planned Launch Time']||''},
+    {section:'Launch',    key:'window',   label:'Launch Window',   get:p=>sp(p)['Launch Window']||''},
+    {section:'Launch',    key:'ico',      label:'ICO (FT)',        get:p=>sp(p)['Initial Case Offering (FT)']||''},
+    {section:'Launch',    key:'stocking', label:'Stocking Type',   get:p=>sp(p)['Stocking Type']||''},
+    {section:'Team',      key:'comm',     label:'Commercial',      get:p=>sp(p)['Commercial Lead']||''},
+    {section:'Team',      key:'form',     label:'Formulation',     get:p=>sp(p)['Formulation Lead']||''},
+    {section:'Team',      key:'ops',      label:'Ops',             get:p=>sp(p)['Ops Lead']||''},
+    {section:'Product',   key:'cat',      label:'Category',        get:p=>sp(p)['Category']||''},
+    {section:'Product',   key:'size',     label:'Product Size',    get:p=>sp(p)['Product Size']||''},
+    {section:'Product',   key:'thc',      label:'Label THC',       get:p=>sp(p)['Label THC Range']||''},
+    {section:'Product',   key:'cbd',      label:'Target CBD',      get:p=>sp(p)['Target CBD Range']||''},
+    {section:'Product',   key:'form2',    label:'Formulations',    get:p=>sp(p)['Formulations']||'', multiline:true},
+    {section:'Product',   key:'ingr',     label:'Ingredients',     get:p=>sp(p)['Ingredients']||''},
+    {section:'Financials',key:'lc',       label:'Landed Cost',     get:p=>sp(p)['Landed Cost']||''},
+    {section:'Financials',key:'wc',       label:'Wholesale Cost',  get:p=>sp(p)['Wholesale Cost']||''},
+    {section:'Financials',key:'msrp',     label:'MSRP',            get:p=>sp(p)['MSRP']||''},
+    {section:'Packaging', key:'hw',       label:'Primary/Hardware',get:p=>sp(p)['Product Primary/Hardware']||'', multiline:true},
+    {section:'Packaging', key:'pkg',      label:'Package/Outer',   get:p=>sp(p)['Product Package/Outer']||''},
+    {section:'Packaging', key:'lbl',      label:'Labels',          get:p=>sp(p)['Packaging Labels']||''},
+    {section:'Packaging', key:'gtinr',    label:'Retail GTIN',     get:p=>sp(p)['Retail Pack GTIN']||''},
+    {section:'Packaging', key:'gtinm',    label:'Master GTIN',     get:p=>sp(p)['Master Case GTIN']||''},
+    {section:'Packaging', key:'dims',     label:'Case Dimensions', get:p=>sp(p)['Master Case Dimensions']||''},
+    {section:'Packaging', key:'upc',      label:'Units/Case',      get:p=>sp(p)['Units per Master Shipper/Case']||''},
+  ];
+
+  // Section colors
+  const SEC_STYLE={
+    'Status':   {bg:'#1e2a3a',color:'#5b9bf0'},
+    'Updates':  {bg:'#2a1e1e',color:'#ff9a5a'},
+    'Launch':   {bg:'#1a2a1e',color:'#3ddc8a'},
+    'Team':     {bg:'#251e2e',color:'#a78bfa'},
+    'Product':  {bg:'#1e2530',color:'#29c3d4'},
+    'Financials':{bg:'#2a2516',color:'#f0b73d'},
+    'Packaging':{bg:'#1a2010',color:'#97cf3f'},
+  };
+
+  const LABEL_W=140;
+  const COL_W=Math.max(160, Math.floor((window.innerWidth-240-LABEL_W-40)/prods.length));
+
+  // Build rows grouped by section
+  let lastSection='';
+  const tableRows=ROWS.map(row=>{
+    const sectionHeader = row.section!==lastSection ? row.section : null;
+    lastSection=row.section;
+    return {row, sectionHeader};
+  });
+
+  const tagColorMap={
+    'Accepted':'#16a34a','Launched':'#16a34a','On Track':'#16a34a',
+    'Rejected':'#dc2626','At Risk':'#dc2626','Delayed':'#dc2626',
+    'In Progress':'#d97706','Pending':'#d97706','High Priority':'#d97706',
+    'Not Started':'#6b7280'
+  };
+
+  return el('div',{style:{
+    overflowX:'auto',background:'var(--bg)',
+    borderTop:'1px solid var(--border)'
+  }},
+    el('table',{style:{
+      borderCollapse:'collapse',width:'100%',
+      tableLayout:'fixed',minWidth:(LABEL_W+prods.length*COL_W)+'px'
+    }},
+      /* STICKY HEADER ROW — product names */
+      el('thead',null,
+        el('tr',null,
+          /* Label column header */
+          el('th',{style:{
+            width:LABEL_W+'px',minWidth:LABEL_W+'px',
+            background:'var(--surface-warm)',borderBottom:'2px solid var(--accent)',
+            borderRight:'1px solid var(--border)',
+            padding:'10px 12px',textAlign:'left',position:'sticky',left:0,zIndex:3,
+            fontFamily:'var(--mono)',fontSize:9,fontWeight:700,
+            textTransform:'uppercase',letterSpacing:'.1em',color:'var(--muted)'
+          }},pcLabel||'Product Call'),
+          /* One column per SKU */
+          prods.map(p=>{
+            const code=p.skuCode||getSkuCode(p.name,p)||'';
+            const tag=(p.tags||[])[0]||'';
+            const tagCol=tagColorMap[tag]||'#6b7280';
+            const pct=p.tasks?.length?Math.round(p.tasks.filter(t=>t.status==='Done').length/p.tasks.length*100):0;
+            return el('th',{key:p.id,style:{
+              width:COL_W+'px',minWidth:COL_W+'px',
+              background:'var(--surface-warm)',
+              borderBottom:'2px solid var(--accent)',
+              borderLeft:'1px solid var(--border)',
+              padding:'10px 12px',textAlign:'left',
+              cursor:'pointer',
+              transition:'background 150ms'
+            },
+            onClick:()=>onSelect(p.id),
+            onMouseEnter:e=>e.currentTarget.style.background='var(--x-accent-soft)',
+            onMouseLeave:e=>e.currentTarget.style.background='var(--surface-warm)'
+            },
+              el('div',{style:{
+                fontFamily:'var(--mono)',fontSize:9,fontWeight:700,
+                textTransform:'uppercase',letterSpacing:'.07em',
+                color:BRAND_COL?.[p.brand]||'var(--accent)',marginBottom:3
+              }},p.brand||'—'),
+              el('div',{style:{fontSize:12,fontWeight:700,color:'var(--fg)',lineHeight:1.3,marginBottom:4}},
+                p.shortName||p.name
+              ),
+              el('div',{style:{display:'flex',alignItems:'center',gap:6,flexWrap:'wrap'}},
+                code&&el('span',{style:{
+                  fontFamily:'var(--mono)',fontSize:9,fontWeight:700,
+                  background:'var(--accent-bg)',color:'var(--accent)',
+                  borderRadius:4,padding:'1px 6px'
+                }},code),
+                tag&&el('span',{style:{
+                  fontFamily:'var(--mono)',fontSize:9,fontWeight:700,
+                  background:tagCol+'18',color:tagCol,
+                  borderRadius:4,padding:'1px 6px'
+                }},tag)
+              ),
+              /* Progress bar */
+              el('div',{style:{
+                height:3,background:'var(--border)',borderRadius:999,
+                overflow:'hidden',marginTop:6
+              }},
+                el('div',{style:{
+                  height:'100%',width:pct+'%',
+                  background:'var(--grad-accent)',borderRadius:999
+                }})
+              )
+            );
+          })
+        )
+      ),
+      /* BODY ROWS */
+      el('tbody',null,
+        tableRows.map(({row,sectionHeader},ri)=>{
+          const secStyle=SEC_STYLE[row.section]||{bg:'var(--surface-warm)',color:'var(--fg-2)'};
+          return el(React.Fragment,{key:row.key},
+            /* Section header row */
+            sectionHeader&&el('tr',null,
+              el('td',{colSpan:prods.length+1,style:{
+                background:secStyle.bg,
+                padding:'5px 12px',
+                fontFamily:'var(--mono)',fontSize:9,fontWeight:800,
+                textTransform:'uppercase',letterSpacing:'.12em',
+                color:secStyle.color,
+                borderTop:'1px solid var(--border)',
+                position:'sticky',left:0
+              }},
+                el('span',{style:{marginRight:6,opacity:.7}},
+                  row.section==='Updates'?'📋':
+                  row.section==='Blockers'?'🚧':
+                  row.section==='Launch'?'🚀':
+                  row.section==='Team'?'👥':
+                  row.section==='Product'?'⚗️':
+                  row.section==='Financials'?'💰':
+                  row.section==='Packaging'?'📦':''
+                ),
+                row.section
+              )
+            ),
+            /* Data row */
+            el('tr',{style:{
+              background:ri%2===0?'var(--bg)':'var(--surface)'
+            }},
+              /* Label cell */
+              el('td',{style:{
+                padding:'7px 12px',
+                fontFamily:'var(--mono)',fontSize:10,fontWeight:500,
+                color:'var(--muted)',
+                background:'var(--surface-warm)',
+                borderRight:'1px solid var(--border)',
+                borderBottom:'0.5px solid var(--border-soft)',
+                position:'sticky',left:0,zIndex:1,
+                letterSpacing:'.02em',whiteSpace:'nowrap'
+              }},row.label),
+              /* Value cells */
+              prods.map(p=>{
+                const val=row.get(p);
+                const isEmpty=!val||val==='—';
+                const isBlocker=row.isBlocker&&val;
+                const isUpdate=row.key==='updates'&&val;
+                return el('td',{key:p.id,style:{
+                  padding:row.multiline?'7px 12px':'0 12px',
+                  fontSize:11,
+                  color:isBlocker?'var(--danger)':isUpdate?'var(--fg)':'var(--fg)',
+                  background:isBlocker?'rgba(192,57,43,.06)':isUpdate?'rgba(255,122,61,.04)':'transparent',
+                  borderLeft:'1px solid var(--border-soft)',
+                  borderBottom:'0.5px solid var(--border-soft)',
+                  verticalAlign:row.multiline?'top':'middle',
+                  height:row.multiline?'auto':32,
+                  lineHeight:1.4,
+                  whiteSpace:row.multiline?'pre-wrap':'normal',
+                  cursor:'pointer',
+                  fontFamily:row.key==='sku'||row.key==='lc'||row.key==='wc'||row.key==='msrp'?'var(--mono)':'inherit',
+                  fontWeight:row.key==='sku'?700:400
+                },
+                onClick:()=>onSelect(p.id),
+                title:isEmpty?'Click to edit':''+val
+                },
+                  isEmpty
+                    ? el('span',{style:{color:'var(--border)',fontSize:10}},'—')
+                    : String(val)
+                );
+              })
+            )
+          );
+        })
+      )
+    )
+  );
+}
+
+
 function SummaryView({prods,onSelect,isDevTab}){
   const overallOverdue=prods.reduce((a,p)=>a+p.tasks.filter(t=>isOverdue(t)).length,0);
   return el('div',{style:{padding:'20px'}},
@@ -1173,6 +1397,429 @@ function generateProductPDF(prod, pcLabel) {
   const win = window.open('', '_blank');
   win.document.write(HTML);
   win.document.close();
+}
+
+
+
+/* ══════════════════════════════════════════
+   EXCEL IMPORT MODAL
+   Parses Mera Product Development Tracker
+   ══════════════════════════════════════════ */
+
+// Field name normalisations (Excel typos → dashboard field names)
+const FIELD_MAP = {
+  'categroy':                        'Category',
+  'inital case offering (ft)':       'Initial Case Offering (FT)',
+  'prouduct primary/hardware':       'Product Primary/Hardware',
+  'product primary/hardware':        'Product Primary/Hardware',
+  'product package/outter':          'Product Package/Outer',
+  'accesory':                        'Accessory',
+  'label thc range':                 'Label THC Range',
+  'brand name internal':             'Brand Name Internal',
+  'product name internal':           'Product Name Internal',
+  'manufactured by: lp name':        'Manufactured by: LP Name',
+  'manufactured by: lp name ':       'Manufactured by: LP Name',
+  'commercial lead':                 'Commercial Lead',
+  'formulation lead':                'Formulation Lead',
+  'ops lead':                        'Ops Lead',
+  'planned launch time':             'Planned Launch Time',
+  'launch window':                   'Launch Window',
+  'stocking type':                   'Stocking Type',
+  'stocking status':                 'Stocking Status',
+  'samples required':                'Samples Required',
+  'landed cost':                     'Landed Cost',
+  'wholesale cost':                  'Wholesale Cost',
+  'msrp':                            'MSRP',
+  'launch po':                       'Launch PO',
+  'label thc range ':                'Label THC Range',
+  'target cbd range':                'Target CBD Range',
+  'other cannabinoids, range':       'Other Cannabinoids, Range',
+  'flavouring type':                 'Flavouring Type',
+  'flavour description':             'Flavour Description',
+  'biomass input ':                  'Biomass Input',
+  'biomass input':                   'Biomass Input',
+  'formulations':                    'Formulations',
+  'ingredients':                     'Ingredients',
+  'target product image':            'Target Product Image',
+  'target accessory image':          'Target Accessory Image',
+  'packaging labels':                'Packaging Labels',
+  'master case gtin':                'Master Case GTIN',
+  'retail pack gtin':                'Retail Pack GTIN',
+  'master case dimensions ':         'Master Case Dimensions',
+  'master case dimensions':          'Master Case Dimensions',
+  'units per master shipper/case':   'Units per Master Shipper/Case',
+  'who is responsible for labels sourcing?': 'Who is responsible for Labels Sourcing?',
+  'do we need new dies for labels?': 'Do we need new dies for labels?',
+  'vendor providing retail labels?': 'Vendor providing retail labels?',
+  'vendor providing case labels?':   'Vendor providing case labels?',
+  'formulated range':                'Formulated Range',
+  'product size':                    'Product Size',
+  'product package/outer':           'Product Package/Outer',
+};
+
+const normField = k => {
+  if(!k) return null;
+  const lk = String(k).toLowerCase().trim();
+  return FIELD_MAP[lk] || (k ? String(k).trim() : null);
+};
+
+// Known skip rows that aren't spec fields
+const SKIP_ROWS = new Set([
+  'product specifics','packaging requirements','status','notes',
+  'key updates','blockers','key update','blocker',''
+]);
+
+// Status mapping
+const TAG_MAP = {
+  'accepted':     'Accepted',
+  'rejected':     'Rejected',
+  'in progress':  'In Progress',
+  'cancelled':    'Cancelled',
+  'on track':     'On Track',
+  'at risk':      'At Risk',
+  'launched':     'Launched',
+};
+const normalizeTag = v => {
+  if(!v) return 'In Progress';
+  const lv = String(v).toLowerCase().trim();
+  for(const [k,tag] of Object.entries(TAG_MAP)) if(lv.includes(k)) return tag;
+  return 'In Progress';
+};
+
+// Sheet name → dashboard PC tab id mapping
+const SHEET_TO_PC = {
+  'PC#1 2026': 'pc1', 'PC#2 2026': 'pc2',
+  'PC#3 2026': 'pc3', 'PC#4 2026': 'pc4',
+  'In Development': 'in_dev',
+};
+
+function parseExcelTracker(workbook) {
+  const XLSX = window.XLSX;
+  const results = {};
+
+  const targetSheets = ['PC#1 2026','PC#2 2026','PC#3 2026','PC#4 2026','In Development'];
+
+  for(const shName of targetSheets) {
+    if(!workbook.SheetNames.includes(shName)) continue;
+    const ws = workbook.Sheets[shName];
+    const rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:null, raw:false});
+
+    // Find "Product Name Internal" row — tells us which columns have products
+    let prodNameRowIdx = rows.findIndex(r => r[0] && String(r[0]).toLowerCase().trim() === 'product name internal');
+    if(prodNameRowIdx < 0) {
+      // try alternate
+      prodNameRowIdx = rows.findIndex(r => r[0] && String(r[0]).toLowerCase().trim() === 'product name internal ');
+    }
+    if(prodNameRowIdx < 0) continue;
+
+    // Product columns: any column > 0 with a non-empty product name
+    const prodCols = rows[prodNameRowIdx]
+      .map((v,j) => ({j, name: v ? String(v).trim() : null}))
+      .filter(x => x.j > 0 && x.name && x.name.length > 1 && !x.name.toLowerCase().includes('product name'));
+
+    if(!prodCols.length) continue;
+
+    // Find Status row (row with col 0 = 'Status' or earlier row containing per-product status)
+    // In PC#1: status is per-col in row 0 ("Spring 2026 - ACCEPTED")
+    // In PC#4: status is in row 1 col 1 as category, and col 2+ as individual statuses
+    // Strategy: look for a row where col 0 = 'Status' OR where values matching status keywords appear for prod cols
+    let statusRowIdx = rows.findIndex(r => r[0] && String(r[0]).toLowerCase().trim() === 'status');
+    if(statusRowIdx < 0) {
+      // Look for first row with status-like values in product columns
+      statusRowIdx = rows.findIndex((r,i) => i < prodNameRowIdx && prodCols.some(pc => {
+        const v = r[pc.j] ? String(r[pc.j]).toLowerCase() : '';
+        return v.includes('accepted')||v.includes('rejected')||v.includes('progress')||v.includes('cancelled');
+      }));
+    }
+    // Also check row 0 (Planned Launch Time row sometimes has status for PC#1)
+    if(statusRowIdx < 0 && rows[0]) {
+      const hasStatus = prodCols.some(pc => {
+        const v = rows[0][pc.j] ? String(rows[0][pc.j]).toLowerCase() : '';
+        return v.includes('accepted')||v.includes('rejected')||v.includes('cancelled');
+      });
+      if(hasStatus) statusRowIdx = 0;
+    }
+
+    // Find brand row
+    const brandRowIdx = rows.findIndex(r => r[0] && String(r[0]).toLowerCase().trim() === 'brand name internal');
+
+    // Find updates row (if any)
+    const updatesRowIdx = rows.findIndex(r => r[0] && String(r[0]).toLowerCase().includes('key update'));
+    const blockersRowIdx = rows.findIndex(r => r[0] && String(r[0]).toLowerCase().includes('blocker'));
+
+    // Build a field→row index map for all spec rows
+    const fieldRows = {};
+    rows.forEach((row, i) => {
+      if(i === prodNameRowIdx || i === brandRowIdx) return;
+      const fieldKey = row[0] ? String(row[0]).trim() : null;
+      if(!fieldKey) return;
+      const norm = normField(fieldKey);
+      if(norm && !SKIP_ROWS.has(fieldKey.toLowerCase())) {
+        fieldRows[norm] = i;
+      }
+    });
+
+    // Build products
+    const pcId = SHEET_TO_PC[shName] || 'in_dev';
+    results[shName] = { pcId, products: [] };
+
+    for(const {j, name} of prodCols) {
+      // Name
+      const cleanName = name.split('\n')[0].trim();
+
+      // Brand
+      const brand = brandRowIdx >= 0 && rows[brandRowIdx][j]
+        ? String(rows[brandRowIdx][j]).trim() : '';
+
+      // Status
+      let status = 'In Progress';
+      if(statusRowIdx >= 0 && rows[statusRowIdx][j]) {
+        status = normalizeTag(rows[statusRowIdx][j]);
+      }
+
+      // Specs
+      const specs = {};
+      for(const [fieldName, rowIdx] of Object.entries(fieldRows)) {
+        const raw = rows[rowIdx][j];
+        if(raw !== null && raw !== undefined && String(raw).trim()) {
+          // Format currency
+          if(['Landed Cost','Wholesale Cost','MSRP'].includes(fieldName) && !isNaN(parseFloat(raw))) {
+            specs[fieldName] = '$'+parseFloat(raw).toFixed(2);
+          } else {
+            specs[fieldName] = String(raw).trim();
+          }
+        }
+      }
+
+      // Notes
+      const updates = updatesRowIdx >= 0 && rows[updatesRowIdx][j]
+        ? String(rows[updatesRowIdx][j]).trim() : '';
+      const blockers = blockersRowIdx >= 0 && rows[blockersRowIdx][j]
+        ? String(rows[blockersRowIdx][j]).trim() : '';
+
+      results[shName].products.push({
+        name: cleanName,
+        shortName: cleanName.split(' ').slice(0,5).join(' '),
+        brand,
+        status,
+        specs,
+        notes: { updates, blockers },
+      });
+    }
+  }
+  return results;
+}
+
+/* ── Import Modal Component ── */
+function ImportExcelModal({onImport, onClose, existingData}) {
+  const [stage, setStage] = React.useState('upload'); // upload | preview | done
+  const [parsed, setParsed] = React.useState(null);
+  const [selected, setSelected] = React.useState({});
+  const [busy, setBusy] = React.useState(false);
+  const [err, setErr] = React.useState('');
+  const fileRef = React.useRef();
+
+  const handleFile = async (file) => {
+    if(!file) return;
+    setBusy(true); setErr('');
+    try {
+      const buf = await file.arrayBuffer();
+      const XLSX = window.XLSX;
+      if(!XLSX) throw new Error('SheetJS not loaded');
+      const wb = XLSX.read(buf, {type:'array', cellText:true, cellDates:false});
+      const result = parseExcelTracker(wb);
+      const totalProds = Object.values(result).reduce((s,sh)=>s+sh.products.length,0);
+      if(!totalProds) throw new Error('No products found. Make sure you uploaded the Product Development Tracker.');
+      setParsed(result);
+      // Pre-select all sheets
+      const sel = {};
+      Object.keys(result).forEach(sh => { sel[sh] = true; });
+      setSelected(sel);
+      setStage('preview');
+    } catch(e) {
+      setErr(e.message);
+    }
+    setBusy(false);
+  };
+
+  const totalSelected = parsed
+    ? Object.entries(selected).filter(([,v])=>v).reduce((s,[sh])=>s+(parsed[sh]?.products?.length||0),0)
+    : 0;
+
+  const doImport = () => {
+    if(!parsed) return;
+    // Build new data updates
+    const updates = {};
+    // Ensure pc4 tab exists
+    let pcTabs = [...(existingData.pcTabs||[])];
+    if(!pcTabs.find(t=>t.id==='pc4')) {
+      pcTabs = [...pcTabs, {id:'pc4',label:'PC#4 2026'}];
+    }
+
+    for(const [shName, sheet] of Object.entries(parsed)) {
+      if(!selected[shName]) continue;
+      const pcId = sheet.pcId;
+
+      const newProds = sheet.products.map(p => ({
+        id: uid(),
+        name: p.name,
+        shortName: p.shortName,
+        brand: p.brand,
+        skuCode: '',
+        launchDate: '',
+        tags: [p.status],
+        notes: p.notes,
+        specs: p.specs,
+        tasks: [...BLANK_PROD('').tasks], // give default tasks
+      }));
+
+      // Add-only: skip products whose name already exists
+      const existing = existingData[pcId]||[];
+      const existingNames = new Set(existing.map(p=>p.name.toLowerCase().trim()));
+      const toAdd = newProds.filter(p=>!existingNames.has(p.name.toLowerCase().trim()));
+      updates[pcId] = [...existing, ...toAdd];
+    }
+
+    onImport({...updates, pcTabs});
+    onClose();
+  };
+
+  const S = {
+    overlay:{position:'fixed',inset:0,background:'rgba(0,0,0,.65)',backdropFilter:'blur(4px)',
+      zIndex:700,display:'flex',alignItems:'center',justifyContent:'center',padding:20},
+    box:{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:'var(--radius-lg)',
+      width:'100%',maxWidth:580,maxHeight:'88vh',display:'flex',flexDirection:'column',
+      boxShadow:'0 24px 64px rgba(0,0,0,.5)'},
+    hd:{padding:'16px 20px',borderBottom:'1px solid var(--border)',background:'var(--surface-warm)',
+      borderRadius:'var(--radius-lg) var(--radius-lg) 0 0',
+      display:'flex',alignItems:'center',justifyContent:'space-between'},
+    body:{padding:'20px',overflowY:'auto',flex:1},
+  };
+
+  return el('div',{style:S.overlay,onClick:e=>e.target===e.currentTarget&&onClose()},
+    el('div',{style:S.box},
+
+      /* Header */
+      el('div',{style:S.hd},
+        el('div',null,
+          el('div',{style:{fontSize:15,fontWeight:700,color:'var(--fg)',display:'flex',alignItems:'center',gap:8}},
+            el('i',{className:'ti ti-file-import',style:{color:'var(--accent)',fontSize:17}}),
+            'Import from Product Development Tracker'
+          ),
+          el('div',{style:{fontFamily:'var(--mono)',fontSize:10,color:'var(--muted)',marginTop:3,textTransform:'uppercase',letterSpacing:'.07em'}},
+            stage==='preview' ? 'Select sheets to import' : 'Upload your Excel tracker'
+          )
+        ),
+        el('button',{onClick:onClose,style:{background:'none',border:'none',cursor:'pointer',color:'var(--muted)',fontSize:18}},
+          el('i',{className:'ti ti-x'})
+        )
+      ),
+
+      el('div',{style:S.body},
+
+        /* Upload stage */
+        stage==='upload'&&el('div',null,
+          el('div',{
+            onClick:()=>fileRef.current?.click(),
+            style:{
+              border:'2px dashed var(--border)',borderRadius:'var(--radius-md)',
+              padding:'40px 20px',textAlign:'center',cursor:'pointer',
+              background:'var(--surface-warm)',transition:'border-color 150ms'
+            },
+            onMouseEnter:e=>e.currentTarget.style.borderColor='var(--accent)',
+            onMouseLeave:e=>e.currentTarget.style.borderColor='var(--border)'
+          },
+            el('i',{className:'ti ti-table-import',style:{fontSize:40,color:'var(--accent)',display:'block',marginBottom:12}}),
+            el('div',{style:{fontSize:14,fontWeight:600,color:'var(--fg)',marginBottom:6}},'Drop Excel file or click to browse'),
+            el('div',{style:{fontFamily:'var(--mono)',fontSize:11,color:'var(--muted)'}},'2026-06-25 - Product Development Tracker.xlsx'),
+            busy&&el('div',{style:{marginTop:12,color:'var(--accent)',fontSize:12}},
+              el('i',{className:'ti ti-loader-2',style:{animation:'spin 1s linear infinite',marginRight:6}}),
+              'Parsing…'
+            ),
+            err&&el('div',{style:{marginTop:12,color:'var(--danger)',fontSize:12,fontFamily:'var(--mono)'}},err)
+          ),
+          el('input',{ref:fileRef,type:'file',accept:'.xlsx,.xls',style:{display:'none'},
+            onChange:e=>handleFile(e.target.files[0])})
+        ),
+
+        /* Preview stage */
+        stage==='preview'&&parsed&&el('div',null,
+
+          /* Info banner — add-only, never overwrites */
+          el('div',{style:{
+            display:'flex',alignItems:'center',gap:8,marginBottom:16,
+            background:'rgba(61,220,138,.1)',border:'1px solid rgba(61,220,138,.25)',
+            borderRadius:8,padding:'9px 13px',
+            fontFamily:'var(--mono)',fontSize:11,color:'var(--success)'
+          }},
+            el('i',{className:'ti ti-shield-check',style:{fontSize:14,flexShrink:0}}),
+            el('span',null,
+              el('strong',null,'Add-only mode: '),
+              'Products already in the dashboard (matched by name) will never be overwritten.'
+            )
+          ),
+
+          /* Sheet selection */
+          el('div',{style:{fontFamily:'var(--mono)',fontSize:9,fontWeight:700,textTransform:'uppercase',letterSpacing:'.1em',color:'var(--muted)',marginBottom:8}},'Sheets'),
+          Object.entries(parsed).map(([shName,sheet])=>
+            el('div',{key:shName,onClick:()=>setSelected(s=>({...s,[shName]:!s[shName]})),style:{
+              display:'flex',alignItems:'center',gap:10,padding:'10px 12px',
+              marginBottom:6,borderRadius:8,cursor:'pointer',
+              border:'1px solid '+(selected[shName]?'var(--accent)':'var(--border)'),
+              background:selected[shName]?'var(--accent-bg)':'var(--surface-warm)',
+              transition:'all 150ms'
+            }},
+              el('div',{style:{
+                width:18,height:18,borderRadius:5,flexShrink:0,
+                border:'2px solid '+(selected[shName]?'var(--accent)':'var(--border)'),
+                background:selected[shName]?'var(--accent)':'transparent',
+                display:'flex',alignItems:'center',justifyContent:'center'
+              }},selected[shName]&&el('i',{className:'ti ti-check',style:{fontSize:10,color:'#fff'}})),
+              el('div',{style:{flex:1}},
+                el('div',{style:{fontSize:12,fontWeight:600,color:selected[shName]?'var(--fg)':'var(--fg-2)'}},shName),
+                el('div',{style:{fontFamily:'var(--mono)',fontSize:9,color:'var(--muted)',marginTop:2}},
+                  sheet.products.length+' products: ',
+                  sheet.products.slice(0,3).map(p=>p.shortName).join(', '),
+                  sheet.products.length>3?` +${sheet.products.length-3} more`:''
+                )
+              ),
+              el('span',{style:{
+                fontFamily:'var(--mono)',fontSize:10,fontWeight:700,
+                background:'var(--surface)',border:'1px solid var(--border)',
+                borderRadius:4,padding:'2px 8px',color:'var(--muted)'
+              }},sheet.products.length+' SKUs')
+            )
+          )
+        )
+      ),
+
+      /* Footer */
+      el('div',{style:{padding:'14px 20px',borderTop:'1px solid var(--border)',display:'flex',gap:10,justifyContent:'flex-end'}},
+        el('button',{onClick:onClose,style:{
+          background:'var(--surface-warm)',border:'1px solid var(--border)',borderRadius:8,
+          padding:'9px 18px',fontSize:13,fontFamily:'inherit',color:'var(--fg-2)',cursor:'pointer'
+        }},'Cancel'),
+        stage==='preview'&&el('button',{onClick:()=>setStage('upload'),style:{
+          background:'var(--surface-warm)',border:'1px solid var(--border)',borderRadius:8,
+          padding:'9px 18px',fontSize:13,fontFamily:'inherit',color:'var(--fg-2)',cursor:'pointer'
+        }},el('i',{className:'ti ti-arrow-left'}),' Back'),
+        stage==='preview'&&el('button',{
+          onClick:doImport,
+          disabled:totalSelected===0,
+          style:{
+            background:totalSelected?'var(--accent)':'var(--surface-warm)',border:'none',borderRadius:8,
+            padding:'9px 18px',fontSize:13,fontFamily:'inherit',
+            color:totalSelected?'#fff':'var(--muted)',
+            fontWeight:700,cursor:totalSelected?'pointer':'not-allowed',
+            display:'flex',alignItems:'center',gap:7
+          }
+        },
+          el('i',{className:'ti ti-download'}),
+          'Import '+totalSelected+' product'+(totalSelected===1?'':'s')
+        )
+      )
+    )
+  );
 }
 
 
@@ -5412,6 +6059,15 @@ function PostLaunchView({data,setData,addChangelogEntry}){
       },
       onClose:()=>setShowBulkUpload(false)
     }),
+    showImport&&el(ImportExcelModal,{
+      existingData:data,
+      onImport:updates=>{
+        setData(d=>({...d,...updates}));
+        setIsDirty(true);
+        dirtyRef.current=true;
+      },
+      onClose:()=>setShowImport(false)
+    }),
     showAddSKU&&el(AddSKUModal,{
       activePC,
       allProds:{...data.postLaunch,...(data.pc1||[]).reduce((a,p)=>({...a,[p.id]:p}),{}),...(data.pc2||[]).reduce((a,p)=>({...a,[p.id]:p}),{}),...(data.pc3||[]).reduce((a,p)=>({...a,[p.id]:p}),{})},
@@ -5813,6 +6469,7 @@ function App(){
   const [sels,setSels]=useState({pc1:'bb',pc2:'bcp',pc3:'pp'});
   const [prodView,setProdView]=useState('summary'); // 'summary' | 'detail'
   const [isFullscreen,setIsFullscreen]=useState(false);
+  const [showImport,setShowImport]=useState(false);
   const [theme,setTheme]=useState(()=>{
     try{return localStorage.getItem('au_theme')||'light';}catch{return 'light';}
   });
@@ -5953,14 +6610,14 @@ function App(){
     const nums=data.pcTabs.map(t=>{const m=t.id.match(/pc(\d+)/);return m?parseInt(m[1]):0;});
     const next=Math.max(0,...nums)+1,newId='pc'+next,newLabel='PC#'+next+' 2026';
     setData(d=>({...d,pcTabs:[...d.pcTabs,{id:newId,label:newLabel}],[newId]:[]}));
-    setView(newId);setProdView('summary');
+    setView(newId);setProdView('overview');
   };
   const removeTab=id=>{
     if(data.pcTabs.length<=1){alert('Cannot remove the last product call.');return;}
     if(!confirm('Remove this product call and all its products?'))return;
     const newTabs=data.pcTabs.filter(t=>t.id!==id);
     setData(d=>{const nd={...d,pcTabs:newTabs};delete nd[id];return nd;});
-    if(view===id){setView(newTabs[0].id);setProdView('summary');}
+    if(view===id){setView(newTabs[0].id);setProdView('overview');}
   };
   const renameTab=(id,label)=>{setData(d=>({...d,pcTabs:d.pcTabs.map(t=>t.id===id?{...t,label}:t)}));setRenamingTab(null);};
 
@@ -6094,7 +6751,7 @@ function App(){
           el('button',{
             className:'sidebar-item '+(view==='in_dev'?'active':''),
             style:{flex:1,borderRadius:0},
-            onClick:()=>{setView('in_dev');setProdView('summary');}
+            onClick:()=>{setView('in_dev');setProdView('overview');}
           },
             el('i',{className:'ti ti-flask'}),
             'In Development',
@@ -6125,7 +6782,7 @@ function App(){
             el('button',{
               className:'sidebar-item '+(isActive?'active':''),
               style:{flex:1,borderRadius:0},
-              onClick:()=>{setView(tab.id);setProdView('summary');}
+              onClick:()=>{setView(tab.id);setProdView('overview');}
             },
               el('i',{className:'ti ti-package'}),
               tab.label,
@@ -6181,6 +6838,11 @@ function App(){
           el('i',{className:'ti ti-upload'}), 'Import'
         ),
         el('button',{className:'sidebar-footer-btn',
+          onClick:()=>setShowImport(true)},
+          el('i',{className:'ti ti-file-import'}),
+          'Import from Excel'
+        ),
+        el('button',{className:'sidebar-footer-btn',
           onClick:()=>setShowGH(true),
           style:isDirty?{
             color:'#fff',background:'var(--grad-accent)',borderRadius:'var(--pill)',
@@ -6204,6 +6866,7 @@ function App(){
           (data.pcTabs.find(t=>t.id===view)?.label||'Dashboard')
         ),
         el('div',{className:'topbar2-sep'}),
+
         el('span',{className:'topbar2-meta'},'Last saved: ',fmtTs(lastSaved)),
         saved&&el('span',{style:{fontSize:11,color:'var(--ok)',display:'flex',alignItems:'center',gap:4}},el('i',{className:'ti ti-check'}),' Saved'),
         el('div',{className:'topbar2-actions'},
@@ -6232,7 +6895,14 @@ function App(){
         view==='workload'   ? el(WorkloadViewComp,{data,setView,setSels,setProdView}) :
         el('div',null,
           el(ProductPanels,{prods,selId:prod?.id||'',setSelId,onAdd:addProd,onRemove:removeProd,allProds:{...data.postLaunch,...prods.reduce((a,p)=>({...a,[p.id]:p}),{})},isDevTab:view==='in_dev'}),
-          prodView==='summary'
+          prodView==='overview'
+            ? el(PCOverview,{
+                prods,
+                pcLabel:data.pcTabs?.find(t=>t.id===view)?.label||(view==='in_dev'?'In Development':''),
+                onSelect:id=>{setSelId(id);setProdView('detail');},
+                onUpdateProd:(pcKey,id,upd)=>updProd(pcKey,id,upd)
+              })
+            : prodView==='summary'
             ? el(SummaryView,{prods,isDevTab:view==='in_dev',onSelect:id=>{setSelId(id);setProdView('detail');}})
             : prod
               ? el(ProductDetail,{
