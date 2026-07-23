@@ -5168,7 +5168,7 @@ function AddSKUModal({activePC,onAdd,onClose,allProds}){
 
   const handleAdd=()=>{
     if(!name.trim()){setErr('Product name is required.');return;}
-    const finalCode=isDevTab?'':displayCode;
+    const finalCode=displayCode;
     // Counter auto-derived from existing products — no manual increment needed
     const newProd={
       pc,
