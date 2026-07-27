@@ -5475,6 +5475,22 @@ function Home3DView({data, setData, setView, setSels, setProdView}){
   const [selected, setSelected] = React.useState(null); // {tabId, prodId}
   const [noteText, setNoteText] = React.useState('');
   const [stickyEdit, setStickyEdit] = React.useState(null); // {id,text,color}
+  const [propEdit, setPropEdit] = React.useState(null);     // {id,kind,s,ry}
+  const [showProps, setShowProps] = React.useState(false);
+  const [showTools, setShowTools] = React.useState(false);
+
+  /* ── Scene object helpers ── */
+  const addProp=(kind,defScale)=>{
+    const spot=stateRef.current.dropSpot?.(kind)||{x:0,y:.18,z:5};
+    const pr={id:uid(),kind,...spot,ry:Math.random()*6.283,s:defScale||2};
+    setData(d=>({...d,home3dProps:[...(d.home3dProps||[]),pr]}));
+    setShowProps(false);
+  };
+  const saveProp=(id,patch)=>setData(d=>({...d,home3dProps:(d.home3dProps||[]).map(q=>q.id===id?{...q,...patch}:q)}));
+  const removeProp=(id)=>{
+    setData(d=>({...d,home3dProps:(d.home3dProps||[]).filter(q=>q.id!==id)}));
+    setPropEdit(null);
+  };
 
   /* ── Sticky note helpers ── */
   const STICKY_COLORS=['#ffd54a','#ff9c6b','#8ee08e','#7fc7ff','#e79bd8'];
@@ -5524,7 +5540,7 @@ function Home3DView({data, setData, setView, setSels, setProdView}){
     renderer.shadowMap.type = T.PCFSoftShadowMap;
     renderer.outputEncoding = T.sRGBEncoding;
     renderer.toneMapping = T.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.12;
+    renderer.toneMappingExposure = 1.05;
     mount.appendChild(renderer.domElement);
 
     const scene = new T.Scene();
@@ -5539,23 +5555,21 @@ function Home3DView({data, setData, setView, setSels, setProdView}){
     const wallNavy = new T.MeshStandardMaterial({color:0x232847, flatShading:true, roughness:.9, side:T.FrontSide});
 
     /* ── Lighting — warm workshop ── */
-    scene.add(new T.HemisphereLight(0x93a4d6, 0x3a2a1c, 0.75));
-    const key = new T.DirectionalLight(0xfff1de, 1.35);
-    key.position.set(14, 22, 16);
+    scene.add(new T.HemisphereLight(0xa9bde8, 0x4a3524, 0.5));
+    const key = new T.DirectionalLight(0xfff2e2, 1.55);   // warm sun, only shadow caster
     key.castShadow = true;
     key.shadow.mapSize.width = 2048;
     key.shadow.mapSize.height = 2048;
-    key.shadow.camera.left = -26; key.shadow.camera.right = 26;
-    key.shadow.camera.top = 26; key.shadow.camera.bottom = -26;
-    key.shadow.camera.far = 80;
-    key.shadow.bias = -0.0004;
-    scene.add(key);
-    const rim = new T.DirectionalLight(0x7a9fff, 0.45);
-    rim.position.set(-16, 12, -12);
+    key.shadow.radius = 3;
+    key.shadow.bias = -0.0006;
+    key.shadow.normalBias = 0.02;
+    scene.add(key); scene.add(key.target);
+    const fill = new T.DirectionalLight(0x8fb0ff, 0.4);   // cool bounce from front-left
+    fill.position.set(-20, 10, 18);
+    scene.add(fill);
+    const rim = new T.DirectionalLight(0x9ecbff, 0.55);   // cool edge from behind
+    rim.position.set(-12, 15, -20);
     scene.add(rim);
-    const lamp = new T.PointLight(0xffa050, 1.1, 30);
-    lamp.position.set(-6, 9, 5);
-    scene.add(lamp);
 
     /* ── Tabs → shelves (every product call gets a shelf, even empty ones) ── */
     const tabs=[
@@ -5613,27 +5627,32 @@ function Home3DView({data, setData, setView, setSels, setProdView}){
     /* ── Hanging pendant lights above the shelf (no walls) ── */
     function pendant(px, pz){
       pz = pz||0;
-      const cord=new T.Mesh(new T.CylinderGeometry(.035,.035,2.4,6),
+      const HANG = totalH + 5.6;            // shade height — well clear of the shelf top
+      const cord=new T.Mesh(new T.CylinderGeometry(.04,.04,4.6,6),
         new T.MeshStandardMaterial({color:0x2a2a30,roughness:.8}));
-      cord.position.set(px, totalH+3.5, pz);
+      cord.position.set(px, HANG + 2.9, pz);
       scene.add(cord);
-      const cap=new T.Mesh(new T.CylinderGeometry(.16,.2,.18,10),
+      const cap=new T.Mesh(new T.CylinderGeometry(.18,.22,.2,10),
         new T.MeshStandardMaterial({color:0x3a3b44,roughness:.5,metalness:.5}));
-      cap.position.set(px, totalH+2.35, pz); scene.add(cap);
-      const shade=new T.Mesh(new T.ConeGeometry(.95,.85,14,1,true),
+      cap.position.set(px, HANG + .62, pz); scene.add(cap);
+      const shade=new T.Mesh(new T.ConeGeometry(1.05,.95,14,1,true),
         new T.MeshStandardMaterial({color:0x33343c,roughness:.45,metalness:.45,side:T.DoubleSide}));
-      shade.position.set(px, totalH+1.85, pz);
+      shade.position.set(px, HANG, pz);
       scene.add(shade);
-      const inner=new T.Mesh(new T.ConeGeometry(.9,.8,14,1,true),
+      const inner=new T.Mesh(new T.ConeGeometry(1.0,.9,14,1,true),
         new T.MeshStandardMaterial({color:0xffe2b8,emissive:0xffb050,emissiveIntensity:.35,side:T.BackSide}));
-      inner.position.set(px, totalH+1.85, pz); scene.add(inner);
-      const bulb=new T.Mesh(new T.SphereGeometry(.24,14,10),
+      inner.position.set(px, HANG, pz); scene.add(inner);
+      const bulb=new T.Mesh(new T.SphereGeometry(.26,14,10),
         new T.MeshStandardMaterial({color:0xffd9a0,emissive:0xffb050,emissiveIntensity:1.9}));
-      bulb.position.set(px, totalH+1.42, pz);
+      bulb.position.set(px, HANG - .5, pz);
       scene.add(bulb);
-      const pl=new T.PointLight(0xffb670, 1.15, 36);
-      pl.position.set(px, totalH+1.15, pz+1.3);
-      scene.add(pl);
+      const sp=new T.SpotLight(0xffc489, 2.6, 46, Math.PI/4.6, .72, 1.1);
+      sp.position.set(px, HANG - .65, pz);
+      sp.target.position.set(px, 0, pz+.8);
+      scene.add(sp); scene.add(sp.target);
+      const halo=new T.PointLight(0xffb670, .32, 4.5);
+      halo.position.set(px, HANG - .3, pz);
+      scene.add(halo);
     }
     for(let i=0;i<3;i++) pendant((i-1)*(SHELF_W/3));
 
@@ -5665,12 +5684,21 @@ function Home3DView({data, setData, setView, setSels, setProdView}){
       new T.MeshStandardMaterial({color:0xc3ccd8, roughness:.6}));
     wbDiv.position.set(SHELF_W/2 + .7, totalH/2 + .6, WB_Z + .08);
     scene.add(wbDiv);
-    const wbLight = new T.PointLight(0xbfd4ff, .55, 30);
-    wbLight.position.set(0, totalH + 1.2, WB_Z + 3.5);
-    scene.add(wbLight);
-    const wbLight2 = new T.PointLight(0xcfe0ff, .6, 34);
-    wbLight2.position.set(NOTE_CX, totalH + 1.2, WB_Z + 4);
-    scene.add(wbLight2);
+    const wbWash = new T.DirectionalLight(0xd2e2ff, .38);
+    wbWash.position.set(ROOM_CX, totalH + 7, WB_Z + 16);
+    scene.add(wbWash);
+
+    /* Frame the shadow camera tightly to the room — crisper, softer shadows */
+    (()=>{
+      const halfW=(SHELF_W+6+EXT_W)/2 + 2, halfD=(SHELF_D+9)/2 + 2, top=totalH + 4;
+      key.position.set(ROOM_CX + halfW*.75, top + 12, halfD*1.1);
+      key.target.position.set(ROOM_CX, totalH*.34, 1.5);
+      key.target.updateMatrixWorld();
+      const c=key.shadow.camera, R=Math.max(halfW, halfD) + top*.4;
+      c.left=-R; c.right=R; c.top=R; c.bottom=-R;
+      c.near=1; c.far=R*4.5;
+      c.updateProjectionMatrix();
+    })();
 
     /* ── Deco: plants + books ── */
     function plant(x,y,z,s=1){
@@ -5688,6 +5716,7 @@ function Home3DView({data, setData, setView, setSels, setProdView}){
       }
       g.position.set(x,y,z); g.scale.setScalar(s);
       scene.add(g);
+      return g;
     }
     function bookStack(x,y,z,s=1){
       const g=new T.Group();
@@ -5701,6 +5730,7 @@ function Home3DView({data, setData, setView, setSels, setProdView}){
       });
       g.position.set(x,y,z); g.scale.setScalar(s);
       scene.add(g);
+      return g;
     }
 
     /* ── Text plate builder (2D text + 3px depth) ── */
@@ -5784,8 +5814,8 @@ function Home3DView({data, setData, setView, setSels, setProdView}){
     const BRAND_3D = [
       // accent = primary brand colour · light = body shell · dark = panels/lids · trim = stripe
       {k:'litti',       accent:0xe23e8c, light:0xf7f5f8, dark:0x252029, trim:0xf9a8d4}, // white + pink
-      {k:'greazy',      accent:0xf5c33b, light:0x141416, dark:0x08080a, trim:0xffd75e}, // yellow + black
-      {k:'shatterizer', accent:0xe02b31, light:0x171719, dark:0x0a0a0c, trim:0xff6b5c}, // black + red
+      {k:'greazy',      accent:0xd9a41e, light:0x141416, dark:0x08080a, trim:0xf0bf3a}, // deep yellow + black
+      {k:'shatterizer', accent:0x1c1c20, light:0xd9262c, dark:0x08080a, trim:0xf2f2f4}, // red body + black
       {k:'buddy',       accent:0xf28023, light:0x1e2f57, dark:0x101a33, trim:0xffab5e}, // orange + navy
       {k:'countryside', accent:0xe8722a, light:0xf0e4cf, dark:0x3a2415, trim:0xffa04a}, // orange
       {k:'ellevia',     accent:0x8b5cf6, light:0xf3f1fb, dark:0x1d1830, trim:0xc4b5fd},
@@ -5813,25 +5843,21 @@ function Home3DView({data, setData, setView, setSels, setProdView}){
       const B=brand3d(prod.brand), PLASTIC=B.dark;
 
       function joint(withSwirl){
-        /* Classic cone joint per reference — smooth taper, kraft paper, twisted tip */
         const PAPER=0xd9c9a3, HERBTONE=0xb3ab8d;
-        // Herb section — upper body, herb faintly visible through paper
+
+        /* ── The joint — slimmer, shorter than its packaging ── */
+        const jg=new T.Group();
         const herb=new T.Mesh(new T.CylinderGeometry(.150,.118,.78,14), mat(HERBTONE,0,0,.62,.05,false));
-        herb.position.set(-.22,.82,0); model.add(herb);
-        // Kraft filter — clean paper, continues the taper
+        herb.position.y=.82; jg.add(herb);
         const filt=new T.Mesh(new T.CylinderGeometry(.118,.105,.42,14), mat(PAPER,0,0,.55,.05,false));
-        filt.position.set(-.22,.22,0); model.add(filt);
-        // Subtle seam ring where filter meets body
+        filt.position.y=.22; jg.add(filt);
         const seam=new T.Mesh(new T.TorusGeometry(.119,.008,6,14), mat(0xc4b491,0,0,.6,.05,false));
-        seam.rotation.x=Math.PI/2; seam.position.set(-.22,.43,0); model.add(seam);
-        // Brand band printed on the filter
+        seam.rotation.x=Math.PI/2; seam.position.y=.43; jg.add(seam);
         const band=new T.Mesh(new T.CylinderGeometry(.1205,.114,.13,14), mat(B.accent,B.accent,.18,.5,.05,false));
-        band.position.set(-.22,.30,0); model.add(band);
-        // Twisted paper tip
+        band.position.y=.30; jg.add(band);
         const twist=new T.Mesh(new T.ConeGeometry(.055,.17,8), mat(PAPER,0,0,.6,.05,false));
-        twist.position.set(-.22,1.29,0); twist.rotation.z=.22; model.add(twist);
+        twist.position.y=1.29; twist.rotation.z=.22; jg.add(twist);
         if(withSwirl){
-          /* Green goop swirl spiraling up the cone */
           const pts=[];
           for(let i=0;i<=50;i++){
             const a=i/50*Math.PI*5.2, yy=.52+i/50*.78;
@@ -5840,15 +5866,23 @@ function Home3DView({data, setData, setView, setSels, setProdView}){
           }
           const swirl=new T.Mesh(new T.TubeGeometry(new T.CatmullRomCurve3(pts),100,.024,8,false),
             mat(0x4ade80,0x22c55e,.45,.25,.05,false));
-          swirl.position.x=-.22; model.add(swirl);
+          jg.add(swirl);
         }
-        /* Doob tube packaging beside the joint */
-        const doobTube=new T.Mesh(new T.CylinderGeometry(.13,.13,1.0,12), mat(B.accent,B.accent,.14,.35,.05,false));
-        doobTube.position.set(.28,.5,-.05); model.add(doobTube);
-        const tubeLbl=new T.Mesh(new T.CylinderGeometry(.134,.134,.3,12), mat(B.light,0,0,.6,.05,false));
-        tubeLbl.position.set(.28,.42,-.05); model.add(tubeLbl);
-        const cap=new T.Mesh(new T.CylinderGeometry(.15,.15,.16,12), mat(B.dark,0,0,.4,.15,false));
-        cap.position.set(.28,1.06,-.05); model.add(cap);
+        jg.position.set(-.15,0,0);
+        jg.scale.setScalar(.78);
+        model.add(jg);
+
+        /* ── Doob tube packaging — fatter and taller than the joint ── */
+        const tg=new T.Group();
+        const doobTube=new T.Mesh(new T.CylinderGeometry(.13,.13,1.0,14), mat(B.accent,B.accent,.14,.35,.05,false));
+        doobTube.position.y=.5; tg.add(doobTube);
+        const tubeLbl=new T.Mesh(new T.CylinderGeometry(.134,.134,.3,14), mat(B.light,0,0,.6,.05,false));
+        tubeLbl.position.y=.42; tg.add(tubeLbl);
+        const cap=new T.Mesh(new T.CylinderGeometry(.15,.15,.16,14), mat(B.dark,0,0,.4,.15,false));
+        cap.position.y=1.06; tg.add(cap);
+        tg.position.set(.21,0,-.05);
+        tg.scale.set(1.3,1.16,1.3);
+        model.add(tg);
       }
 
       if(key==='pre-roll'){ joint(false); }
@@ -6005,6 +6039,7 @@ function Home3DView({data, setData, setView, setSels, setProdView}){
       g.position.set(x,FLOOR_Y,z); g.rotation.y=ry; g.scale.setScalar(s);
       scene.add(g);
       smokes.push({puffs, ember, light:eLight, phase:Math.random()*6, s});
+      return g;
     }
 
     function herbJar(x,z,s=1,h=1,ry=0){
@@ -6032,6 +6067,7 @@ function Home3DView({data, setData, setView, setSels, setProdView}){
       knob.position.y=.66*h+.16; g.add(knob);
       g.position.set(x,FLOOR_Y,z); g.rotation.y=ry; g.scale.setScalar(s);
       scene.add(g);
+      return g;
     }
 
     function rollingTray(x,z,s=1,ry=0){
@@ -6069,6 +6105,7 @@ function Home3DView({data, setData, setView, setSels, setProdView}){
       }
       g.position.set(x,FLOOR_Y,z); g.rotation.y=ry; g.scale.setScalar(s);
       scene.add(g);
+      return g;
     }
 
     /* ── Spawnable joints that fall and pile up on the desk ── */
@@ -6150,11 +6187,61 @@ function Home3DView({data, setData, setView, setSels, setProdView}){
     stateRef.current.spawnJoint=spawnJoint;
     stateRef.current.clearJoints=clearJoints;
 
+    /* Shelf divider — a vertical panel that splits a shelf into bays */
+    function divider(x,y,z,s=1,ry=0){
+      const g=new T.Group();
+      const wood=new T.MeshStandardMaterial({color:0x8a5c30, flatShading:true, roughness:.72});
+      const dark=new T.MeshStandardMaterial({color:0x5c381e, flatShading:true, roughness:.8});
+      const panel=new T.Mesh(new T.BoxGeometry(.1,1.0,1.15), wood);
+      panel.position.y=.5; panel.castShadow=true; panel.receiveShadow=true; g.add(panel);
+      const foot=new T.Mesh(new T.BoxGeometry(.34,.07,1.22), dark);
+      foot.position.y=.035; foot.castShadow=true; g.add(foot);
+      const top=new T.Mesh(new T.BoxGeometry(.15,.07,1.19), dark);
+      top.position.y=1.0; top.castShadow=true; g.add(top);
+      const lip=new T.Mesh(new T.BoxGeometry(.13,1.0,.05), dark);
+      lip.position.set(0,.5,.6); g.add(lip);
+      g.position.set(x,y,z); g.rotation.y=ry; g.scale.setScalar(s);
+      scene.add(g);
+      return g;
+    }
+
     ashtray(-SHELF_W/2+4.6, 4.5, 2.1, .4);
     herbJar(-SHELF_W/2+7.6, 4.7, 2.0, 1.0, .3);
     herbJar(-SHELF_W/2+9.2, 4.2, 1.7, 1.3, -.5);
     rollingTray(SHELF_W/2-4.6, 4.8, 1.9, -.25);
     herbJar(SHELF_W/2+3.0, 4.6, 1.8, .9, .6);
+
+    /* ── User-placed scene objects ── */
+    const PROP_KINDS = {
+      divider: {label:'Shelf divider', s:3.4, make:()=>divider(0,0,0,1,0)},
+      plant:   {label:'Plant',        s:2.4, make:()=>plant(0,FLOOR_Y,0,1)},
+      jar:     {label:'Cannabis jar', s:1.9, make:()=>herbJar(0,0,1,1,0)},
+      books:   {label:'Book stack',   s:2.0, make:()=>bookStack(0,FLOOR_Y,0,1)},
+      ashtray: {label:'Ashtray',      s:2.0, make:()=>ashtray(0,0,1,0)},
+      tray:    {label:'Rolling tray', s:1.8, make:()=>rollingTray(0,0,1,0)},
+    };
+    const propPickables=[];
+    const propMap={};
+    (data.home3dProps||[]).forEach(pr=>{
+      const def=PROP_KINDS[pr.kind]; if(!def) return;
+      const g=def.make(); if(!g) return;
+      g.position.set(pr.x??0, pr.y??FLOOR_Y, pr.z??4);
+      g.rotation.y=pr.ry??0;
+      g.scale.setScalar(pr.s??def.s);
+      g.userData={prop:pr, isProp:true};
+      g.traverse(o=>{ if(o.isMesh){ o.castShadow=true; o.userData.propRoot=g; propPickables.push(o); } });
+      propMap[pr.id]=g;
+    });
+    // Live preview while sliders move — avoids a full rebuild per tick
+    stateRef.current.liveProp=(id,patch)=>{
+      const g=propMap[id]; if(!g) return;
+      if(patch.s!==undefined) g.scale.setScalar(patch.s);
+      if(patch.ry!==undefined) g.rotation.y=patch.ry;
+    };
+    stateRef.current.propKinds=Object.entries(PROP_KINDS).map(([k,v])=>({k,label:v.label,s:v.s}));
+    stateRef.current.dropSpot=(kind)=>kind==='divider'
+      ? {x:(Math.random()-.5)*SHELF_W*.5, y:.6, z:0}      // onto the bottom shelf
+      : {x:DROP_CX+(Math.random()-.5)*4, y:FLOOR_Y, z:DROP_CZ+1.3};
 
     /* ── Build shelves + icons ── */
     const pickables=[];
@@ -6226,7 +6313,7 @@ function Home3DView({data, setData, setView, setSels, setProdView}){
 
     /* ── Controls: orbit + drag icons + drag stickies ── */
     const cs = stateRef.current.cam;
-    let isOrbiting=false, dragIcon=null, dragSticky=null, dragMoved=0, lastX=0, lastY=0;
+    let isOrbiting=false, dragIcon=null, dragSticky=null, dragProp=null, dragMoved=0, lastX=0, lastY=0;
     let hovered=null;
     const mouse=new T.Vector2(), raycaster=new T.Raycaster();
     const dragPlane=new T.Plane();
@@ -6240,11 +6327,12 @@ function Home3DView({data, setData, setView, setSels, setProdView}){
     }
     function pickAll(e){
       setMouse(e);
-      const hits=raycaster.intersectObjects([...stickyPickables,...pickables]);
+      const hits=raycaster.intersectObjects([...stickyPickables,...pickables,...propPickables]);
       if(!hits.length) return null;
       const o=hits[0].object;
-      if(o.userData.isSticky) return {type:'sticky', obj:o};
-      if(o.userData.iconRoot) return {type:'icon', obj:o.userData.iconRoot};
+      if(o.userData.isSticky)  return {type:'sticky', obj:o};
+      if(o.userData.iconRoot)  return {type:'icon',   obj:o.userData.iconRoot};
+      if(o.userData.propRoot)  return {type:'prop',   obj:o.userData.propRoot};
       return null;
     }
 
@@ -6252,6 +6340,7 @@ function Home3DView({data, setData, setView, setSels, setProdView}){
       lastX=e.clientX; lastY=e.clientY; dragMoved=0;
       const hit=pickAll(e);
       if(hit&&hit.type==='sticky'){ dragSticky=hit.obj; }
+      else if(hit&&hit.type==='prop'){ dragProp=hit.obj; }
       else if(hit&&hit.type==='icon'){
         dragIcon=hit.obj;
         dragPlane.setFromNormalAndCoplanarPoint(new T.Vector3(0,1,0), new T.Vector3(0,dragIcon.userData.shelfY,0));
@@ -6264,6 +6353,15 @@ function Home3DView({data, setData, setView, setSels, setProdView}){
         if(dragMoved<6){ setStickyEdit({...st}); }
         else { saveSticky(st.id,{x:dragSticky.position.x,y:dragSticky.position.y,z:dragSticky.position.z}); }
         dragSticky=null; isOrbiting=false; return;
+      }
+      if(dragProp){
+        const pr=dragProp.userData.prop;
+        if(dragMoved<6){ setPropEdit({...pr, s:dragProp.scale.x, ry:dragProp.rotation.y}); }
+        else {
+          const np={x:dragProp.position.x, y:dragProp.position.y, z:dragProp.position.z};
+          setData(d=>({...d, home3dProps:(d.home3dProps||[]).map(q=>q.id===pr.id?{...q,...np}:q)}));
+        }
+        dragProp=null; isOrbiting=false; return;
       }
       if(dragIcon){
         if(dragMoved<6){
@@ -6284,9 +6382,23 @@ function Home3DView({data, setData, setView, setSels, setProdView}){
         setMouse(e);
         const hits=raycaster.intersectObjects(placeSurfaces);
         if(hits.length){
-          const p=hits[0].point;
-          if(hits[0].object.userData.isBoard) dragSticky.position.set(p.x, p.y, p.z+.09);
-          else dragSticky.position.set(p.x, p.y+1.3, p.z+.02);
+          const p=hits[0].point, HALF=1.25;   // grabbed by its top edge
+          if(hits[0].object.userData.isBoard){
+            dragSticky.position.set(p.x, p.y-HALF, p.z+.09);
+          } else {
+            // hangs off the front lip of a shelf; never sinks through the floor
+            dragSticky.position.set(p.x, Math.max(FLOOR_Y+HALF+.05, p.y-HALF), p.z+.14);
+          }
+        }
+        lastX=e.clientX; lastY=e.clientY;
+        return;
+      }
+      if(dragProp){
+        dragMoved+=Math.abs(dx)+Math.abs(dy);
+        setMouse(e);
+        const hits=raycaster.intersectObjects(placeSurfaces);
+        if(hits.length && !hits[0].object.userData.isBoard){
+          dragProp.position.set(hits[0].point.x, hits[0].point.y+.02, hits[0].point.z);
         }
         lastX=e.clientX; lastY=e.clientY;
         return;
@@ -6435,7 +6547,7 @@ function Home3DView({data, setData, setView, setSels, setProdView}){
         if(em.light) em.light.intensity=1.0*f;
       });
       // Gentle icon idle spin (not while dragging)
-      icons.forEach(ic=>{ if(ic!==dragIcon&&ic.userData.model) ic.userData.model.rotation.y+=.004; });
+      // products hold their orientation — no idle spin
 
       renderer.render(scene,cam);
     }
@@ -6561,10 +6673,28 @@ function Home3DView({data, setData, setView, setSels, setProdView}){
       fontFamily:'var(--font-mono)',fontSize:10,color:'rgba(255,255,255,.45)',
       background:'rgba(16,19,28,.8)',border:'1px solid rgba(255,255,255,.1)',
       borderRadius:99,padding:'6px 16px',pointerEvents:'none',whiteSpace:'nowrap'
-    }},'Drag icons & stickies to arrange · Click for details · Drag space to orbit · Shift+drag pan · Scroll zoom'),
+    }},'Drag icons, stickies & objects to arrange · Click for details · Drag space to orbit · Shift+drag pan · Scroll zoom'),
+    /* Secret toggle — reveals the customisation tools */
+    el('button',{
+      onClick:()=>{ setShowTools(v=>!v); setShowProps(false); },
+      title:showTools?'Hide tools':'',
+      'aria-label':'Toggle scene tools',
+      style:{
+        position:'absolute',top:14,left:14,zIndex:14,
+        width:26,height:26,borderRadius:'50%',
+        display:'flex',alignItems:'center',justifyContent:'center',
+        background:showTools?'rgba(255,213,74,.9)':'rgba(255,255,255,.07)',
+        color:showTools?'#3a3220':'rgba(255,255,255,.32)',
+        border:'1px solid rgba(255,255,255,'+(showTools?'.35':'.12')+')',
+        cursor:'pointer',padding:0,fontSize:13,
+        transition:'all 180ms'
+      },
+      onMouseEnter:e=>{ if(!showTools){ e.currentTarget.style.color='rgba(255,255,255,.85)'; e.currentTarget.style.background='rgba(255,255,255,.14)'; } },
+      onMouseLeave:e=>{ if(!showTools){ e.currentTarget.style.color='rgba(255,255,255,.32)'; e.currentTarget.style.background='rgba(255,255,255,.07)'; } }
+    }, el('i',{className:'ti ti-sparkles'})),
     /* Add sticky note button */
-    el('button',{onClick:addSticky,style:{
-      position:'absolute',top:14,left:14,zIndex:10,
+    showTools&&el('button',{onClick:addSticky,style:{
+      position:'absolute',top:50,left:14,zIndex:10,
       display:'flex',alignItems:'center',gap:7,
       fontFamily:'var(--font-mono)',fontSize:11,fontWeight:700,
       background:'rgba(255,213,74,.92)',color:'#3a3220',
@@ -6572,8 +6702,66 @@ function Home3DView({data, setData, setView, setSels, setProdView}){
       padding:'8px 14px',cursor:'pointer',
       boxShadow:'0 4px 14px rgba(0,0,0,.4)'
     }},el('i',{className:'ti ti-note'}),'＋ Sticky Note'),
+    /* Add scene object */
+    showTools&&el('div',{style:{position:'absolute',top:134,left:14,zIndex:12}},
+      el('button',{
+        onClick:()=>setShowProps(v=>!v),
+        style:{
+          display:'flex',alignItems:'center',gap:7,
+          fontFamily:'var(--font-mono)',fontSize:11,fontWeight:700,
+          background:showProps?'rgba(120,180,255,.95)':'rgba(16,19,28,.88)',
+          color:showProps?'#0d1117':'#c8cedb',
+          border:'1px solid rgba(255,255,255,.18)',borderRadius:8,
+          padding:'8px 14px',cursor:'pointer',boxShadow:'0 4px 14px rgba(0,0,0,.4)'
+        }
+      },el('i',{className:'ti ti-box'}),'＋ Object'),
+      showProps&&el('div',{style:{
+        marginTop:6,background:'rgba(16,19,28,.97)',border:'1px solid rgba(255,255,255,.16)',
+        borderRadius:10,padding:6,minWidth:170,boxShadow:'0 8px 26px rgba(0,0,0,.55)'
+      }},
+        (stateRef.current.propKinds||[]).map(pk=>el('button',{
+          key:pk.k, onClick:()=>addProp(pk.k,pk.s),
+          style:{display:'block',width:'100%',textAlign:'left',background:'transparent',
+            border:'none',borderRadius:6,padding:'8px 10px',color:'#dfe3ec',
+            fontSize:12,fontFamily:'inherit',cursor:'pointer'},
+          onMouseEnter:e=>e.currentTarget.style.background='rgba(255,255,255,.08)',
+          onMouseLeave:e=>e.currentTarget.style.background='transparent'
+        },pk.label))
+      )
+    ),
+    /* Selected object editor */
+    propEdit&&el('div',{style:{
+      position:'absolute',bottom:60,left:300,zIndex:20,width:240,
+      background:'rgba(16,19,28,.96)',backdropFilter:'blur(10px)',
+      border:'1px solid rgba(120,180,255,.4)',borderRadius:12,
+      padding:'14px',boxShadow:'0 8px 30px rgba(0,0,0,.5)'
+    }},
+      el('div',{style:{fontFamily:'var(--font-mono)',fontSize:9,fontWeight:700,color:'#7ab4ff',
+        textTransform:'uppercase',letterSpacing:'.1em',marginBottom:10,display:'flex',alignItems:'center',gap:6}},
+        el('i',{className:'ti ti-box'}), propEdit.kind),
+      el('div',{style:{fontFamily:'var(--font-mono)',fontSize:9,color:'#7b8393',marginBottom:4}},'Size'),
+      el('input',{type:'range',min:.6,max:5,step:.05,value:propEdit.s??2,
+        onChange:e=>{const v=+e.target.value;setPropEdit(s=>({...s,s:v}));stateRef.current.liveProp?.(propEdit.id,{s:v});},
+        onMouseUp:e=>saveProp(propEdit.id,{s:+e.target.value}),
+        style:{width:'100%',marginBottom:10}}),
+      el('div',{style:{fontFamily:'var(--font-mono)',fontSize:9,color:'#7b8393',marginBottom:4}},'Rotation'),
+      el('input',{type:'range',min:0,max:6.283,step:.02,value:propEdit.ry??0,
+        onChange:e=>{const v=+e.target.value;setPropEdit(s=>({...s,ry:v}));stateRef.current.liveProp?.(propEdit.id,{ry:v});},
+        onMouseUp:e=>saveProp(propEdit.id,{ry:+e.target.value}),
+        style:{width:'100%',marginBottom:12}}),
+      el('div',{style:{display:'flex',gap:8}},
+        el('button',{onClick:()=>{saveProp(propEdit.id,{s:propEdit.s,ry:propEdit.ry});setPropEdit(null);},style:{
+          flex:1,background:'rgba(120,180,255,.9)',border:'none',borderRadius:8,
+          padding:'8px',color:'#0d1117',cursor:'pointer',fontSize:12,fontWeight:700,fontFamily:'inherit'
+        }},'Done'),
+        el('button',{onClick:()=>removeProp(propEdit.id),style:{
+          background:'rgba(255,107,92,.15)',border:'1px solid rgba(255,107,92,.4)',borderRadius:8,
+          padding:'8px 12px',color:'#ff6b5c',cursor:'pointer',fontSize:12,fontFamily:'inherit'
+        }},el('i',{className:'ti ti-trash'}))
+      )
+    ),
     /* Joint spawner */
-    el('div',{style:{position:'absolute',top:56,left:14,zIndex:10,display:'flex',gap:6}},
+    showTools&&el('div',{style:{position:'absolute',top:92,left:14,zIndex:10,display:'flex',gap:6}},
       el('button',{
         onClick:()=>{ for(let i=0;i<3;i++) setTimeout(()=>stateRef.current.spawnJoint?.(), i*90); },
         title:'Drop joints onto the desk',
