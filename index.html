@@ -600,6 +600,18 @@ div:hover > .rm-btn{display:flex!important;}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
 ::-webkit-scrollbar-thumb:hover{background:var(--muted);}
 .leaflet-tile{filter:none;}
+
+/* Ontario map — city store breakdown tooltip */
+.leaflet-tooltip.city-store-tip{
+  background:rgba(18,20,26,.97);
+  border:1px solid rgba(255,255,255,.18);
+  color:#e8eaf0;
+  border-radius:8px;
+  padding:8px 11px;
+  max-width:290px;
+  box-shadow:0 8px 26px rgba(0,0,0,.55);
+}
+.leaflet-tooltip.city-store-tip::before{ border-top-color:rgba(18,20,26,.97); }
 </style>
 
 </head>
@@ -609,6 +621,7 @@ div:hover > .rm-btn{display:flex!important;}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 'use strict';
 const {useState,useEffect,useRef,useCallback}=React;
@@ -3820,7 +3833,7 @@ function RegionBar({regions}){
 
 
 /* ── Ontario Map (Leaflet) ── */
-function OntarioMap({cityData}){
+function OntarioMap({cityData, cityStores}){
   const containerRef = React.useRef(null);
   const mapRef       = React.useRef(null);
   const markersRef   = React.useRef([]);
@@ -3871,10 +3884,26 @@ function OntarioMap({cityData}){
         color:'rgba(255,255,255,0.7)', weight:1.5, fillOpacity:0.85,
       })
       .bindTooltip(
-        '<b style="color:'+col+'">'+city+'</b><br>'+
-        '<span style="color:#aaa;font-size:11px">'+region+'</span><br>'+
-        '<b>'+units.toLocaleString()+'</b> units',
-        {direction:'top', offset:[0,-4]}
+        (()=>{
+          const head='<b style="color:'+col+'">'+city+'</b>'+
+            '<div style="color:#9aa;font-size:10px;margin-bottom:3px">'+region+
+            ' &middot; <b style="color:#eee">'+units.toLocaleString()+'</b> units</div>';
+          const sm=(cityStores||{})[city];
+          const list=sm?Object.entries(sm).sort(([,a],[,b])=>b-a):[];
+          if(!list.length) return head+
+            '<div style="color:#777;font-size:10px;font-style:italic;border-top:1px solid #444;padding-top:4px">Re-import sales file for store detail</div>';
+          const rows=list.slice(0,12).map(([s,u])=>
+            '<div style="display:flex;gap:10px;justify-content:space-between;font-size:11px;line-height:1.55">'+
+            '<span style="color:#ddd;max-width:190px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+s+'</span>'+
+            '<b style="color:'+col+'">'+u.toLocaleString()+'</b></div>'
+          ).join('');
+          const more=list.length>12?'<div style="color:#888;font-size:10px;margin-top:3px">+'+(list.length-12)+' more stores</div>':'';
+          return head+
+            '<div style="border-top:1px solid #444;margin-top:2px;padding-top:4px">'+
+            '<div style="color:#888;font-size:9px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:3px">'+
+            list.length+' store'+(list.length===1?'':'s')+' with sales</div>'+rows+more+'</div>';
+        })(),
+        {direction:'top', offset:[0,-4], className:'city-store-tip'}
       )
       .addTo(map);
       markersRef.current.push(m);
@@ -4634,7 +4663,7 @@ function parseExcelSalesData(buffer, existingProdName){
     throw new Error('No rows for "'+targetName+'". Products in file: '+productNames.join(', '));
 
   // ── Aggregate ──
-  const cities={}, stores={}, regions={}, weeks={}, months={}, daily={}, storeWeeks={}, storeRegions={};
+  const cities={}, stores={}, regions={}, weeks={}, months={}, daily={}, storeWeeks={}, storeRegions={}, cityStores={};
   let totalUnits=0, totalOrders=0, brand='';
 
   dataRows.forEach(row=>{
@@ -4656,6 +4685,8 @@ function parseExcelSalesData(buffer, existingProdName){
 
     cities[city]  = (cities[city]  ||0)+units;
     stores[store] = (stores[store] ||0)+units;
+    if(!cityStores[city]) cityStores[city]={};
+    cityStores[city][store] = (cityStores[city][store]||0)+units;
     if(reg) regions[reg]=(regions[reg]||0)+units;
     if(reg&&!storeRegions[store]) storeRegions[store]=reg;
     totalUnits+=units;
@@ -4726,6 +4757,9 @@ function parseExcelSalesData(buffer, existingProdName){
       storeCount: Object.keys(stores).length,
       cities:  Object.fromEntries(Object.entries(cities).sort(([,a],[,b])=>b-a)),
       stores:  Object.fromEntries(Object.entries(stores).sort(([,a],[,b])=>b-a)),
+      cityStores: Object.fromEntries(Object.entries(cityStores).map(([c,s])=>[
+        c, Object.fromEntries(Object.entries(s).sort(([,a],[,b])=>b-a))
+      ])),
         storeRegions,
       regions,
       weekly:  Object.fromEntries(Object.entries(weeks).sort()),
@@ -5429,6 +5463,1134 @@ function MeetingMode({product,name,vel,clsKey,clsCol,lwUnits,wowDelta,wowPct,uni
 ══════════════════════════════════════════ */
 const HOME_KEY='au_home_v1'; // kept for legacy migration
 const getHomeData=(data)=>data?.home||{actions:[],notes:''};
+
+/* ════════════════════════════════════════════════
+   3D LOW-POLY HOME NAVIGATION v3 — "The Workshop"
+   Isometric wood room · draggable shelf icons ·
+   product hub panel with weekly action notes
+   ════════════════════════════════════════════════ */
+function Home3DView({data, setData, setView, setSels, setProdView}){
+  const mountRef = React.useRef();
+  const stateRef = React.useRef({cam:{theta:-Math.PI/5, phi:0.58, radius:22, panX:0}});
+  const [selected, setSelected] = React.useState(null); // {tabId, prodId}
+  const [noteText, setNoteText] = React.useState('');
+  const [stickyEdit, setStickyEdit] = React.useState(null); // {id,text,color}
+
+  /* ── Sticky note helpers ── */
+  const STICKY_COLORS=['#ffd54a','#ff9c6b','#8ee08e','#7fc7ff','#e79bd8'];
+  const addSticky=()=>{
+    const b=stateRef.current.bay||{x0:8,x1:18,y0:1.5,y1:7,z:-2.9};
+    const st={id:uid(),text:'New note',
+      x:b.x0+1.4+Math.random()*Math.max(1,(b.x1-b.x0-2.8)),
+      y:b.y0+1.4+Math.random()*Math.max(1,(b.y1-b.y0-2.8)),
+      z:b.z,
+      rot:(Math.random()-.5)*.14,color:STICKY_COLORS[Math.floor(Math.random()*STICKY_COLORS.length)]};
+    setData(d=>({...d,home3dStickies:[...(d.home3dStickies||[]),st]}));
+    setStickyEdit({...st});
+  };
+  const saveSticky=(id,patch)=>setData(d=>({...d,home3dStickies:(d.home3dStickies||[]).map(s=>s.id===id?{...s,...patch}:s)}));
+  const removeSticky=(id)=>setData(d=>({...d,home3dStickies:(d.home3dStickies||[]).filter(s=>s.id!==id)}));
+
+  /* ── Notes helpers (persist onto the product) ── */
+  const addNote = (tabId, prodId, text)=>{
+    if(!text.trim()) return;
+    setData(d=>({...d,[tabId]:(d[tabId]||[]).map(p=>p.id===prodId
+      ? {...p, hubNotes:[...(p.hubNotes||[]), {id:uid(), text:text.trim(), date:new Date().toISOString().slice(0,10), done:false}]}
+      : p)}));
+    setNoteText('');
+  };
+  const toggleNote = (tabId, prodId, noteId)=>{
+    setData(d=>({...d,[tabId]:(d[tabId]||[]).map(p=>p.id===prodId
+      ? {...p, hubNotes:(p.hubNotes||[]).map(n=>n.id===noteId?{...n,done:!n.done}:n)}
+      : p)}));
+  };
+  const deleteNote = (tabId, prodId, noteId)=>{
+    setData(d=>({...d,[tabId]:(d[tabId]||[]).map(p=>p.id===prodId
+      ? {...p, hubNotes:(p.hubNotes||[]).filter(n=>n.id!==noteId)}
+      : p)}));
+  };
+
+  React.useEffect(()=>{
+    const mount = mountRef.current;
+    if(!mount || !window.THREE) return;
+    const T = window.THREE;
+    const W = mount.clientWidth, H = mount.clientHeight;
+
+    const renderer = new T.WebGLRenderer({antialias:true});
+    renderer.setSize(W,H);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+    renderer.setClearColor(0x1f1b2b);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = T.PCFSoftShadowMap;
+    renderer.outputEncoding = T.sRGBEncoding;
+    renderer.toneMapping = T.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.12;
+    mount.appendChild(renderer.domElement);
+
+    const scene = new T.Scene();
+    scene.fog = new T.FogExp2(0x1f1b2b, 0.007);
+
+    const cam = new T.PerspectiveCamera(45, W/H, 0.1, 200);
+
+    /* ── Materials palette (warm wood room) ── */
+    const woodA = new T.MeshStandardMaterial({color:0x9a6236, flatShading:true, roughness:.75});
+    const woodB = new T.MeshStandardMaterial({color:0x7d4e2a, flatShading:true, roughness:.8});
+    const woodDark = new T.MeshStandardMaterial({color:0x5c381e, flatShading:true, roughness:.85});
+    const wallNavy = new T.MeshStandardMaterial({color:0x232847, flatShading:true, roughness:.9, side:T.FrontSide});
+
+    /* ── Lighting — warm workshop ── */
+    scene.add(new T.HemisphereLight(0x93a4d6, 0x3a2a1c, 0.75));
+    const key = new T.DirectionalLight(0xfff1de, 1.35);
+    key.position.set(14, 22, 16);
+    key.castShadow = true;
+    key.shadow.mapSize.width = 2048;
+    key.shadow.mapSize.height = 2048;
+    key.shadow.camera.left = -26; key.shadow.camera.right = 26;
+    key.shadow.camera.top = 26; key.shadow.camera.bottom = -26;
+    key.shadow.camera.far = 80;
+    key.shadow.bias = -0.0004;
+    scene.add(key);
+    const rim = new T.DirectionalLight(0x7a9fff, 0.45);
+    rim.position.set(-16, 12, -12);
+    scene.add(rim);
+    const lamp = new T.PointLight(0xffa050, 1.1, 30);
+    lamp.position.set(-6, 9, 5);
+    scene.add(lamp);
+
+    /* ── Tabs → shelves (every product call gets a shelf, even empty ones) ── */
+    const tabs=[
+      ...(data.pcTabs||[]).map(t=>({...t,prods:data[t.id]||[]})),
+      {id:'in_dev',label:'In Development',prods:data.in_dev||[]}
+    ];
+
+    /* Category-grouped layout per shelf */
+    const SLOT_W = 4.7, CAT_GAP = 2.2;
+    const ICON_SCALE = 2.75;
+    const CAT_ORDER_3D=['pre-roll','infused','vape','concentrate','flower','other'];
+    const catKey3d=s=>{
+      const c=((s||{}).Category||'').toLowerCase();
+      if(c.includes('infused')||c.includes('diamond')||c.includes('caviar'))return 'infused';
+      if(c.includes('vape')||c.includes('aio')||c.includes('510'))return 'vape';
+      if(c.includes('pre-roll')||c.includes('preroll'))return 'pre-roll';
+      if(c.includes('concentrate')||c.includes('extract')||c.includes('shatter')||c.includes('rosin')||c.includes('rso')||c.includes('hash')||c.includes('honey')||c.includes('oil'))return 'concentrate';
+      if(c.includes('flower'))return 'flower';
+      return 'other';
+    };
+    function tabLayout(prods){
+      const sorted=[...prods].sort((a,b)=>CAT_ORDER_3D.indexOf(catKey3d(a.specs))-CAT_ORDER_3D.indexOf(catKey3d(b.specs)));
+      const xs=[]; let cursor=0, prev=null;
+      sorted.forEach(p=>{
+        const ck=catKey3d(p.specs);
+        if(prev!==null&&ck!==prev) cursor+=CAT_GAP;
+        xs.push(cursor); cursor+=SLOT_W; prev=ck;
+      });
+      const width=xs.length?xs[xs.length-1]:0;
+      return {sorted, xs:xs.map(x=>x-width/2), width};
+    }
+    const layouts=tabs.map(t=>tabLayout(t.prods));
+    const maxRow=Math.max(...layouts.map(l=>l.width), 6);
+    const SHELF_W = Math.max(14, maxRow + 5.0);
+    const SHELF_GAP = 4.6;
+    const SHELF_D = 5.0;
+    const totalH = tabs.length*SHELF_GAP;
+    const EXT_W = 13;          // blank notes/action-item bay to the right
+    const ROOM_CX = EXT_W/2;   // room re-centres so the shelf stays put
+    const placeSurfaces=[];
+
+    /* ── Room: plinth, floor planks, 2 dollhouse walls ── */
+    const plinth = new T.Mesh(new T.BoxGeometry(SHELF_W+6+EXT_W, 1.2, SHELF_D+9), woodDark);
+    plinth.position.set(ROOM_CX, -0.6, 1.5);
+    plinth.receiveShadow = true;
+    placeSurfaces.push(plinth);
+    scene.add(plinth);
+    for(let i=0;i<7;i++){
+      const plank=new T.Mesh(new T.BoxGeometry(SHELF_W+5.4+EXT_W, .18, 1.15), i%2?woodA:woodB);
+      plank.position.set(ROOM_CX, .09, -1.6 + i*1.25);
+      plank.receiveShadow = true;
+      placeSurfaces.push(plank);
+      scene.add(plank);
+    }
+    /* ── Hanging pendant lights above the shelf (no walls) ── */
+    function pendant(px, pz){
+      pz = pz||0;
+      const cord=new T.Mesh(new T.CylinderGeometry(.035,.035,2.4,6),
+        new T.MeshStandardMaterial({color:0x2a2a30,roughness:.8}));
+      cord.position.set(px, totalH+3.5, pz);
+      scene.add(cord);
+      const cap=new T.Mesh(new T.CylinderGeometry(.16,.2,.18,10),
+        new T.MeshStandardMaterial({color:0x3a3b44,roughness:.5,metalness:.5}));
+      cap.position.set(px, totalH+2.35, pz); scene.add(cap);
+      const shade=new T.Mesh(new T.ConeGeometry(.95,.85,14,1,true),
+        new T.MeshStandardMaterial({color:0x33343c,roughness:.45,metalness:.45,side:T.DoubleSide}));
+      shade.position.set(px, totalH+1.85, pz);
+      scene.add(shade);
+      const inner=new T.Mesh(new T.ConeGeometry(.9,.8,14,1,true),
+        new T.MeshStandardMaterial({color:0xffe2b8,emissive:0xffb050,emissiveIntensity:.35,side:T.BackSide}));
+      inner.position.set(px, totalH+1.85, pz); scene.add(inner);
+      const bulb=new T.Mesh(new T.SphereGeometry(.24,14,10),
+        new T.MeshStandardMaterial({color:0xffd9a0,emissive:0xffb050,emissiveIntensity:1.9}));
+      bulb.position.set(px, totalH+1.42, pz);
+      scene.add(bulb);
+      const pl=new T.PointLight(0xffb670, 1.15, 36);
+      pl.position.set(px, totalH+1.15, pz+1.3);
+      scene.add(pl);
+    }
+    for(let i=0;i<3;i++) pendant((i-1)*(SHELF_W/3));
+
+    pendant(EXT_W/2 + SHELF_W/2);
+
+    /* ── Whiteboard behind the bookshelf (sticky note surface) ── */
+    const WB_Z = -SHELF_D/2 - 1.0;
+    const WB_W = SHELF_W + 3.0 + EXT_W, WB_H = totalH + 1.0;
+    const NOTE_X0 = SHELF_W/2 + 1.5, NOTE_X1 = EXT_W + (SHELF_W+3)/2 - 1.5;
+    const NOTE_CX = (NOTE_X0+NOTE_X1)/2;
+    const wbFrame = new T.Mesh(new T.BoxGeometry(WB_W+.5, WB_H+.5, .18),
+      new T.MeshStandardMaterial({color:0x8a5c30, flatShading:true, roughness:.7}));
+    wbFrame.position.set(ROOM_CX, totalH/2 + .6, WB_Z - .05);
+    wbFrame.receiveShadow = true;
+    scene.add(wbFrame);
+    const whiteboard = new T.Mesh(new T.BoxGeometry(WB_W, WB_H, .12),
+      new T.MeshStandardMaterial({color:0xeef1f6, roughness:.32, metalness:.02}));
+    whiteboard.position.set(ROOM_CX, totalH/2 + .6, WB_Z);
+    whiteboard.receiveShadow = true;
+    whiteboard.userData.isBoard = true;
+    scene.add(whiteboard);
+    placeSurfaces.push(whiteboard);
+    const wbTray = new T.Mesh(new T.BoxGeometry(EXT_W*.8, .12, .32),
+      new T.MeshStandardMaterial({color:0x6f7480, roughness:.5, metalness:.35}));
+    wbTray.position.set(NOTE_CX, totalH/2 + .6 - WB_H/2 - .1, WB_Z + .22);
+    scene.add(wbTray);
+    // Divider between the shelf half and the blank notes bay
+    const wbDiv = new T.Mesh(new T.BoxGeometry(.06, WB_H - .6, .04),
+      new T.MeshStandardMaterial({color:0xc3ccd8, roughness:.6}));
+    wbDiv.position.set(SHELF_W/2 + .7, totalH/2 + .6, WB_Z + .08);
+    scene.add(wbDiv);
+    const wbLight = new T.PointLight(0xbfd4ff, .55, 30);
+    wbLight.position.set(0, totalH + 1.2, WB_Z + 3.5);
+    scene.add(wbLight);
+    const wbLight2 = new T.PointLight(0xcfe0ff, .6, 34);
+    wbLight2.position.set(NOTE_CX, totalH + 1.2, WB_Z + 4);
+    scene.add(wbLight2);
+
+    /* ── Deco: plants + books ── */
+    function plant(x,y,z,s=1){
+      const g=new T.Group();
+      const pot=new T.Mesh(new T.CylinderGeometry(.22,.17,.3,7), woodDark);
+      pot.position.y=.15; pot.castShadow=true; g.add(pot);
+      const soil=new T.Mesh(new T.CylinderGeometry(.2,.2,.04,7),
+        new T.MeshStandardMaterial({color:0x3a2a1c, roughness:1}));
+      soil.position.y=.3; g.add(soil);
+      for(let i=0;i<6;i++){
+        const leaf=new T.Mesh(new T.IcosahedronGeometry(.15+Math.random()*.06,0),
+          new T.MeshStandardMaterial({color:i%2?0x3f9d4e:0x4fb85c, flatShading:true, roughness:.7}));
+        leaf.position.set((Math.random()-.5)*.36, .38+i*.11, (Math.random()-.5)*.36);
+        leaf.castShadow=true; g.add(leaf);
+      }
+      g.position.set(x,y,z); g.scale.setScalar(s);
+      scene.add(g);
+    }
+    function bookStack(x,y,z,s=1){
+      const g=new T.Group();
+      const cols=[0xc0564a, 0x4a7ec0, 0x56a860, 0xd7a53c];
+      cols.forEach((c,i)=>{
+        const b=new T.Mesh(new T.BoxGeometry(.7-.07*i,.15,.5),
+          new T.MeshStandardMaterial({color:c, flatShading:true, roughness:.8}));
+        b.position.set((Math.random()-.5)*.06, .075+i*.155, 0);
+        b.rotation.y=(Math.random()-.5)*.3;
+        b.castShadow=true; g.add(b);
+      });
+      g.position.set(x,y,z); g.scale.setScalar(s);
+      scene.add(g);
+    }
+
+    /* ── Text plate builder (2D text + 3px depth) ── */
+    function textPlate(text, o={}){
+      const fs=o.fs||40, pad=o.pad||18;
+      const meas=document.createElement('canvas').getContext('2d');
+      meas.font=`700 ${fs}px 'DM Mono', monospace`;
+      const tw=Math.ceil(meas.measureText(text).width);
+      const cw=tw+pad*2, ch=fs+pad*1.5;
+      const c=document.createElement('canvas'); c.width=cw; c.height=ch;
+      const x=c.getContext('2d');
+      x.fillStyle=o.bg||'rgba(16,20,30,0.9)'; x.fillRect(0,0,cw,ch);
+      x.strokeStyle=o.border||'rgba(255,150,80,.6)'; x.lineWidth=3; x.strokeRect(1.5,1.5,cw-3,ch-3);
+      x.font=`700 ${fs}px 'DM Mono', monospace`;
+      x.fillStyle=o.fg||'#ffe6cf'; x.textAlign='center'; x.textBaseline='middle';
+      x.fillText(text, cw/2, ch/2+2);
+      const tex=new T.CanvasTexture(c); tex.minFilter=T.LinearFilter; tex.encoding=T.sRGBEncoding;
+      const sc=o.scale||0.01;
+      const geo=new T.BoxGeometry(cw*sc, ch*sc, 0.07);
+      const front=new T.MeshBasicMaterial({map:tex, transparent:true});
+      const side=new T.MeshBasicMaterial({color:0x14100c});
+      return new T.Mesh(geo,[side,side,side,side,front,side]);
+    }
+
+    function jitter(geo, amt){
+      const p=geo.attributes.position;
+      for(let i=0;i<p.count;i++){
+        p.setX(i,p.getX(i)+(Math.random()-.5)*amt);
+        p.setY(i,p.getY(i)+(Math.random()-.5)*amt);
+        p.setZ(i,p.getZ(i)+(Math.random()-.5)*amt);
+      }
+      geo.computeVertexNormals();
+      return geo;
+    }
+
+    /* ── Sticky note mesh ── */
+    function stickyMesh(st){
+      const size=440;
+      const c=document.createElement('canvas'); c.width=size; c.height=size;
+      const x=c.getContext('2d');
+      x.fillStyle=st.color||'#ffd54a'; x.fillRect(0,0,size,size);
+      x.fillStyle='rgba(0,0,0,.09)'; x.fillRect(0,0,size,40);
+      x.fillStyle='#3a3220';
+      x.font='700 60px Syne, sans-serif';
+      x.textAlign='left'; x.textBaseline='top';
+      const words=String(st.text||'').split(/\s+/);
+      const lines=[]; let line='';
+      words.forEach(w=>{
+        const test=line?line+' '+w:w;
+        if(x.measureText(test).width>size-48){lines.push(line);line=w;}
+        else line=test;
+      });
+      if(line) lines.push(line);
+      lines.slice(0,6).forEach((ln,i)=>x.fillText(ln,24,62+i*66));
+      const tex=new T.CanvasTexture(c); tex.encoding=T.sRGBEncoding;
+      const front=new T.MeshStandardMaterial({map:tex,roughness:.85});
+      const side=new T.MeshStandardMaterial({color:0xcfae3d,roughness:.85});
+      const mesh=new T.Mesh(new T.BoxGeometry(2.5,2.5,.06),[side,side,side,side,front,side]);
+      mesh.position.set(st.x??0, st.y??5, st.z??-2.9);
+      mesh.rotation.z=st.rot??0;
+      mesh.userData={sticky:st,isSticky:true};
+      mesh.castShadow=true;
+      return mesh;
+    }
+
+    /* ── Category colours ── */
+    const CAT_COL={vape:0xf0b73d,'pre-roll':0x5b9bf0,infused:0x29c3d4,concentrate:0xffb347,flower:0xe879b9};
+    const STATUS_COL={accepted:0x3ddc8a,launched:0x3ddc8a,'on track':0x3ddc8a,rejected:0xff6b5c,'at risk':0xff6b5c,delayed:0xff6b5c,'in progress':0xf0b73d,pending:0xf0b73d,'high priority':0xf0b73d};
+    const catKey=s=>{
+      const c=(s?.Category||'').toLowerCase();
+      if(c.includes('infused')||c.includes('diamond')||c.includes('caviar'))return 'infused';
+      if(c.includes('vape')||c.includes('aio')||c.includes('510'))return 'vape';
+      if(c.includes('pre-roll')||c.includes('preroll'))return 'pre-roll';
+      if(c.includes('concentrate')||c.includes('extract')||c.includes('shatter')||c.includes('rosin')||c.includes('rso')||c.includes('hash')||c.includes('honey')||c.includes('oil'))return 'concentrate';
+      if(c.includes('flower'))return 'flower';
+      return 'other';
+    };
+    const statColor=t=>STATUS_COL[((t||[])[0]||'').toLowerCase()]||0x8a8f9e;
+
+    /* ── Product icon builder ── */
+    const embers=[];
+    function productIcon(prod){
+      const specs=prod.specs, key=catKey(specs);
+      const colHex=CAT_COL[key]||0xff7a3d;
+      const statHex=statColor(prod.tags);
+      const done=prod.tasks?.length?prod.tasks.filter(t=>t.status==='Done').length/prod.tasks.length:0;
+      const g=new T.Group();
+      const model=new T.Group();
+      g.add(model);
+      g.userData.model=model;
+      const mat=(c,e,ei,r,m2,flat)=>new T.MeshStandardMaterial({color:c,emissive:new T.Color(e||0),emissiveIntensity:ei||0,flatShading:flat??true,metalness:m2??.15,roughness:r??.55});
+      const KRAFT=0xd6b183, HERB=0x8b9070, PLASTIC=0x1e1e24;
+
+      function joint(withSwirl){
+        /* Classic cone joint per reference — smooth taper, kraft paper, twisted tip */
+        const PAPER=0xd9c9a3, HERBTONE=0xb3ab8d;
+        // Herb section — upper body, herb faintly visible through paper
+        const herb=new T.Mesh(new T.CylinderGeometry(.150,.118,.78,14), mat(HERBTONE,0,0,.62,.05,false));
+        herb.position.set(-.22,.82,0); model.add(herb);
+        // Kraft filter — clean paper, continues the taper
+        const filt=new T.Mesh(new T.CylinderGeometry(.118,.105,.42,14), mat(PAPER,0,0,.55,.05,false));
+        filt.position.set(-.22,.22,0); model.add(filt);
+        // Subtle seam ring where filter meets body
+        const seam=new T.Mesh(new T.TorusGeometry(.119,.008,6,14), mat(0xc4b491,0,0,.6,.05,false));
+        seam.rotation.x=Math.PI/2; seam.position.set(-.22,.43,0); model.add(seam);
+        // Twisted paper tip
+        const twist=new T.Mesh(new T.ConeGeometry(.055,.17,8), mat(PAPER,0,0,.6,.05,false));
+        twist.position.set(-.22,1.29,0); twist.rotation.z=.22; model.add(twist);
+        if(withSwirl){
+          /* Green goop swirl spiraling up the cone */
+          const pts=[];
+          for(let i=0;i<=50;i++){
+            const a=i/50*Math.PI*5.2, yy=.52+i/50*.78;
+            const rr=.172-(yy-.52)*.042;
+            pts.push(new T.Vector3(Math.cos(a)*rr, yy, Math.sin(a)*rr));
+          }
+          const swirl=new T.Mesh(new T.TubeGeometry(new T.CatmullRomCurve3(pts),100,.024,8,false),
+            mat(0x4ade80,0x22c55e,.45,.25,.05,false));
+          swirl.position.x=-.22; model.add(swirl);
+        }
+        /* Doob tube packaging beside the joint */
+        const doobTube=new T.Mesh(new T.CylinderGeometry(.13,.13,1.0,12), mat(0xcf8a3f,0xff7a3d,.08,.35,.05,false));
+        doobTube.position.set(.28,.5,-.05); model.add(doobTube);
+        const cap=new T.Mesh(new T.CylinderGeometry(.15,.15,.16,12), mat(PLASTIC,0,0,.4,.15,false));
+        cap.position.set(.28,1.06,-.05); model.add(cap);
+      }
+
+      if(key==='pre-roll'){ joint(false); }
+      else if(key==='infused'){ joint(true); }
+      else if(key==='concentrate'){
+        /* Smooth glossy goop pile — high-segment spheres, smooth shading */
+        const goopMat=()=>new T.MeshStandardMaterial({color:0xf0a437,emissive:new T.Color(0xd97a10),emissiveIntensity:.32,flatShading:false,metalness:.08,roughness:.18});
+        const blobs=[[.38,.19,.55,0,0],[.26,.36,.55,.13,-.05],[.16,.5,.6,-.1,.07]];
+        blobs.forEach(([r,y,sy,ox,oz])=>{
+          const b=new T.Mesh(new T.SphereGeometry(r,20,14), goopMat());
+          b.position.set(ox-.26,y,oz); b.scale.y=sy;
+          model.add(b);
+        });
+        const drip=new T.Mesh(new T.SphereGeometry(.075,12,9), goopMat());
+        drip.position.set(.06,.08,.26); drip.scale.y=.55; model.add(drip);
+        /* Puck containers beside — black jar + yellow label band */
+        function puckJar(x,z,ry){
+          const body=new T.Mesh(new T.CylinderGeometry(.26,.26,.44,16), mat(PLASTIC,0,0,.35,.1,false));
+          body.position.set(x,.22,z); body.rotation.y=ry; model.add(body);
+          const label=new T.Mesh(new T.CylinderGeometry(.268,.268,.22,16), mat(0xf5c33b,0xf0b73d,.15,.5,.05,false));
+          label.position.set(x,.2,z); model.add(label);
+          const lid=new T.Mesh(new T.CylinderGeometry(.28,.28,.1,16), mat(0x151519,0,0,.3,.15,false));
+          lid.position.set(x,.48,z); model.add(lid);
+        }
+        puckJar(.46,.10,.4);
+      }
+      else if(key==='vape'){
+        const is510=(specs?.Category||'').toLowerCase().includes('510');
+        const MAG=0xd6336c, WHITE=0xf0eff2, OIL=0xe0a63c, DARK=0x17171c;
+        if(is510){
+          /* 510-thread cart — thread base, white band, amber tank, magenta mouthpiece */
+          const thread=new T.Mesh(new T.CylinderGeometry(.085,.095,.09,12), mat(0x8a8f98,0,0,.35,.8,false));
+          thread.position.y=.05; model.add(thread);
+          const base=new T.Mesh(new T.CylinderGeometry(.13,.13,.2,12), mat(WHITE,0,0,.5,.05,false));
+          base.position.y=.19; model.add(base);
+          const tank=new T.Mesh(new T.CylinderGeometry(.125,.125,.52,12), mat(OIL,0xc07d10,.35,.25,.05,false));
+          tank.position.y=.55; model.add(tank);
+          const label=new T.Mesh(new T.CylinderGeometry(.129,.129,.2,12), mat(WHITE,0,0,.5,.05,false));
+          label.position.y=.48; model.add(label);
+          const mouth=new T.Mesh(new T.CylinderGeometry(.062,.115,.38,12), mat(MAG,0,0,.45,.08,false));
+          mouth.position.y=1.0; model.add(mouth);
+          const tip=new T.Mesh(new T.SphereGeometry(.062,12,8), mat(MAG,0,0,.45,.08,false));
+          tip.position.y=1.19; tip.scale.y=.6; model.add(tip);
+        } else {
+          /* All-in-one — box body, dark screen panel, oil window, pink duckbill cap */
+          const body=new T.Mesh(new T.BoxGeometry(.52,.82,.3), mat(0xd9dbe8,0,0,.5,.05,false));
+          body.position.y=.45; model.add(body);
+          const panel=new T.Mesh(new T.BoxGeometry(.2,.76,.286), mat(DARK,0,0,.35,.2,false));
+          panel.position.set(.145,.45,.009); model.add(panel);
+          const screen=new T.Mesh(new T.BoxGeometry(.13,.22,.02), mat(0x0a0a0e,0xbfe8ff,.7,.3,.1,false));
+          screen.position.set(.145,.62,.165); model.add(screen);
+          const win=new T.Mesh(new T.BoxGeometry(.1,.2,.02), mat(OIL,0xc07d10,.6,.25,.05,false));
+          win.position.set(-.1,.55,.165); model.add(win);
+          const cap=new T.Mesh(new T.BoxGeometry(.34,.2,.2), mat(MAG,0,0,.45,.08,false));
+          cap.position.y=.96; model.add(cap);
+          const capTop=new T.Mesh(new T.BoxGeometry(.22,.1,.14), mat(MAG,0,0,.45,.08,false));
+          capTop.position.y=1.1; model.add(capTop);
+        }
+      }
+      else if(key==='flower'){
+        const bud=new T.Mesh(jitter(new T.IcosahedronGeometry(.48,1),.1), mat(colHex,statHex,.15+done*.25,.65));
+        bud.position.y=.55; model.add(bud);
+      }
+      else {
+        const geo=jitter(new T.IcosahedronGeometry(.5,0),.15);
+        const p=geo.attributes.position;
+        for(let i=0;i<p.count;i++) p.setY(i,p.getY(i)*1.5);
+        geo.computeVertexNormals();
+        const cry=new T.Mesh(geo, mat(0xff7a3d,statHex,.25+done*.3,.4,.3));
+        cry.position.y=.75; model.add(cry);
+      }
+
+      /* Status LED base puck (stays with outer group — doesn't spin) */
+      const basePuck=new T.Mesh(new T.CylinderGeometry(.55,.6,.09,12), mat(0x2a2030,statHex,.45,.5));
+      basePuck.position.y=.02;
+      g.add(basePuck);
+      model.scale.setScalar(ICON_SCALE);
+      basePuck.scale.set(1.9,1,1.9);
+      return g;
+    }
+
+    /* ── Bookshelf frame ── */
+    const frameL=new T.Mesh(new T.BoxGeometry(.5, totalH+1.6, SHELF_D), woodB);
+    frameL.position.set(-SHELF_W/2-.3, (totalH)/2, 0);
+    scene.add(frameL);
+    const frameR=frameL.clone(); frameR.position.x = SHELF_W/2+.3;
+    scene.add(frameR);
+    const frameTop=new T.Mesh(new T.BoxGeometry(SHELF_W+1.4, .45, SHELF_D+.3), woodA);
+    frameTop.position.set(0, totalH+.6, 0);
+    scene.add(frameTop);
+    const SHELF_TOP = totalH + .825;
+    plant(-SHELF_W/2+1.5, SHELF_TOP, 0, 2.6);
+    plant(SHELF_W/2-1.8, SHELF_TOP, .5, 2.1);
+    plant(EXT_W/2+SHELF_W/2, SHELF_TOP - totalH - .6, 5.2, 2.9);
+    bookStack(SHELF_W/2-2.2, .18, 4.6, 2.1);
+    bookStack(-SHELF_W/2+1.8, .18, 5.0, 1.8);
+
+
+    /* ── Desk props: ashtray w/ burning joint, herb jars, rolling tray ── */
+    const FLOOR_Y = .18;
+    const smokes = [];
+    const GLASS = ()=>new T.MeshStandardMaterial({color:0x39404c, roughness:.18, metalness:.22, transparent:true, opacity:.72});
+
+    function ashtray(x,z,s=1,ry=0){
+      const g=new T.Group();
+      const dish=new T.Mesh(new T.CylinderGeometry(.62,.5,.17,16), GLASS());
+      dish.position.y=.085; dish.castShadow=true; g.add(dish);
+      const rim=new T.Mesh(new T.TorusGeometry(.6,.06,8,22), GLASS());
+      rim.rotation.x=Math.PI/2; rim.position.y=.17; g.add(rim);
+      const ash=new T.Mesh(new T.CylinderGeometry(.44,.44,.035,16),
+        new T.MeshStandardMaterial({color:0x6b6259, roughness:1}));
+      ash.position.y=.175; g.add(ash);
+      for(let i=0;i<4;i++){
+        const stub=new T.Mesh(new T.CylinderGeometry(.035,.035,.16,7),
+          new T.MeshStandardMaterial({color:0xcbbb98, roughness:.85}));
+        stub.rotation.set(Math.PI/2,0,Math.random()*3);
+        stub.position.set((Math.random()-.5)*.6,.21,(Math.random()-.5)*.6);
+        g.add(stub);
+      }
+      /* Burning joint resting on the rim */
+      const j=new T.Group();
+      const paper=new T.MeshStandardMaterial({color:0xd9c9a3, roughness:.6});
+      const body=new T.Mesh(new T.CylinderGeometry(.052,.042,.62,10), paper);
+      body.rotation.z=Math.PI/2; body.position.x=-.12; j.add(body);
+      const herbSeg=new T.Mesh(new T.CylinderGeometry(.052,.05,.34,10),
+        new T.MeshStandardMaterial({color:0xb3ab8d, roughness:.72}));
+      herbSeg.rotation.z=Math.PI/2; herbSeg.position.x=.34; j.add(herbSeg);
+      const ember=new T.Mesh(new T.SphereGeometry(.055,10,8),
+        new T.MeshStandardMaterial({color:0xff5a1f, emissive:0xff4400, emissiveIntensity:2.2, roughness:.3}));
+      ember.position.x=.53; j.add(ember);
+      const eLight=new T.PointLight(0xff5510,.85,3.2);
+      eLight.position.x=.53; j.add(eLight);
+      j.position.set(-.05,.29,.1); j.rotation.set(0,-.55,.16);
+      g.add(j);
+      /* Smoke */
+      const puffs=[];
+      for(let i=0;i<6;i++){
+        const pf=new T.Mesh(new T.IcosahedronGeometry(.085+i*.04,0),
+          new T.MeshStandardMaterial({color:0xd7d9de, transparent:true, opacity:.26-i*.035, roughness:1}));
+        pf.position.set(.4,.45+i*.42,.3);
+        pf.userData.baseX=.4; pf.userData.baseZ=.3; pf.userData.i=i;
+        g.add(pf); puffs.push(pf);
+      }
+      g.position.set(x,FLOOR_Y,z); g.rotation.y=ry; g.scale.setScalar(s);
+      scene.add(g);
+      smokes.push({puffs, ember, light:eLight, phase:Math.random()*6, s});
+    }
+
+    function herbJar(x,z,s=1,h=1,ry=0){
+      const g=new T.Group();
+      const jar=new T.Mesh(new T.CylinderGeometry(.33,.33,.66*h,16),
+        new T.MeshStandardMaterial({color:0xbfe0d0, roughness:.1, metalness:.04, transparent:true, opacity:.36}));
+      jar.position.y=.33*h; jar.castShadow=true; g.add(jar);
+      for(let i=0;i<8;i++){
+        const bud=new T.Mesh(new T.IcosahedronGeometry(.095+Math.random()*.055,0),
+          new T.MeshStandardMaterial({color:i%3?0x4f8f3f:0x3d7431, flatShading:true, roughness:.85}));
+        bud.position.set((Math.random()-.5)*.36,.11+Math.random()*.38*h,(Math.random()-.5)*.36);
+        g.add(bud);
+      }
+      const label=new T.Mesh(new T.CylinderGeometry(.335,.335,.21,16),
+        new T.MeshStandardMaterial({color:0xf2ead6, roughness:.85}));
+      label.position.y=.24*h; g.add(label);
+      const band=new T.Mesh(new T.CylinderGeometry(.337,.337,.05,16),
+        new T.MeshStandardMaterial({color:0xff7a3d, roughness:.7}));
+      band.position.y=.35*h; g.add(band);
+      const lid=new T.Mesh(new T.CylinderGeometry(.36,.36,.13,16),
+        new T.MeshStandardMaterial({color:0x8d6b3f, roughness:.5, metalness:.32}));
+      lid.position.y=.66*h+.065; lid.castShadow=true; g.add(lid);
+      const knob=new T.Mesh(new T.SphereGeometry(.075,10,8),
+        new T.MeshStandardMaterial({color:0x8d6b3f, roughness:.5, metalness:.32}));
+      knob.position.y=.66*h+.16; g.add(knob);
+      g.position.set(x,FLOOR_Y,z); g.rotation.y=ry; g.scale.setScalar(s);
+      scene.add(g);
+    }
+
+    function rollingTray(x,z,s=1,ry=0){
+      const g=new T.Group();
+      const metal=new T.MeshStandardMaterial({color:0x2f3a46, roughness:.35, metalness:.55});
+      const base=new T.Mesh(new T.BoxGeometry(1.5,.06,1.0), metal);
+      base.position.y=.03; base.receiveShadow=true; g.add(base);
+      [[0,.5],[0,-.5]].forEach(([bx,bz])=>{
+        const w=new T.Mesh(new T.BoxGeometry(1.5,.14,.06), metal);
+        w.position.set(bx,.1,bz); g.add(w);
+      });
+      [[.75,0],[-.75,0]].forEach(([bx,bz])=>{
+        const w=new T.Mesh(new T.BoxGeometry(.06,.14,1.0), metal);
+        w.position.set(bx,.1,bz); g.add(w);
+      });
+      const pile=new T.Mesh(new T.IcosahedronGeometry(.2,0),
+        new T.MeshStandardMaterial({color:0x5c8f42, flatShading:true, roughness:.9}));
+      pile.position.set(-.35,.14,.05); pile.scale.y=.55; g.add(pile);
+      const grinder=new T.Mesh(new T.CylinderGeometry(.24,.24,.2,14),
+        new T.MeshStandardMaterial({color:0x9aa2ad, roughness:.3, metalness:.7}));
+      grinder.position.set(.42,.16,-.12); grinder.castShadow=true; g.add(grinder);
+      for(let i=0;i<3;i++){
+        const holder=new T.Group();
+        holder.rotation.y=(i-1)*.11;
+        const pj=new T.Mesh(new T.CylinderGeometry(.042,.033,.58,9),
+          new T.MeshStandardMaterial({color:0xd9c9a3, roughness:.6}));
+        pj.rotation.z=Math.PI/2;
+        pj.castShadow=true;
+        holder.add(pj);
+        const ht=new T.Mesh(new T.CylinderGeometry(.042,.042,.18,9),
+          new T.MeshStandardMaterial({color:0xb3ab8d, roughness:.75}));
+        ht.rotation.z=Math.PI/2; ht.position.x=.2; holder.add(ht);
+        holder.position.set(-.1,.1,-.26+i*.17);
+        g.add(holder);
+      }
+      g.position.set(x,FLOOR_Y,z); g.rotation.y=ry; g.scale.setScalar(s);
+      scene.add(g);
+    }
+
+    /* ── Spawnable joints that fall and pile up on the desk ── */
+    const fallers = [];
+    const J_S = 1.9;                    // spawned joint scale
+    const J_R  = .052 * J_S;            // joint radius
+    const J_HALF = .40 * J_S;           // capsule half-length
+    const J_LAYER = J_R * 1.82;         // nested layer step
+    const SLIDE_STEP = J_R * 3.2;       // how far downhill we probe
+    const SLIDE_DROP = J_LAYER * 1.35;  // slope steeper than this -> roll off
+    const DROP_CX = 0, DROP_CZ = 4.3;   // clear patch of desk
+    const DESK_X0 = DROP_CX-5, DESK_X1 = DROP_CX+5, DESK_Z0 = 3.0, DESK_Z1 = 6.0;
+
+    function makeJoint(){
+      const g=new T.Group();
+      const paper=new T.MeshStandardMaterial({color:0xd9c9a3, roughness:.62});
+      const body=new T.Mesh(new T.CylinderGeometry(.052,.04,.6,10), paper);
+      body.rotation.z=Math.PI/2; body.castShadow=true; g.add(body);
+      const herb=new T.Mesh(new T.CylinderGeometry(.052,.05,.22,10),
+        new T.MeshStandardMaterial({color:0xb3ab8d, roughness:.74}));
+      herb.rotation.z=Math.PI/2; herb.position.x=.34; herb.castShadow=true; g.add(herb);
+      const tip=new T.Mesh(new T.ConeGeometry(.03,.11,8), paper);
+      tip.rotation.z=-Math.PI/2; tip.position.x=-.33; g.add(tip);
+      g.scale.setScalar(J_S);
+      return g;
+    }
+
+    /* Distance from a point to a resting joint's centre-line (2D, top-down) */
+    function ptSegD(px,pz, sx,sz, dx,dz, half){
+      const t=Math.max(-half, Math.min(half, (px-sx)*dx + (pz-sz)*dz));
+      const cx=sx+dx*t, cz=sz+dz*t;
+      return Math.hypot(px-cx, pz-cz);
+    }
+    /* Highest surface under a joint lying at (x,z) with yaw — capsule vs capsule */
+    function restSupport(x,z,yaw,skip){
+      let h=FLOOR_Y+J_R, sup=null;
+      const dx=Math.cos(yaw), dz=-Math.sin(yaw);
+      for(const f of fallers){
+        if(f===skip||!f.rest) continue;
+        const fx=f.m.position.x, fz=f.m.position.z;
+        const fdx=Math.cos(f.yaw), fdz=-Math.sin(f.yaw);
+        let touch=false;
+        for(let k=-2;k<=2;k++){
+          const t=(k/2)*J_HALF;
+          if(ptSegD(x+dx*t, z+dz*t, fx,fz, fdx,fdz, J_HALF) < J_R*2.05){ touch=true; break; }
+        }
+        if(touch && f.m.position.y + J_LAYER > h){
+          h=f.m.position.y+J_LAYER; sup=f;
+        }
+      }
+      return {h, sup};
+    }
+
+    function spawnJoint(){
+      const m=makeJoint();
+      const yaw=Math.random()*Math.PI*2;      // decided up front so the
+      m.rotation.set(0, yaw, 0);              // footprint matches where it lands
+      m.position.set(
+        DROP_CX+(Math.random()-.5)*1.5,
+        FLOOR_Y+6.0+Math.random()*1.4,
+        DROP_CZ+(Math.random()-.5)*1.1
+      );
+      m.rotation.z=(Math.random()-.5)*2.2;    // tips over as it falls
+      scene.add(m);
+      fallers.push({
+        m, yaw,
+        vx:(Math.random()-.5)*.35, vy:-1-Math.random()*.6, vz:(Math.random()-.5)*.35,
+        az:(Math.random()<.5?-1:1)*(2.6+Math.random()*2.4),   // end-over-end tumble
+        slides:0, rest:false
+      });
+      while(fallers.length>70){ const o=fallers.shift(); scene.remove(o.m); }
+    }
+    function clearJoints(){
+      fallers.forEach(f=>scene.remove(f.m));
+      fallers.length=0;
+    }
+    stateRef.current.spawnJoint=spawnJoint;
+    stateRef.current.clearJoints=clearJoints;
+
+    ashtray(-SHELF_W/2+4.6, 4.5, 2.1, .4);
+    herbJar(-SHELF_W/2+7.6, 4.7, 2.0, 1.0, .3);
+    herbJar(-SHELF_W/2+9.2, 4.2, 1.7, 1.3, -.5);
+    rollingTray(SHELF_W/2-4.6, 4.8, 1.9, -.25);
+    herbJar(SHELF_W/2+3.0, 4.6, 1.8, .9, .6);
+
+    /* ── Build shelves + icons ── */
+    const pickables=[];
+    const icons=[];
+    const savedPos = data.home3dPos||{};
+
+    tabs.forEach((tab,ti)=>{
+      const shelfY = .6 + ti*SHELF_GAP;
+      // Shelf board
+      const board=new T.Mesh(new T.BoxGeometry(SHELF_W, .3, SHELF_D), ti%2?woodA:woodB);
+      board.position.set(0, shelfY-.15, 0);
+      board.receiveShadow = true;
+      board.castShadow = true;
+      placeSurfaces.push(board);
+      scene.add(board);
+      // Shelf edge label (fixed to shelf front like a real label)
+      const lbl=textPlate(tab.label,{fs:34,pad:14,scale:.0085,fg:'#ffe6cf',bg:'rgba(40,24,12,.95)',border:'rgba(255,150,80,.8)'});
+      lbl.position.set(-SHELF_W/2+lbl.geometry.parameters.width/2+.3, shelfY+.05, SHELF_D/2+.1);
+      scene.add(lbl);
+
+      const layout=layouts[ti];
+      layout.sorted.forEach((prod,pi)=>{
+        const defX=layout.xs[pi];
+        const sp=savedPos[prod.id]||{};
+        const px=sp.x??defX, pz=sp.z??0;
+
+        const icon=productIcon(prod);
+        icon.position.set(px, shelfY, pz);
+        icon.userData={...icon.userData, prod, tab, shelfY, isIcon:true, baseScale:1};
+        scene.add(icon);
+        icons.push(icon);
+        icon.traverse(o=>{ if(o.isMesh){ o.userData.iconRoot=icon; o.castShadow=true; pickables.push(o); } });
+
+        // Name plate on shelf edge below icon
+        const nm=(prod.shortName||prod.name).slice(0,16);
+        const np=textPlate(nm,{fs:24,pad:9,scale:.0068,fg:'#e8eaf0',bg:'rgba(13,17,23,.85)',border:'rgba(255,255,255,.15)'});
+        np.position.set(0, .26, SHELF_D/2-.5);
+        np.scale.setScalar(2.0);
+        icon.add(np);
+        icon.userData.namePlate=np;
+
+        // Note count badge
+        const nc=(prod.hubNotes||[]).filter(n=>!n.done).length;
+        if(nc>0){
+          const badge=textPlate(String(nc),{fs:26,pad:9,scale:.0075,fg:'#fff',bg:'rgba(200,60,30,.95)',border:'rgba(255,120,80,.9)'});
+          badge.position.set(1.75, 3.45, .5);
+          badge.scale.setScalar(1.7);
+          icon.add(badge);
+          icon.userData.badge=badge;
+        }
+      });
+    });
+
+    /* ── Notes bay header on the whiteboard ── */
+    const bayTitle = textPlate('ACTION ITEMS & NOTES',
+      {fs:44, pad:20, scale:.012, fg:'#2a3242', bg:'rgba(255,255,255,0)', border:'rgba(90,110,140,.55)'});
+    bayTitle.position.set(NOTE_CX, totalH + .55, WB_Z + .1);
+    scene.add(bayTitle);
+    // Tell addSticky where the blank bay is
+    stateRef.current.bay = {x0:NOTE_X0, x1:NOTE_X1, y0:1.4, y1:totalH + .1, z:WB_Z + .09};
+
+    /* ── Sticky notes in scene ── */
+    const stickyPickables=[];
+    (data.home3dStickies||[]).forEach(st=>{
+      const sm=stickyMesh(st);
+      scene.add(sm);
+      stickyPickables.push(sm);
+    });
+
+    /* ── Controls: orbit + drag icons + drag stickies ── */
+    const cs = stateRef.current.cam;
+    let isOrbiting=false, dragIcon=null, dragSticky=null, dragMoved=0, lastX=0, lastY=0;
+    let hovered=null;
+    const mouse=new T.Vector2(), raycaster=new T.Raycaster();
+    const dragPlane=new T.Plane();
+    const dragPoint=new T.Vector3();
+
+    function setMouse(e){
+      const rect=mount.getBoundingClientRect();
+      mouse.x=((e.clientX-rect.left)/rect.width)*2-1;
+      mouse.y=-((e.clientY-rect.top)/rect.height)*2+1;
+      raycaster.setFromCamera(mouse,cam);
+    }
+    function pickAll(e){
+      setMouse(e);
+      const hits=raycaster.intersectObjects([...stickyPickables,...pickables]);
+      if(!hits.length) return null;
+      const o=hits[0].object;
+      if(o.userData.isSticky) return {type:'sticky', obj:o};
+      if(o.userData.iconRoot) return {type:'icon', obj:o.userData.iconRoot};
+      return null;
+    }
+
+    const onMouseDown=e=>{
+      lastX=e.clientX; lastY=e.clientY; dragMoved=0;
+      const hit=pickAll(e);
+      if(hit&&hit.type==='sticky'){ dragSticky=hit.obj; }
+      else if(hit&&hit.type==='icon'){
+        dragIcon=hit.obj;
+        dragPlane.setFromNormalAndCoplanarPoint(new T.Vector3(0,1,0), new T.Vector3(0,dragIcon.userData.shelfY,0));
+      }
+      else { isOrbiting=true; }
+    };
+    const onMouseUp=e=>{
+      if(dragSticky){
+        const st=dragSticky.userData.sticky;
+        if(dragMoved<6){ setStickyEdit({...st}); }
+        else { saveSticky(st.id,{x:dragSticky.position.x,y:dragSticky.position.y,z:dragSticky.position.z}); }
+        dragSticky=null; isOrbiting=false; return;
+      }
+      if(dragIcon){
+        if(dragMoved<6){
+          const {tab,prod}=dragIcon.userData;
+          setSelected({tabId:tab.id, prodId:prod.id});
+        } else {
+          const {prod}=dragIcon.userData;
+          const np={x:dragIcon.position.x, z:dragIcon.position.z};
+          setData(d=>({...d, home3dPos:{...(d.home3dPos||{}), [prod.id]:np}}));
+        }
+      }
+      dragIcon=null; isOrbiting=false;
+    };
+    const onMouseMove=e=>{
+      const dx=e.clientX-lastX, dy=e.clientY-lastY;
+      if(dragSticky){
+        dragMoved+=Math.abs(dx)+Math.abs(dy);
+        setMouse(e);
+        const hits=raycaster.intersectObjects(placeSurfaces);
+        if(hits.length){
+          const p=hits[0].point;
+          if(hits[0].object.userData.isBoard) dragSticky.position.set(p.x, p.y, p.z+.09);
+          else dragSticky.position.set(p.x, p.y+1.3, p.z+.02);
+        }
+        lastX=e.clientX; lastY=e.clientY;
+        return;
+      }
+      if(dragIcon){
+        dragMoved+=Math.abs(dx)+Math.abs(dy);
+        setMouse(e);
+        if(raycaster.ray.intersectPlane(dragPlane,dragPoint)){
+          dragIcon.position.x=Math.max(-SHELF_W/2+2.4, Math.min(SHELF_W/2-2.4, dragPoint.x));
+          dragIcon.position.z=Math.max(-SHELF_D/2+1.0, Math.min(SHELF_D/2-1.4, dragPoint.z));
+        }
+        lastX=e.clientX; lastY=e.clientY;
+        return;
+      }
+      if(isOrbiting){
+        if(e.shiftKey){ cs.panX-=dx*.03; }
+        else {
+          cs.theta-=dx*.005;
+          cs.phi=Math.max(.12,Math.min(1.2,cs.phi-dy*.005));
+        }
+        lastX=e.clientX; lastY=e.clientY;
+      }
+      const hit=pickAll(e);
+      const hitIcon=hit&&hit.type==='icon'?hit.obj:null;
+      if(hitIcon!==hovered){
+        if(hovered) hovered.scale.setScalar(1);
+        hovered=hitIcon;
+        if(hovered){ hovered.scale.setScalar(1.18); }
+      }
+      mount.style.cursor=hit?'pointer':'grab';
+    };
+    const onWheel=e=>{e.preventDefault();cs.radius=Math.max(8,Math.min(60,cs.radius+e.deltaY*.02));};
+    const onResize=()=>{const w=mount.clientWidth,h=mount.clientHeight;cam.aspect=w/h;cam.updateProjectionMatrix();renderer.setSize(w,h);};
+
+    mount.addEventListener('mousedown',onMouseDown);
+    window.addEventListener('mouseup',onMouseUp);
+    mount.addEventListener('mousemove',onMouseMove);
+    mount.addEventListener('wheel',onWheel,{passive:false});
+    window.addEventListener('resize',onResize);
+    mount.style.cursor='grab';
+
+    /* ── Loop ── */
+    let frame,t=0;
+    const midY=totalH/2;
+    function loop(){
+      frame=requestAnimationFrame(loop);
+      t+=.016;
+      cam.position.x=cs.panX+Math.sin(cs.theta)*Math.cos(cs.phi)*cs.radius;
+      cam.position.y=midY+Math.sin(cs.phi)*cs.radius;
+      cam.position.z=Math.cos(cs.theta)*Math.cos(cs.phi)*cs.radius;
+      cam.lookAt(cs.panX, midY, 0);
+
+      // Falling joints — gravity, bounce, settle into a pile
+      for(const f of fallers){
+        if(f.rest) continue;
+        f.vy += -17*0.016;
+        f.m.position.x += f.vx*0.016;
+        f.m.position.y += f.vy*0.016;
+        f.m.position.z += f.vz*0.016;
+        f.m.rotation.z += f.az*0.016;
+        // Keep the pile on the desk
+        const cx=Math.max(DESK_X0, Math.min(DESK_X1, f.m.position.x));
+        const cz=Math.max(DESK_Z0, Math.min(DESK_Z1, f.m.position.z));
+        if(cx!==f.m.position.x){ f.m.position.x=cx; f.vx*=-.25; }
+        if(cz!==f.m.position.z){ f.m.position.z=cz; f.vz*=-.25; }
+
+        const rh = restSupport(f.m.position.x, f.m.position.z, f.yaw, f).h;
+        if(f.m.position.y <= rh){
+          f.m.position.y = rh;
+
+          if(Math.abs(f.vy) >= 1.9){        // still bouncing
+            f.vy = -f.vy*.2;
+            f.vx *= .4; f.vz *= .4;
+            f.az *= .35;
+            continue;
+          }
+
+          // Look downhill in 8 directions — if we're perched on a peak, roll off
+          let bestH=rh, bestA=null;
+          const jit=Math.random()*.8;
+          for(let i=0;i<8;i++){
+            const a=(i/8)*Math.PI*2+jit;
+            const nx=Math.max(DESK_X0,Math.min(DESK_X1,f.m.position.x+Math.cos(a)*SLIDE_STEP));
+            const nz=Math.max(DESK_Z0,Math.min(DESK_Z1,f.m.position.z+Math.sin(a)*SLIDE_STEP));
+            const nh=restSupport(nx,nz,f.yaw,f).h;
+            if(nh < bestH-1e-4){ bestH=nh; bestA=a; }
+          }
+          const drop = rh-bestH;
+          if(bestA!==null && drop > SLIDE_DROP && f.slides < 16){
+            f.slides++;
+            const push = 1.0 + drop*1.6;
+            f.vx = Math.cos(bestA)*push;
+            f.vz = Math.sin(bestA)*push;
+            f.vy = .45;                                   // small hop as it tips off
+            f.az = (Math.random()<.5?-1:1)*(1.8+Math.random()*2.2);
+            f.m.position.y = rh + .03;
+            continue;                                     // stays in flight
+          }
+
+          // Settled — lie flat, tilted along the slope it came to rest on
+          f.rest = true;
+          const tilt = Math.min(.34, drop*1.1);
+          f.m.rotation.set((Math.random()-.5)*(.08+tilt), f.yaw, (Math.random()-.5)*(.08+tilt));
+        }
+      }
+
+      // Desk ashtray: ember flicker + rising smoke
+      smokes.forEach(sm=>{
+        const f=.85+Math.sin(t*6.5+sm.phase)*.3+Math.random()*.14;
+        sm.ember.material.emissiveIntensity=2.0*f;
+        sm.light.intensity=.85*f;
+        sm.puffs.forEach(pf=>{
+          const i=pf.userData.i;
+          let y=pf.position.y + .011 + i*.0016;
+          if(y>3.1){ y=.45; }
+          pf.position.y=y;
+          pf.position.x=pf.userData.baseX+Math.sin(t*.8+i*1.3+sm.phase)*(.06+y*.07);
+          pf.position.z=pf.userData.baseZ+Math.cos(t*.6+i*1.1+sm.phase)*(.05+y*.05);
+          pf.material.opacity=Math.max(0,(.26-i*.035)*(1-(y-.45)/2.8));
+          pf.rotation.y+=.006;
+        });
+      });
+      // Ember flicker
+      embers.forEach(em=>{
+        const f=.9+Math.sin(t*7+em.phase)*.35+Math.random()*.15;
+        em.mesh.material.emissiveIntensity=1.2*f;
+        if(em.light) em.light.intensity=1.0*f;
+      });
+      // Gentle icon idle spin (not while dragging)
+      icons.forEach(ic=>{ if(ic!==dragIcon&&ic.userData.model) ic.userData.model.rotation.y+=.004; });
+
+      renderer.render(scene,cam);
+    }
+    loop();
+
+    stateRef.current.cleanup=()=>{
+      cancelAnimationFrame(frame);
+      mount.removeEventListener('mousedown',onMouseDown);
+      window.removeEventListener('mouseup',onMouseUp);
+      mount.removeEventListener('mousemove',onMouseMove);
+      mount.removeEventListener('wheel',onWheel);
+      window.removeEventListener('resize',onResize);
+      renderer.dispose();
+      if(mount.contains(renderer.domElement))mount.removeChild(renderer.domElement);
+    };
+    return ()=>stateRef.current.cleanup?.();
+  },[data]);
+
+  /* ── Hub panel (React overlay) ── */
+  let panel=null;
+  if(selected){
+    const prod=(data[selected.tabId]||[]).find(p=>p.id===selected.prodId);
+    if(prod){
+      const notes=prod.hubNotes||[];
+      const sp=prod.specs||{};
+      const done=prod.tasks?.length?Math.round(prod.tasks.filter(t=>t.status==='Done').length/prod.tasks.length*100):0;
+      const tag=(prod.tags||[])[0]||'—';
+      const tagCol=['Accepted','Launched','On Track'].includes(tag)?'#3ddc8a':['Rejected','At Risk','Delayed'].includes(tag)?'#ff6b5c':'#f0b73d';
+      const tabLabel=(data.pcTabs||[]).find(x=>x.id===selected.tabId)?.label||(selected.tabId==='in_dev'?'In Development':'');
+      panel=el('div',{style:{
+        position:'absolute',top:0,right:0,bottom:0,width:360,zIndex:20,
+        background:'rgba(16,19,28,.96)',backdropFilter:'blur(12px)',
+        borderLeft:'1px solid rgba(255,150,80,.3)',
+        display:'flex',flexDirection:'column',overflow:'hidden'
+      }},
+        /* Header */
+        el('div',{style:{padding:'16px 18px 14px',borderBottom:'1px solid rgba(255,255,255,.08)'}},
+          el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'flex-start',gap:10}},
+            el('div',{style:{minWidth:0}},
+              el('div',{style:{fontFamily:'var(--font-mono)',fontSize:9,color:'#ff9a5a',textTransform:'uppercase',letterSpacing:'.1em',marginBottom:3}},
+                (prod.brand||'')+' · '+tabLabel),
+              el('div',{style:{fontSize:15,fontWeight:700,color:'#f2f3f5',lineHeight:1.3}},prod.shortName||prod.name)
+            ),
+            el('button',{onClick:()=>setSelected(null),style:{background:'none',border:'none',cursor:'pointer',color:'#878ea0',fontSize:17,flexShrink:0}},
+              el('i',{className:'ti ti-x'}))
+          ),
+          el('div',{style:{display:'flex',gap:6,marginTop:10,flexWrap:'wrap',alignItems:'center'}},
+            prod.skuCode&&el('span',{style:{fontFamily:'var(--font-mono)',fontSize:10,fontWeight:700,color:'#ff9a5a',background:'rgba(255,122,61,.12)',border:'1px solid rgba(255,122,61,.35)',borderRadius:5,padding:'2px 9px'}},prod.skuCode),
+            el('span',{style:{fontFamily:'var(--font-mono)',fontSize:10,fontWeight:700,color:tagCol,background:tagCol+'1c',borderRadius:5,padding:'2px 9px'}},tag),
+            el('span',{style:{fontFamily:'var(--font-mono)',fontSize:10,color:'#878ea0'}},done+'% done')
+          )
+        ),
+        /* Quick specs */
+        el('div',{style:{padding:'12px 18px',borderBottom:'1px solid rgba(255,255,255,.08)',display:'grid',gridTemplateColumns:'1fr 1fr',gap:'6px 12px'}},
+          [['Category',sp['Category']],['Size',sp['Product Size']],['Launch',prod.launchDate||sp['Launch Window']],['MSRP',sp['MSRP']]]
+            .filter(([,v])=>v).map(([k,v])=>el('div',{key:k},
+              el('div',{style:{fontFamily:'var(--font-mono)',fontSize:8.5,color:'#5d6470',textTransform:'uppercase',letterSpacing:'.08em'}},k),
+              el('div',{style:{fontSize:11.5,color:'#c4c8d4',fontWeight:600}},String(v).slice(0,28))
+            ))
+        ),
+        /* Notes — weekly hub */
+        el('div',{style:{flex:1,overflowY:'auto',padding:'14px 18px'}},
+          el('div',{style:{fontFamily:'var(--font-mono)',fontSize:9,fontWeight:700,color:'#ff9a5a',textTransform:'uppercase',letterSpacing:'.1em',marginBottom:10,display:'flex',alignItems:'center',gap:6}},
+            el('i',{className:'ti ti-notes'}),'Action Items & Notes',
+            el('span',{style:{color:'#5d6470',marginLeft:'auto'}},notes.filter(n=>!n.done).length+' open')
+          ),
+          notes.length===0&&el('div',{style:{fontSize:11,color:'#5d6470',fontStyle:'italic',padding:'8px 0'}},'No notes yet — add action items, comments, or issues below.'),
+          notes.map(n=>el('div',{key:n.id,style:{
+            display:'flex',alignItems:'flex-start',gap:9,padding:'8px 10px',marginBottom:6,
+            background:n.done?'rgba(255,255,255,.03)':'rgba(255,150,80,.07)',
+            border:'1px solid '+(n.done?'rgba(255,255,255,.06)':'rgba(255,150,80,.22)'),
+            borderRadius:8
+          }},
+            el('button',{onClick:()=>toggleNote(selected.tabId,selected.prodId,n.id),style:{
+              width:16,height:16,borderRadius:5,flexShrink:0,marginTop:1,cursor:'pointer',
+              border:'1.5px solid '+(n.done?'#3ddc8a':'#878ea0'),
+              background:n.done?'#3ddc8a':'transparent',
+              display:'flex',alignItems:'center',justifyContent:'center'
+            }},n.done&&el('i',{className:'ti ti-check',style:{fontSize:9,color:'#0d1117'}})),
+            el('div',{style:{flex:1,minWidth:0}},
+              el('div',{style:{fontSize:12,color:n.done?'#5d6470':'#e8eaf0',lineHeight:1.45,textDecoration:n.done?'line-through':'none'}},n.text),
+              el('div',{style:{fontFamily:'var(--font-mono)',fontSize:8.5,color:'#5d6470',marginTop:3}},n.date)
+            ),
+            el('button',{onClick:()=>deleteNote(selected.tabId,selected.prodId,n.id),style:{background:'none',border:'none',cursor:'pointer',color:'#5d6470',fontSize:12,padding:2,flexShrink:0}},
+              el('i',{className:'ti ti-trash'}))
+          ))
+        ),
+        /* Add note + open product */
+        el('div',{style:{padding:'12px 18px 16px',borderTop:'1px solid rgba(255,255,255,.08)'}},
+          el('div',{style:{display:'flex',gap:8,marginBottom:10}},
+            el('input',{
+              value:noteText,
+              onChange:e=>setNoteText(e.target.value),
+              onKeyDown:e=>e.key==='Enter'&&addNote(selected.tabId,selected.prodId,noteText),
+              placeholder:'Add action item, comment, or issue…',
+              style:{flex:1,background:'rgba(255,255,255,.06)',border:'1px solid rgba(255,255,255,.14)',
+                borderRadius:8,padding:'9px 12px',color:'#f2f3f5',fontSize:12,fontFamily:'inherit',outline:'none'}
+            }),
+            el('button',{onClick:()=>addNote(selected.tabId,selected.prodId,noteText),style:{
+              background:'linear-gradient(135deg,#ff9a5a,#e8622a)',border:'none',borderRadius:8,
+              padding:'9px 14px',color:'#fff',cursor:'pointer',fontSize:13,fontWeight:700
+            }},el('i',{className:'ti ti-plus'}))
+          ),
+          el('button',{onClick:()=>{
+            setView(selected.tabId);
+            setSels(s=>({...s,[selected.tabId]:selected.prodId}));
+            setProdView('detail');
+          },style:{
+            width:'100%',background:'rgba(255,255,255,.07)',border:'1px solid rgba(255,150,80,.35)',
+            borderRadius:8,padding:'10px',color:'#ff9a5a',cursor:'pointer',fontSize:12,fontWeight:700,
+            fontFamily:'inherit',display:'flex',alignItems:'center',justifyContent:'center',gap:7
+          }},el('i',{className:'ti ti-external-link'}),'Open Full Product')
+        )
+      );
+    }
+  }
+
+  return el('div',{style:{width:'100%',height:'calc(100vh - 46px)',position:'relative',overflow:'hidden',background:'#1f1b2b'}},
+    el('div',{ref:mountRef,style:{position:'absolute',inset:0}}),
+    /* Hint bar */
+    el('div',{style:{
+      position:'absolute',bottom:14,left:'50%',transform:'translateX(-50%)',zIndex:10,
+      fontFamily:'var(--font-mono)',fontSize:10,color:'rgba(255,255,255,.45)',
+      background:'rgba(16,19,28,.8)',border:'1px solid rgba(255,255,255,.1)',
+      borderRadius:99,padding:'6px 16px',pointerEvents:'none',whiteSpace:'nowrap'
+    }},'Drag icons & stickies to arrange · Click for details · Drag space to orbit · Shift+drag pan · Scroll zoom'),
+    /* Add sticky note button */
+    el('button',{onClick:addSticky,style:{
+      position:'absolute',top:14,left:14,zIndex:10,
+      display:'flex',alignItems:'center',gap:7,
+      fontFamily:'var(--font-mono)',fontSize:11,fontWeight:700,
+      background:'rgba(255,213,74,.92)',color:'#3a3220',
+      border:'1px solid rgba(0,0,0,.2)',borderRadius:8,
+      padding:'8px 14px',cursor:'pointer',
+      boxShadow:'0 4px 14px rgba(0,0,0,.4)'
+    }},el('i',{className:'ti ti-note'}),'＋ Sticky Note'),
+    /* Joint spawner */
+    el('div',{style:{position:'absolute',top:56,left:14,zIndex:10,display:'flex',gap:6}},
+      el('button',{
+        onClick:()=>{ for(let i=0;i<3;i++) setTimeout(()=>stateRef.current.spawnJoint?.(), i*90); },
+        title:'Drop joints onto the desk',
+        style:{
+          display:'flex',alignItems:'center',gap:7,
+          fontFamily:'var(--font-mono)',fontSize:11,fontWeight:700,
+          background:'rgba(217,201,163,.95)',color:'#3a3220',
+          border:'1px solid rgba(0,0,0,.2)',borderRadius:8,
+          padding:'8px 14px',cursor:'pointer',boxShadow:'0 4px 14px rgba(0,0,0,.4)'
+        }
+      },el('i',{className:'ti ti-flame'}),'Drop Joints'),
+      el('button',{
+        onClick:()=>stateRef.current.clearJoints?.(),
+        title:'Clear the pile',
+        style:{
+          fontFamily:'var(--font-mono)',fontSize:11,fontWeight:700,
+          background:'rgba(16,19,28,.85)',color:'#aab0bd',
+          border:'1px solid rgba(255,255,255,.16)',borderRadius:8,
+          padding:'8px 11px',cursor:'pointer',boxShadow:'0 4px 14px rgba(0,0,0,.4)'
+        }
+      },el('i',{className:'ti ti-trash'}))
+    ),
+    /* Sticky editor */
+    stickyEdit&&el('div',{style:{
+      position:'absolute',bottom:60,left:14,zIndex:20,width:270,
+      background:'rgba(16,19,28,.96)',backdropFilter:'blur(10px)',
+      border:'1px solid rgba(255,213,74,.4)',borderRadius:12,
+      padding:'14px',boxShadow:'0 8px 30px rgba(0,0,0,.5)'
+    }},
+      el('div',{style:{fontFamily:'var(--font-mono)',fontSize:9,fontWeight:700,color:'#ffd54a',
+        textTransform:'uppercase',letterSpacing:'.1em',marginBottom:8,display:'flex',alignItems:'center',gap:6}},
+        el('i',{className:'ti ti-note'}),'Sticky Note'),
+      el('textarea',{
+        value:stickyEdit.text,
+        onChange:e=>setStickyEdit(s=>({...s,text:e.target.value})),
+        rows:3,autoFocus:true,
+        style:{width:'100%',background:'rgba(255,255,255,.07)',border:'1px solid rgba(255,255,255,.15)',
+          borderRadius:8,padding:'9px 11px',color:'#f2f3f5',fontSize:12,fontFamily:'inherit',
+          outline:'none',resize:'none',boxSizing:'border-box'}
+      }),
+      el('div',{style:{display:'flex',gap:6,margin:'10px 0'}},
+        STICKY_COLORS.map(c=>el('button',{key:c,onClick:()=>setStickyEdit(s=>({...s,color:c})),style:{
+          width:22,height:22,borderRadius:6,background:c,cursor:'pointer',
+          border:stickyEdit.color===c?'2px solid #fff':'2px solid transparent'
+        }}))
+      ),
+      el('div',{style:{display:'flex',gap:8}},
+        el('button',{onClick:()=>{saveSticky(stickyEdit.id,{text:stickyEdit.text,color:stickyEdit.color});setStickyEdit(null);},style:{
+          flex:1,background:'linear-gradient(135deg,#ffd54a,#e8a622)',border:'none',borderRadius:8,
+          padding:'8px',color:'#3a3220',cursor:'pointer',fontSize:12,fontWeight:700,fontFamily:'inherit'
+        }},'Save'),
+        el('button',{onClick:()=>{removeSticky(stickyEdit.id);setStickyEdit(null);},style:{
+          background:'rgba(255,107,92,.15)',border:'1px solid rgba(255,107,92,.4)',borderRadius:8,
+          padding:'8px 12px',color:'#ff6b5c',cursor:'pointer',fontSize:12,fontWeight:700,fontFamily:'inherit'
+        }},el('i',{className:'ti ti-trash'})),
+        el('button',{onClick:()=>setStickyEdit(null),style:{
+          background:'rgba(255,255,255,.07)',border:'1px solid rgba(255,255,255,.15)',borderRadius:8,
+          padding:'8px 12px',color:'#878ea0',cursor:'pointer',fontSize:12,fontFamily:'inherit'
+        }},'✕')
+      )
+    ),
+    panel,
+    !window.THREE&&el('div',{style:{
+      position:'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'center',
+      flexDirection:'column',gap:12,color:'var(--muted)',fontFamily:'var(--font-mono)',fontSize:12
+    }},
+      el('i',{className:'ti ti-cube-off',style:{fontSize:36,opacity:.4}}),
+      'Three.js not loaded — check internet connection'
+    )
+  );
+}
 
 function HomeView({data,setData,setView,setSels,setProdView}){
   const [home,setHome]=React.useState(()=>getHomeData(data));
@@ -6489,7 +7651,7 @@ function PostLaunchView({data,setData,addChangelogEntry}){
             el('i',{className:'ti ti-map-pin',style:{color:'#a78bfa'}}), 'Ontario Distribution'
           ),
           el('div',{style:{flex:1,minHeight:360}},
-            el(OntarioMap,{cityData:current.cities})
+            el(OntarioMap,{cityData:current.cities, cityStores:current.cityStores})
           )
         ),
         el('div',{style:{background:'var(--bg)',border:'0.5px solid var(--bdr)',borderRadius:10,padding:'16px',overflowY:'auto',maxHeight:520}},
@@ -7192,7 +8354,7 @@ function App(){
 
       /* Content */
       el('div',{style:{flex:1}},
-        view==='home'       ? el(HomeView,{data,setData,setView,setSels,setProdView}) :
+        view==='home'       ? el(Home3DView,{data,setData,setView,setSels,setProdView}) :
         view==='funnel'     ? el(FunnelView,{data,setData}) :
         view==='postlaunch' ? el(PostLaunchView,{data,setData,addChangelogEntry}) :
         view==='macro'      ? MacroTimeline :
