@@ -5780,6 +5780,23 @@ function Home3DView({data, setData, setView, setSels, setProdView}){
     };
     const statColor=t=>STATUS_COL[((t||[])[0]||'').toLowerCase()]||0x8a8f9e;
 
+    /* ── Brand palettes (accent / body / dark / trim) ── */
+    const BRAND_3D = [
+      // accent = primary brand colour · light = body shell · dark = panels/lids · trim = stripe
+      {k:'litti',       accent:0xe23e8c, light:0xf7f5f8, dark:0x252029, trim:0xf9a8d4}, // white + pink
+      {k:'greazy',      accent:0xf5c33b, light:0x141416, dark:0x08080a, trim:0xffd75e}, // yellow + black
+      {k:'shatterizer', accent:0xe02b31, light:0x171719, dark:0x0a0a0c, trim:0xff6b5c}, // black + red
+      {k:'buddy',       accent:0xf28023, light:0x1e2f57, dark:0x101a33, trim:0xffab5e}, // orange + navy
+      {k:'countryside', accent:0xe8722a, light:0xf0e4cf, dark:0x3a2415, trim:0xffa04a}, // orange
+      {k:'ellevia',     accent:0x8b5cf6, light:0xf3f1fb, dark:0x1d1830, trim:0xc4b5fd},
+    ];
+    const BRAND_DEF = {accent:0xff7a3d, light:0xe4e6ec, dark:0x1e1e24, trim:0xffb07a};
+    function brand3d(name){
+      const n=String(name||'').toLowerCase();
+      return BRAND_3D.find(b=>n.includes(b.k)) || BRAND_DEF;
+    }
+    const hex2css=h=>'#'+h.toString(16).padStart(6,'0');
+
     /* ── Product icon builder ── */
     const embers=[];
     function productIcon(prod){
@@ -5792,7 +5809,8 @@ function Home3DView({data, setData, setView, setSels, setProdView}){
       g.add(model);
       g.userData.model=model;
       const mat=(c,e,ei,r,m2,flat)=>new T.MeshStandardMaterial({color:c,emissive:new T.Color(e||0),emissiveIntensity:ei||0,flatShading:flat??true,metalness:m2??.15,roughness:r??.55});
-      const KRAFT=0xd6b183, HERB=0x8b9070, PLASTIC=0x1e1e24;
+      const KRAFT=0xd6b183, HERB=0x8b9070;
+      const B=brand3d(prod.brand), PLASTIC=B.dark;
 
       function joint(withSwirl){
         /* Classic cone joint per reference — smooth taper, kraft paper, twisted tip */
@@ -5806,6 +5824,9 @@ function Home3DView({data, setData, setView, setSels, setProdView}){
         // Subtle seam ring where filter meets body
         const seam=new T.Mesh(new T.TorusGeometry(.119,.008,6,14), mat(0xc4b491,0,0,.6,.05,false));
         seam.rotation.x=Math.PI/2; seam.position.set(-.22,.43,0); model.add(seam);
+        // Brand band printed on the filter
+        const band=new T.Mesh(new T.CylinderGeometry(.1205,.114,.13,14), mat(B.accent,B.accent,.18,.5,.05,false));
+        band.position.set(-.22,.30,0); model.add(band);
         // Twisted paper tip
         const twist=new T.Mesh(new T.ConeGeometry(.055,.17,8), mat(PAPER,0,0,.6,.05,false));
         twist.position.set(-.22,1.29,0); twist.rotation.z=.22; model.add(twist);
@@ -5822,9 +5843,11 @@ function Home3DView({data, setData, setView, setSels, setProdView}){
           swirl.position.x=-.22; model.add(swirl);
         }
         /* Doob tube packaging beside the joint */
-        const doobTube=new T.Mesh(new T.CylinderGeometry(.13,.13,1.0,12), mat(0xcf8a3f,0xff7a3d,.08,.35,.05,false));
+        const doobTube=new T.Mesh(new T.CylinderGeometry(.13,.13,1.0,12), mat(B.accent,B.accent,.14,.35,.05,false));
         doobTube.position.set(.28,.5,-.05); model.add(doobTube);
-        const cap=new T.Mesh(new T.CylinderGeometry(.15,.15,.16,12), mat(PLASTIC,0,0,.4,.15,false));
+        const tubeLbl=new T.Mesh(new T.CylinderGeometry(.134,.134,.3,12), mat(B.light,0,0,.6,.05,false));
+        tubeLbl.position.set(.28,.42,-.05); model.add(tubeLbl);
+        const cap=new T.Mesh(new T.CylinderGeometry(.15,.15,.16,12), mat(B.dark,0,0,.4,.15,false));
         cap.position.set(.28,1.06,-.05); model.add(cap);
       }
 
@@ -5845,16 +5868,18 @@ function Home3DView({data, setData, setView, setSels, setProdView}){
         function puckJar(x,z,ry){
           const body=new T.Mesh(new T.CylinderGeometry(.26,.26,.44,16), mat(PLASTIC,0,0,.35,.1,false));
           body.position.set(x,.22,z); body.rotation.y=ry; model.add(body);
-          const label=new T.Mesh(new T.CylinderGeometry(.268,.268,.22,16), mat(0xf5c33b,0xf0b73d,.15,.5,.05,false));
+          const label=new T.Mesh(new T.CylinderGeometry(.268,.268,.22,16), mat(B.accent,B.accent,.16,.5,.05,false));
           label.position.set(x,.2,z); model.add(label);
-          const lid=new T.Mesh(new T.CylinderGeometry(.28,.28,.1,16), mat(0x151519,0,0,.3,.15,false));
+          const lblEdge=new T.Mesh(new T.CylinderGeometry(.271,.271,.045,16), mat(B.trim,0,0,.6,.05,false));
+          lblEdge.position.set(x,.30,z); model.add(lblEdge);
+          const lid=new T.Mesh(new T.CylinderGeometry(.28,.28,.1,16), mat(B.dark,0,0,.3,.15,false));
           lid.position.set(x,.48,z); model.add(lid);
         }
         puckJar(.46,.10,.4);
       }
       else if(key==='vape'){
         const is510=(specs?.Category||'').toLowerCase().includes('510');
-        const MAG=0xd6336c, WHITE=0xf0eff2, OIL=0xe0a63c, DARK=0x17171c;
+        const MAG=B.accent, WHITE=B.light, OIL=0xe0a63c, DARK=B.dark;
         if(is510){
           /* 510-thread cart — thread base, white band, amber tank, magenta mouthpiece */
           const thread=new T.Mesh(new T.CylinderGeometry(.085,.095,.09,12), mat(0x8a8f98,0,0,.35,.8,false));
@@ -5865,14 +5890,18 @@ function Home3DView({data, setData, setView, setSels, setProdView}){
           tank.position.y=.55; model.add(tank);
           const label=new T.Mesh(new T.CylinderGeometry(.129,.129,.2,12), mat(WHITE,0,0,.5,.05,false));
           label.position.y=.48; model.add(label);
+          const stripe=new T.Mesh(new T.CylinderGeometry(.132,.132,.06,12), mat(B.trim,B.trim,.2,.5,.05,false));
+          stripe.position.y=.42; model.add(stripe);
           const mouth=new T.Mesh(new T.CylinderGeometry(.062,.115,.38,12), mat(MAG,0,0,.45,.08,false));
           mouth.position.y=1.0; model.add(mouth);
           const tip=new T.Mesh(new T.SphereGeometry(.062,12,8), mat(MAG,0,0,.45,.08,false));
           tip.position.y=1.19; tip.scale.y=.6; model.add(tip);
         } else {
           /* All-in-one — box body, dark screen panel, oil window, pink duckbill cap */
-          const body=new T.Mesh(new T.BoxGeometry(.52,.82,.3), mat(0xd9dbe8,0,0,.5,.05,false));
+          const body=new T.Mesh(new T.BoxGeometry(.52,.82,.3), mat(WHITE,0,0,.5,.05,false));
           body.position.y=.45; model.add(body);
+          const stripe=new T.Mesh(new T.BoxGeometry(.53,.1,.305), mat(B.trim,B.trim,.22,.5,.05,false));
+          stripe.position.set(-.005,.2,0); model.add(stripe);
           const panel=new T.Mesh(new T.BoxGeometry(.2,.76,.286), mat(DARK,0,0,.35,.2,false));
           panel.position.set(.145,.45,.009); model.add(panel);
           const screen=new T.Mesh(new T.BoxGeometry(.13,.22,.02), mat(0x0a0a0e,0xbfe8ff,.7,.3,.1,false));
@@ -5886,15 +5915,19 @@ function Home3DView({data, setData, setView, setSels, setProdView}){
         }
       }
       else if(key==='flower'){
-        const bud=new T.Mesh(jitter(new T.IcosahedronGeometry(.48,1),.1), mat(colHex,statHex,.15+done*.25,.65));
-        bud.position.y=.55; model.add(bud);
+        const bud=new T.Mesh(jitter(new T.IcosahedronGeometry(.48,1),.1), mat(0x4f9d52,statHex,.12+done*.2,.7));
+        bud.position.y=.62; model.add(bud);
+        const wrap=new T.Mesh(new T.CylinderGeometry(.34,.34,.3,12), mat(B.accent,B.accent,.16,.5,.05,false));
+        wrap.position.y=.16; model.add(wrap);
+        const wrapLid=new T.Mesh(new T.CylinderGeometry(.355,.355,.07,12), mat(B.dark,0,0,.35,.15,false));
+        wrapLid.position.y=.33; model.add(wrapLid);
       }
       else {
         const geo=jitter(new T.IcosahedronGeometry(.5,0),.15);
         const p=geo.attributes.position;
         for(let i=0;i<p.count;i++) p.setY(i,p.getY(i)*1.5);
         geo.computeVertexNormals();
-        const cry=new T.Mesh(geo, mat(0xff7a3d,statHex,.25+done*.3,.4,.3));
+        const cry=new T.Mesh(geo, mat(B.accent,B.accent,.22+done*.3,.4,.3));
         cry.position.y=.75; model.add(cry);
       }
 
@@ -6063,30 +6096,32 @@ function Home3DView({data, setData, setView, setSels, setProdView}){
       return g;
     }
 
-    /* Distance from a point to a resting joint's centre-line (2D, top-down) */
-    function ptSegD(px,pz, sx,sz, dx,dz, half){
-      const t=Math.max(-half, Math.min(half, (px-sx)*dx + (pz-sz)*dz));
-      const cx=sx+dx*t, cz=sz+dz*t;
-      return Math.hypot(px-cx, pz-cz);
-    }
-    /* Highest surface under a joint lying at (x,z) with yaw — capsule vs capsule */
-    function restSupport(x,z,yaw,skip){
-      let h=FLOOR_Y+J_R, sup=null;
-      const dx=Math.cos(yaw), dz=-Math.sin(yaw);
+    /* Pile height at ONE point — follows the tilt of whatever is resting there */
+    function supportAt(px,pz,skip){
+      let h=FLOOR_Y+J_R;
       for(const f of fallers){
         if(f===skip||!f.rest) continue;
         const fx=f.m.position.x, fz=f.m.position.z;
         const fdx=Math.cos(f.yaw), fdz=-Math.sin(f.yaw);
-        let touch=false;
-        for(let k=-2;k<=2;k++){
-          const t=(k/2)*J_HALF;
-          if(ptSegD(x+dx*t, z+dz*t, fx,fz, fdx,fdz, J_HALF) < J_R*2.05){ touch=true; break; }
-        }
-        if(touch && f.m.position.y + J_LAYER > h){
-          h=f.m.position.y+J_LAYER; sup=f;
+        const t=Math.max(-J_HALF, Math.min(J_HALF, (px-fx)*fdx + (pz-fz)*fdz));
+        const cx=fx+fdx*t, cz=fz+fdz*t;
+        if(Math.hypot(px-cx, pz-cz) < J_R*2.05){
+          const top=f.m.position.y + Math.sin(f.pitch||0)*t + J_LAYER;
+          if(top>h) h=top;
         }
       }
-      return {h, sup};
+      return h;
+    }
+    /* Highest contact anywhere along a joint — used for collision while falling */
+    function pileHeight(x,z,yaw,skip){
+      const dx=Math.cos(yaw), dz=-Math.sin(yaw);
+      let h=FLOOR_Y+J_R;
+      for(let k=-2;k<=2;k++){
+        const t=(k/2)*J_HALF;
+        const s=supportAt(x+dx*t, z+dz*t, skip);
+        if(s>h) h=s;
+      }
+      return h;
     }
 
     function spawnJoint(){
@@ -6155,7 +6190,7 @@ function Home3DView({data, setData, setView, setSels, setProdView}){
 
         // Name plate on shelf edge below icon
         const nm=(prod.shortName||prod.name).slice(0,16);
-        const np=textPlate(nm,{fs:24,pad:9,scale:.0068,fg:'#e8eaf0',bg:'rgba(13,17,23,.85)',border:'rgba(255,255,255,.15)'});
+        const np=textPlate(nm,{fs:24,pad:9,scale:.0068,fg:'#e8eaf0',bg:'rgba(13,17,23,.88)',border:hex2css(brand3d(prod.brand).accent)});
         np.position.set(0, .26, SHELF_D/2-.5);
         np.scale.setScalar(2.0);
         icon.add(np);
@@ -6318,7 +6353,7 @@ function Home3DView({data, setData, setView, setSels, setProdView}){
         if(cx!==f.m.position.x){ f.m.position.x=cx; f.vx*=-.25; }
         if(cz!==f.m.position.z){ f.m.position.z=cz; f.vz*=-.25; }
 
-        const rh = restSupport(f.m.position.x, f.m.position.z, f.yaw, f).h;
+        const rh = pileHeight(f.m.position.x, f.m.position.z, f.yaw, f);
         if(f.m.position.y <= rh){
           f.m.position.y = rh;
 
@@ -6336,7 +6371,7 @@ function Home3DView({data, setData, setView, setSels, setProdView}){
             const a=(i/8)*Math.PI*2+jit;
             const nx=Math.max(DESK_X0,Math.min(DESK_X1,f.m.position.x+Math.cos(a)*SLIDE_STEP));
             const nz=Math.max(DESK_Z0,Math.min(DESK_Z1,f.m.position.z+Math.sin(a)*SLIDE_STEP));
-            const nh=restSupport(nx,nz,f.yaw,f).h;
+            const nh=pileHeight(nx,nz,f.yaw,f);
             if(nh < bestH-1e-4){ bestH=nh; bestA=a; }
           }
           const drop = rh-bestH;
@@ -6351,10 +6386,29 @@ function Home3DView({data, setData, setView, setSels, setProdView}){
             continue;                                     // stays in flight
           }
 
-          // Settled — lie flat, tilted along the slope it came to rest on
-          f.rest = true;
-          const tilt = Math.min(.34, drop*1.1);
-          f.m.rotation.set((Math.random()-.5)*(.08+tilt), f.yaw, (Math.random()-.5)*(.08+tilt));
+          // Settle by draping: sample each end, lie along the slope between them
+          const dxs=Math.cos(f.yaw), dzs=-Math.sin(f.yaw);
+          const L=J_HALF*.85;
+          const hA=supportAt(f.m.position.x-dxs*L, f.m.position.z-dzs*L, f);
+          const hB=supportAt(f.m.position.x+dxs*L, f.m.position.z+dzs*L, f);
+          let pitch=Math.atan2(hB-hA, 2*L);
+
+          // Too steep to balance, or stacked too high — tip off toward the low end
+          const tooHigh = (hA+hB)/2 > FLOOR_Y + J_LAYER*6;
+          if((Math.abs(pitch) > .5 || tooHigh) && f.slides < 16){
+            f.slides++;
+            const a = (hB<hA) ? Math.atan2(dzs,dxs) : Math.atan2(-dzs,-dxs);
+            f.vx=Math.cos(a)*1.6; f.vz=Math.sin(a)*1.6; f.vy=.45;
+            f.az=(Math.random()<.5?-1:1)*(1.8+Math.random()*2.0);
+            f.m.position.y = rh + .03;
+            continue;
+          }
+
+          pitch = Math.max(-.45, Math.min(.45, pitch));
+          f.rest  = true;
+          f.pitch = pitch;
+          f.m.position.y = Math.max(FLOOR_Y+J_R, (hA+hB)/2);
+          f.m.rotation.set(0, f.yaw, pitch);
         }
       }
 
