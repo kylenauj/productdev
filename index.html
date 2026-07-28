@@ -7622,7 +7622,7 @@ function TopStoresBySku({salesData, hidden, sel, onSelect}){
     if(!ret[banner]) ret[banner]={units:0,cities:{},sites:{},skus:{}};
     ret[banner].units+=u;
     ret[banner].cities[city]=(ret[banner].cities[city]||0)+u;
-    ret[banner].sites[key]=1;
+    ret[banner].sites[key]=(ret[banner].sites[key]||0)+u;
     ret[banner].skus[name]=(ret[banner].skus[name]||0)+u;
   };
   prods.forEach(([name,d])=>{
@@ -7642,8 +7642,21 @@ function TopStoresBySku({salesData, hidden, sel, onSelect}){
     }
   });
 
-  const locList=Object.values(loc).sort((a,b)=>b.units-a.units);
-  const retList=Object.entries(ret).sort(([,a],[,b])=>b.units-a.units);
+  // OCS addresses arrive as "STREET\nCITY, ON POSTAL\nCAN" — keep the street line
+  const cleanAddr=a=>String(a||'').split(/[\r\n]+/)[0].replace(/\s+/g,' ').trim();
+  // Ties are common (most stores order a fixed case size), so sort them stably
+  // and use competition ranking so equal volumes share a rank.
+  const locList=Object.values(loc).sort((a,b)=>b.units-a.units||a.banner.localeCompare(b.banner));
+  let _r=0,_p=null;
+  locList.forEach((L,i)=>{ if(L.units!==_p){_r=i+1;_p=L.units;} L.rank=_r; });
+  const tiedAtTop=locList.filter(L=>L.units===locList[0]?.units).length;
+  // Where each storefront ranks inside its own banner
+  const siteRank={}, siteTotal={};
+  Object.entries(loc).sort(([,a],[,b])=>b.units-a.units).forEach(([k,L])=>{
+    siteTotal[L.banner]=(siteTotal[L.banner]||0)+1;
+    siteRank[k]=siteTotal[L.banner];
+  });
+  const retList=Object.entries(ret).sort(([a,x],[b,y])=>y.units-x.units||a.localeCompare(b));
   const locMax=locList[0]?.units||1, retMax=retList[0]?.[1].units||1;
   const champ=locList[0];
   const skuCount=prods.length;
@@ -7677,7 +7690,10 @@ function TopStoresBySku({salesData, hidden, sel, onSelect}){
         [1,3,5].map(n=>pill(topN===n,'Top '+n,()=>setTopN(n))))
     ),
     el('div',{style:{fontSize:10,color:'var(--text3)',marginBottom:12}},
-      mode==='loc'?(anyAddr
+      mode==='loc'&&tiedAtTop>1
+        ? tiedAtTop+' storefronts are tied at '+locList[0].units.toLocaleString()+
+          ' units — most stores order a fixed case size, so equal ranks are shared.'
+      :mode==='loc'?(anyAddr
         ? 'Individual storefronts, split by street address — same-banner shops in one city rank separately.'
         : 'Individual storefronts — banner counted separately per city. Add an address column to split shops within a city.')
       :mode==='ret'?'Retail banners rolled up across all their locations.'
@@ -7689,22 +7705,34 @@ function TopStoresBySku({salesData, hidden, sel, onSelect}){
       missingGeo+' of '+skuCount+' SKUs have no city detail — re-import those sales files to split banners into locations.'),
 
     /* Champion */
-    champ&&el('div',{style:{display:'flex',alignItems:'center',gap:12,marginBottom:14,
-      padding:'11px 14px',borderRadius:8,background:'var(--bg2)',
-      border:'0.5px solid rgba(224,164,55,.4)',flexWrap:'wrap'}},
-      el('i',{className:'ti ti-award',style:{fontSize:20,color:'#e0a437'}}),
-      el('div',{style:{minWidth:0,flex:1}},
-        el('div',{style:{fontSize:9,color:'var(--text3)',textTransform:'uppercase',
-          letterSpacing:'.08em',...mono,marginBottom:2}},'#1 storefront'),
-        el('div',{style:{fontSize:14,fontWeight:800,color:'var(--text)'}},champ.banner),
-        el('div',{style:{fontSize:10,color:'var(--text3)'}},[champ.addr,champ.city].filter(Boolean).join(' · '))
-      ),
-      el('div',{style:{textAlign:'right'}},
-        el('div',{style:{fontSize:18,fontWeight:900,color:'#e0a437',lineHeight:1}},champ.units.toLocaleString()),
-        el('div',{style:{fontSize:9,color:'var(--text3)'}},
-          'units · '+Object.keys(champ.skus).length+' of '+skuCount+' SKUs')
-      )
-    ),
+    (()=>{
+      const onRet=mode==='ret';
+      const top=onRet?retList[0]:champ;
+      if(!top) return null;
+      const label=onRet?'#1 retail banner':'#1 storefront';
+      const title=onRet?top[0]:top.banner;
+      const sub2=onRet
+        ? (Object.keys(top[1].sites||{}).length||Object.keys(top[1].cities).length)+' locations · '+
+          (topOf(top[1].cities)?.[0]||'')
+        : [cleanAddr(top.addr),top.city].filter(Boolean).join(' · ');
+      const units=onRet?top[1].units:top.units;
+      const nSku=Object.keys(onRet?top[1].skus:top.skus).length;
+      return el('div',{style:{display:'flex',alignItems:'center',gap:12,marginBottom:14,
+        padding:'11px 14px',borderRadius:8,background:'var(--bg2)',
+        border:'0.5px solid rgba(224,164,55,.4)',flexWrap:'wrap'}},
+        el('i',{className:'ti ti-award',style:{fontSize:20,color:'#e0a437'}}),
+        el('div',{style:{minWidth:0,flex:1}},
+          el('div',{style:{fontSize:9,color:'var(--text3)',textTransform:'uppercase',
+            letterSpacing:'.08em',...mono,marginBottom:2}},label),
+          el('div',{style:{fontSize:14,fontWeight:800,color:'var(--text)'}},title),
+          el('div',{style:{fontSize:10,color:'var(--text3)'}},sub2)
+        ),
+        el('div',{style:{textAlign:'right'}},
+          el('div',{style:{fontSize:18,fontWeight:900,color:'#e0a437',lineHeight:1}},units.toLocaleString()),
+          el('div',{style:{fontSize:9,color:'var(--text3)'}},'units · '+nSku+' of '+skuCount+' SKUs')
+        )
+      );
+    })(),
 
     /* ── Specific storefronts ── */
     mode==='loc'&&el('div',{style:{overflowX:'auto'}},
@@ -7720,11 +7748,17 @@ function TopStoresBySku({salesData, hidden, sel, onSelect}){
         )),
         el('tbody',null, locList.slice(0,30).map((L,i)=>{
           const best=topOf(L.skus);
-          return el('tr',{key:L.banner+L.city,style:{background:i<3?'rgba(224,164,55,.06)':'transparent'}},
-            el('td',{style:{...cell,textAlign:'center',fontWeight:900,color:RANK[i]||'var(--text3)',...mono}},i+1),
-            el('td',{style:{...cell,fontWeight:i<3?700:400,color:'var(--text)'}},
-              el('div',null,L.banner),
-              L.addr&&el('div',{style:{fontSize:9.5,fontWeight:400,color:'var(--text3)',marginTop:1}},L.addr)
+          const rc=RANK[L.rank-1]||'var(--text3)';
+          return el('tr',{key:L.banner+L.city+L.addr,style:{background:L.rank<=3?'rgba(224,164,55,.06)':'transparent'}},
+            el('td',{style:{...cell,textAlign:'center',fontWeight:900,color:rc,...mono}},L.rank),
+            el('td',{style:{...cell,fontWeight:L.rank<=3?700:400,color:'var(--text)'}},
+              el('div',{style:{display:'flex',alignItems:'center',gap:6,flexWrap:'wrap'}},
+                el('span',null,L.banner),
+                siteTotal[L.banner]>1&&el('span',{style:{fontSize:8.5,fontWeight:700,...mono,
+                  color:'var(--info)',background:'rgba(91,155,213,.14)',borderRadius:4,padding:'1px 5px'}},
+                  'site '+siteRank[L.banner+'\u0000'+L.city+'\u0000'+(L.addr||'')]+' of '+siteTotal[L.banner])
+              ),
+              L.addr&&el('div',{style:{fontSize:9.5,fontWeight:400,color:'var(--text3)',marginTop:1}},cleanAddr(L.addr))
             ),
             el('td',{style:{...cell,color:'var(--text2)'}},L.city),
             el('td',{style:{...cell,textAlign:'right',fontWeight:700,...mono}},L.units.toLocaleString()),
@@ -7734,7 +7768,7 @@ function TopStoresBySku({salesData, hidden, sel, onSelect}){
               textOverflow:'ellipsis',whiteSpace:'nowrap'}},
               best&&el('span',{onClick:()=>onSelect&&onSelect(best[0]),
                 style:{cursor:'pointer',borderBottom:'1px dotted var(--bdr)'}},best[0])),
-            el('td',{style:cell},bar(Math.round(L.units/locMax*100),RANK[i]||'var(--info)'))
+            el('td',{style:cell},bar(Math.round(L.units/locMax*100),rc==='var(--text3)'?'var(--info)':rc))
           );
         }))
       ),
@@ -7751,7 +7785,7 @@ function TopStoresBySku({salesData, hidden, sel, onSelect}){
           el('th',{style:{...hdr,textAlign:'center'}},'Locations'),
           el('th',{style:{...hdr,textAlign:'right'}},'Units'),
           el('th',{style:{...hdr,textAlign:'right'}},'Avg / loc'),
-          el('th',{style:hdr},'Strongest city'),
+          el('th',{style:hdr},'Best location'),
           el('th',{style:hdr},'Best seller'),
           el('th',{style:{...hdr,minWidth:90}},'vs #1')
         )),
@@ -7765,8 +7799,17 @@ function TopStoresBySku({salesData, hidden, sel, onSelect}){
             el('td',{style:{...cell,textAlign:'right',fontWeight:700,...mono}},R.units.toLocaleString()),
             el('td',{style:{...cell,textAlign:'right',color:'var(--text3)',...mono}},
               nLoc?Math.round(R.units/nLoc).toLocaleString():'—'),
-            el('td',{style:{...cell,color:'var(--text2)'}},
-              bestCity?bestCity[0]+' ('+bestCity[1].toLocaleString()+')':'—'),
+            el('td',{style:{...cell,color:'var(--text2)',maxWidth:210}},
+              (()=>{
+                const bs=topOf(R.sites);
+                const L=bs&&loc[bs[0]];
+                if(!L) return bestCity?bestCity[0]+' ('+bestCity[1].toLocaleString()+')':'—';
+                return el('div',null,
+                  el('div',{style:{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},
+                    (cleanAddr(L.addr)||L.city)+' · '+L.units.toLocaleString()),
+                  L.addr&&el('div',{style:{fontSize:9,color:'var(--text3)'}},L.city)
+                );
+              })()),
             el('td',{style:{...cell,color:'var(--text2)',maxWidth:190,overflow:'hidden',
               textOverflow:'ellipsis',whiteSpace:'nowrap'}},
               best&&el('span',{onClick:()=>onSelect&&onSelect(best[0]),
@@ -7815,7 +7858,7 @@ function TopStoresBySku({salesData, hidden, sel, onSelect}){
               el('span',{style:{fontSize:11,fontWeight:700,color:'var(--text)',...mono}},r.u.toLocaleString())
             ),
             el('div',{style:{display:'flex',alignItems:'center',gap:6,paddingLeft:21,marginTop:2}},
-              el('span',{style:{fontSize:9,color:'var(--text3)',flexShrink:0,maxWidth:132,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},[r.addr,r.city].filter(Boolean).join(' · ')||'—'),
+              el('span',{style:{fontSize:9,color:'var(--text3)',flexShrink:0,maxWidth:132,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},[cleanAddr(r.addr),r.city].filter(Boolean).join(' · ')||'—'),
               el('div',{style:{flex:1}},bar(Math.round(r.u/total*100),RANK[i]||'var(--info)')),
               el('span',{style:{fontSize:9,color:'var(--text3)',flexShrink:0,...mono}},
                 Math.round(r.u/total*100)+'%')
