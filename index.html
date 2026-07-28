@@ -1105,7 +1105,177 @@ function FunnelView({data, setData}){
 
 
 
-function PCOverview({prods, pcLabel, onSelect, onUpdateProd}){
+
+/* ── Tentative date scheduler ──
+   Offsets derived from the PC#1 timelines already in the dashboard.
+   'A' = submission accepted, 'L' = launch. Dev work hangs off acceptance,
+   everything downstream hangs off the launch date.                        */
+const SCHED_TEMPLATE={
+  'NNCP/GTIN':                  {a:'A', s:-110, e:-81},
+  'Formulation Dev':            {a:'A', s:-110, e:  11},
+  'Sensory':                    {a:'A', s: -14, e: -12},
+  'Sensory – Internal':         {a:'A', s: -14, e: -12},
+  'Sensory – Customer':         {a:'A', s: -11, e:  -8},
+  'Packaging Dev':              {a:'A', s:-110, e: -81},
+  'Financial Analysis':         {a:'A', s:-110, e: -81},
+  'Product Specs / Submission': {a:'A', s:-110, e:  -1},
+  'R&D':                        {a:'A', s:-110, e:  -1},
+  'Labels':                     {a:'L', s:-108, e: -90},
+  'Input':                      {a:'L', s:-136, e: -90},
+  'Internal Packaging':         {a:'L', s:-108, e: -90},
+  'External Packaging':         {a:'L', s:-136, e: -90},
+  'Materials On Site':          {a:'L', s: -59, e: -55},
+  'Sample Run':                 {a:'L', s: -66, e: -41},
+  'Samples Ready':              {a:'L', s: -52, e: -48},
+  'PO Received':                {a:'L', s: -56, e: -49},
+  'Pre-Selling':                {a:'L', s: -38, e:   5},
+  'Pre-Sell / Promo':           {a:'L', s: -38, e:   5},
+  'Bulk Production':            {a:'L', s: -30, e: -18},
+  'Production/Shipment':        {a:'L', s: -17, e:  -6},
+  'Delivery into OCS':          {a:'L', s:  -2, e:   5},
+  'Pre-Sell Communications':    {a:'L', s: -38, e: -20},
+  'Launch Eblast & Comms':      {a:'L', s:  -3, e:  10},
+  'Digital Selling Assets':     {a:'L', s: -52, e: -20},
+  'Printed Marketing Materials':{a:'L', s: -52, e: -20},
+  'Base Marketing Materials':   {a:'L', s: -52, e: -48},
+};
+const schedShift=(iso,days)=>{
+  const d=new Date(iso+'T00:00:00');
+  d.setDate(d.getDate()+days);
+  return d.toISOString().slice(0,10);
+};
+/* Returns {tasks, filled, skipped} */
+function applySchedule(tasks, acceptISO, launchISO, overwrite){
+  let filled=0, skipped=0;
+  const out=(tasks||[]).map(t=>{
+    const tpl=SCHED_TEMPLATE[t.name];
+    if(!tpl){ skipped++; return t; }
+    if(!overwrite && t.start && t.end){ skipped++; return t; }
+    const base=tpl.a==='A'?acceptISO:launchISO;
+    filled++;
+    return {...t, start:schedShift(base,tpl.s), end:schedShift(base,tpl.e)};
+  });
+  return {tasks:out, filled, skipped};
+}
+
+function ScheduleDatesModal({prods, pcKey, pcLabel, onApply, onClose}){
+  const [launch,setLaunch]=React.useState(()=>prods.find(p=>p.launchDate)?.launchDate||'2026-11-01');
+  const [accept,setAccept]=React.useState('2026-07-24');
+  const [overwrite,setOverwrite]=React.useState(false);
+  const [setLaunchField,setSetLaunchField]=React.useState(true);
+  const [sel,setSel]=React.useState(()=>Object.fromEntries(prods.map(p=>[p.id,true])));
+
+  const chosen=prods.filter(p=>sel[p.id]);
+  const gap=(()=>{
+    try{
+      const d=(new Date(launch+'T00:00:00')-new Date(accept+'T00:00:00'))/86400000;
+      return isFinite(d)?Math.round(d):null;
+    }catch(e){ return null; }
+  })();
+  const preview=chosen.length?applySchedule(chosen[0].tasks,accept,launch,overwrite):{filled:0,skipped:0};
+
+  const apply=()=>{
+    chosen.forEach(p=>{
+      const r=applySchedule(p.tasks,accept,launch,overwrite);
+      const upd={tasks:r.tasks};
+      if(setLaunchField) upd.launchDate=launch;
+      onApply(pcKey,p.id,upd);
+    });
+    onClose();
+  };
+
+  const fld={background:'var(--bg2)',border:'0.5px solid var(--bdr2)',borderRadius:7,
+    padding:'8px 10px',color:'var(--text)',fontSize:12.5,fontFamily:'inherit',width:'100%'};
+  const lbl={fontSize:9,color:'var(--text3)',textTransform:'uppercase',letterSpacing:'.08em',
+    fontFamily:'var(--font-mono)',marginBottom:4};
+
+  return el('div',{style:{position:'fixed',inset:0,background:'rgba(20,15,10,.55)',backdropFilter:'blur(4px)',
+    zIndex:640,display:'flex',alignItems:'center',justifyContent:'center',padding:20},
+    onClick:e=>e.target===e.currentTarget&&onClose()},
+    el('div',{style:{background:'var(--bg)',border:'1px solid var(--bdr2)',borderRadius:'var(--r)',
+      width:'100%',maxWidth:520,maxHeight:'86vh',display:'flex',flexDirection:'column',
+      boxShadow:'0 8px 40px rgba(0,0,0,.45)'}},
+
+      el('div',{style:{padding:'14px 18px',borderBottom:'0.5px solid var(--bdr)',
+        display:'flex',alignItems:'center',justifyContent:'space-between'}},
+        el('div',null,
+          el('div',{style:{fontSize:14,fontWeight:700,color:'var(--text)',display:'flex',alignItems:'center',gap:7}},
+            el('i',{className:'ti ti-calendar-plus',style:{color:'var(--accent)'}}),'Preload Tentative Dates'),
+          el('div',{style:{fontSize:10,color:'var(--text3)',marginTop:2}},
+            pcLabel+' · back-planned from launch and acceptance')
+        ),
+        el('button',{onClick:onClose,style:{background:'none',border:'none',cursor:'pointer',
+          color:'var(--text3)',fontSize:17}},el('i',{className:'ti ti-x'}))
+      ),
+
+      el('div',{style:{padding:'16px 18px',overflowY:'auto',flex:1}},
+        el('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:6}},
+          el('div',null,
+            el('div',{style:lbl},'Submission accepted'),
+            el('input',{type:'date',value:accept,onChange:e=>setAccept(e.target.value),style:fld})),
+          el('div',null,
+            el('div',{style:lbl},'Tentative launch'),
+            el('input',{type:'date',value:launch,onChange:e=>setLaunch(e.target.value),style:fld}))
+        ),
+        el('div',{style:{fontSize:10.5,color:gap!==null&&gap>0?'var(--text3)':'var(--err)',marginBottom:14}},
+          gap===null?'':gap>0?(gap+' days from acceptance to launch'):'Launch must fall after acceptance'),
+
+        el('label',{style:{display:'flex',alignItems:'center',gap:8,marginBottom:8,cursor:'pointer'}},
+          el('input',{type:'checkbox',checked:overwrite,onChange:e=>setOverwrite(e.target.checked)}),
+          el('span',{style:{fontSize:12,color:'var(--text2)'}},'Overwrite dates that are already set')),
+        el('label',{style:{display:'flex',alignItems:'center',gap:8,marginBottom:14,cursor:'pointer'}},
+          el('input',{type:'checkbox',checked:setLaunchField,onChange:e=>setSetLaunchField(e.target.checked)}),
+          el('span',{style:{fontSize:12,color:'var(--text2)'}},'Also set each SKU’s launch date field')),
+
+        el('div',{style:{display:'flex',alignItems:'center',gap:8,marginBottom:8}},
+          el('div',{style:lbl},'Apply to'),
+          el('button',{onClick:()=>setSel(Object.fromEntries(prods.map(p=>[p.id,true]))),
+            style:{marginLeft:'auto',background:'none',border:'none',color:'var(--info)',
+              fontSize:10.5,cursor:'pointer',fontFamily:'inherit'}},'All'),
+          el('button',{onClick:()=>setSel({}),
+            style:{background:'none',border:'none',color:'var(--text3)',fontSize:10.5,
+              cursor:'pointer',fontFamily:'inherit'}},'None')
+        ),
+        prods.map(p=>el('label',{key:p.id,style:{display:'flex',alignItems:'center',gap:9,
+          padding:'7px 10px',marginBottom:5,borderRadius:7,cursor:'pointer',
+          background:sel[p.id]?'var(--bg2)':'transparent',
+          border:'0.5px solid '+(sel[p.id]?'var(--bdr2)':'var(--bdr)')}},
+          el('input',{type:'checkbox',checked:!!sel[p.id],
+            onChange:e=>setSel(s=>({...s,[p.id]:e.target.checked}))}),
+          el('div',{style:{flex:1,minWidth:0}},
+            el('div',{style:{fontSize:12,color:'var(--text)',overflow:'hidden',
+              textOverflow:'ellipsis',whiteSpace:'nowrap'}},p.shortName||p.name),
+            el('div',{style:{fontSize:9.5,color:'var(--text3)'}},
+              (p.skuCode?p.skuCode+' · ':'')+(p.tasks||[]).length+' tasks'+
+              (p.launchDate?' · launch '+p.launchDate:''))
+          )
+        )),
+
+        chosen.length>0&&el('div',{style:{marginTop:10,padding:'9px 12px',borderRadius:7,
+          background:'var(--bg2)',border:'0.5px solid var(--bdr)',fontSize:10.5,color:'var(--text3)'}},
+          el('i',{className:'ti ti-info-circle',style:{marginRight:6}}),
+          'Each SKU: '+preview.filled+' task'+(preview.filled===1?'':'s')+' dated'+
+          (preview.skipped?', '+preview.skipped+' left alone':'')+
+          (overwrite?'':' — existing dates are kept'))
+      ),
+
+      el('div',{style:{padding:'12px 18px',borderTop:'0.5px solid var(--bdr)',
+        display:'flex',gap:9,justifyContent:'flex-end'}},
+        el('button',{onClick:onClose,style:{background:'transparent',border:'0.5px solid var(--bdr2)',
+          borderRadius:7,padding:'8px 14px',color:'var(--text3)',cursor:'pointer',
+          fontSize:12,fontFamily:'inherit'}},'Cancel'),
+        el('button',{onClick:apply,disabled:!chosen.length||!(gap>0),
+          style:{background:chosen.length&&gap>0?'var(--accent)':'var(--bg2)',border:'none',borderRadius:7,
+            padding:'8px 16px',color:chosen.length&&gap>0?'#fff':'var(--text3)',fontWeight:700,fontSize:12,
+            cursor:chosen.length&&gap>0?'pointer':'not-allowed',fontFamily:'inherit'}},
+          'Schedule '+chosen.length+' SKU'+(chosen.length===1?'':'s'))
+      )
+    )
+  );
+}
+
+function PCOverview({prods, pcLabel, pcKey, onSelect, onUpdateProd}){
+  const [showSched,setShowSched]=React.useState(false);
   if(!prods||!prods.length) return el('div',{style:{padding:40,textAlign:'center',color:'var(--muted)'}},
     el('i',{className:'ti ti-package-off',style:{fontSize:32,display:'block',marginBottom:8,opacity:.4}}),
     'No products in this product call yet.'
@@ -1178,6 +1348,22 @@ function PCOverview({prods, pcLabel, onSelect, onUpdateProd}){
     overflowX:'auto',background:'var(--bg)',
     borderTop:'1px solid var(--border)'
   }},
+    el('div',{style:{display:'flex',alignItems:'center',gap:8,padding:'8px 12px',
+      borderBottom:'0.5px solid var(--border)',background:'var(--surface-warm)',
+      position:'sticky',left:0}},
+      el('span',{style:{fontFamily:'var(--mono)',fontSize:9,fontWeight:700,color:'var(--muted)',
+        textTransform:'uppercase',letterSpacing:'.1em'}},prods.length+' SKUs'),
+      el('button',{onClick:()=>setShowSched(true),style:{marginLeft:'auto',
+        display:'flex',alignItems:'center',gap:6,background:'var(--accent)',border:'none',
+        borderRadius:7,padding:'6px 12px',color:'#fff',fontSize:11,fontWeight:700,
+        cursor:'pointer',fontFamily:'inherit'}},
+        el('i',{className:'ti ti-calendar-plus',style:{fontSize:13}}),'Preload Dates')
+    ),
+    showSched&&el(ScheduleDatesModal,{
+      prods, pcKey, pcLabel,
+      onApply:(k,id,upd)=>onUpdateProd&&onUpdateProd(k,id,upd),
+      onClose:()=>setShowSched(false)
+    }),
     el('table',{style:{
       borderCollapse:'collapse',width:'100%',
       tableLayout:'fixed',minWidth:(LABEL_W+prods.length*COL_W)+'px'
@@ -5094,12 +5280,19 @@ function BulkUploadModal({salesData,onUpdate,onClose}){
   const [results,setResults]=React.useState(null);
   const [busy,setBusy]=React.useState(false);
   const [err,setErr]=React.useState('');
+  const [fileName,setFileName]=React.useState('');
   const fileRef=React.useRef();
+
+  const keys=Object.keys(salesData||{});
+  // Exact, then case/punctuation-insensitive. No word-prefix guessing —
+  // "…Infused Blunt" and "…Infused Pre-Roll" share their first six words.
+  const norm=s=>String(s||'').toLowerCase().replace(/[^a-z0-9]+/g,'');
+  const findKey=name=>keys.find(k=>k===name)||keys.find(k=>norm(k)===norm(name))||'';
 
   const handleFile=async(file)=>{
     if(!file) return;
     if(!file.name.match(/\.(xlsx|xls)$/i)){setErr('Please upload an Excel file (.xlsx or .xls)');return;}
-    setBusy(true); setErr(''); setResults(null);
+    setBusy(true); setErr(''); setResults(null); setFileName(file.name);
     try{
       const buf=await file.arrayBuffer();
       const XLSX=window.XLSX;
@@ -5108,105 +5301,157 @@ function BulkUploadModal({salesData,onUpdate,onClose}){
       const rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:true});
       if(rows.length<2) throw new Error('No data found in file.');
       const hdrs=rows[0].map(h=>String(h||'').trim());
-      if(!hdrs.includes('Item Name')) throw new Error('Cannot find "Item Name" column.');
-      // Get all distinct products in this file
-      const allNames=[...new Set(rows.slice(1).filter(r=>r[1]).map(r=>String(r[1]).trim()))];
-      const parsed=[];
-      for(const pName of allNames){
+      const iName=hdrs.findIndex(h=>/^item\s*name$/i.test(h));
+      if(iName<0) throw new Error('Cannot find an "Item Name" column.');
+      const iUnits=hdrs.findIndex(h=>/units\s*sold/i.test(h));
+
+      // Distinct products, with a units tally so the preview is meaningful
+      const tally={};
+      rows.slice(1).forEach(r=>{
+        const n=r&&r[iName]?String(r[iName]).trim():'';
+        if(!n) return;
+        const u=iUnits>=0?Number(r[iUnits]):0;
+        tally[n]=(tally[n]||0)+(isFinite(u)&&u>0&&u<50000?u:0);
+      });
+
+      const parsed=Object.keys(tally).map(pName=>{
         try{
           const result=parseExcelSalesData(buf,pName);
-          // Try exact match first, then case-insensitive match
-          const matchedKey=Object.keys(salesData).find(k=>
-            k===pName||k.toLowerCase()===pName.toLowerCase()||
-            k.toLowerCase().includes(pName.toLowerCase().split(' ').slice(0,2).join(' '))||
-            pName.toLowerCase().includes(k.toLowerCase().split(' ').slice(0,2).join(' '))
-          );
-          parsed.push({name:matchedKey||pName,detected:result.detectedName,data:result.data,matched:!!matchedKey});
-        }catch(e){
-          parsed.push({name:pName,err:e.message});
-        }
-      }
+          const key=findKey(pName);
+          return {src:pName, units:tally[pName], data:result.data,
+                  target:key||pName, mode:key?'update':'create'};
+        }catch(e){ return {src:pName, units:tally[pName], err:e.message, mode:'skip'}; }
+      }).sort((a,b)=>b.units-a.units);
       setResults(parsed);
     }catch(e){ setErr(e.message); }
     setBusy(false);
   };
 
+  const setRow=(src,patch)=>setResults(rs=>rs.map(r=>r.src===src?{...r,...patch}:r));
+
   const applyAll=()=>{
     if(!results) return;
     const now=new Date().toISOString();
-    results.filter(r=>!r.err&&r.matched).forEach(r=>{
-      const existing=salesData[r.name]||{};
-      const updated={...existing,...r.data,pc:existing.pc,launchDate:existing.launchDate,ocs:existing.ocs};
-      onUpdate(r.name, updated, {[r.name]:now});
+    results.filter(r=>!r.err&&r.mode!=='skip').forEach(r=>{
+      const key=r.mode==='update'?r.target:r.src;
+      const existing=salesData[key]||{};
+      const updated={...existing,...r.data};
+      // Never let a sales import clobber the product's own metadata
+      if(existing.pc!==undefined) updated.pc=existing.pc;
+      if(existing.launchDate!==undefined) updated.launchDate=existing.launchDate;
+      if(existing.ocs!==undefined) updated.ocs=existing.ocs;
+      if(existing.brand&&!updated.brand) updated.brand=existing.brand;
+      onUpdate(key, updated, {[key]:now});
     });
     onClose();
   };
 
-  const matched=results?.filter(r=>!r.err&&r.matched)||[];
-  const unmatched=results?.filter(r=>!r.err&&!r.matched)||[];
+  const willCreate=results?.filter(r=>!r.err&&r.mode==='create')||[];
+  const willUpdate=results?.filter(r=>!r.err&&r.mode==='update')||[];
   const errored=results?.filter(r=>r.err)||[];
+  const totalApply=willCreate.length+willUpdate.length;
 
-  return el('div',{style:{position:'fixed',inset:0,background:'rgba(20,15,10,0.55)',backdropFilter:'blur(4px)',zIndex:600,display:'flex',alignItems:'center',justifyContent:'center',padding:20},onClick:e=>e.target===e.currentTarget&&onClose()},
-    el('div',{style:{background:'var(--bg)',border:'1px solid var(--bdr2)',borderRadius:'var(--r)',width:'100%',maxWidth:540,maxHeight:'85vh',display:'flex',flexDirection:'column',boxShadow:'0 8px 40px rgba(0,0,0,0.45)'}},
-      el('div',{style:{padding:'14px 18px',borderBottom:'0.5px solid var(--bdr)',display:'flex',alignItems:'center',justifyContent:'space-between',flexShrink:0}},
-        el('div',{style:{fontSize:15,fontWeight:800,display:'flex',alignItems:'center',gap:8}},
-          el('i',{className:'ti ti-table-import',style:{color:'var(--ok)',fontSize:18}}), 'Bulk Upload — All SKUs'
+  const tag=(txt,col)=>el('span',{style:{fontSize:9,fontWeight:700,fontFamily:'var(--font-mono)',
+    background:col+'22',color:col,borderRadius:4,padding:'2px 7px',whiteSpace:'nowrap'}},txt);
+
+  return el('div',{style:{position:'fixed',inset:0,background:'rgba(20,15,10,0.55)',backdropFilter:'blur(4px)',
+    zIndex:600,display:'flex',alignItems:'center',justifyContent:'center',padding:20},
+    onClick:e=>e.target===e.currentTarget&&onClose()},
+    el('div',{style:{background:'var(--bg)',border:'1px solid var(--bdr2)',borderRadius:'var(--r)',
+      width:'100%',maxWidth:640,maxHeight:'86vh',display:'flex',flexDirection:'column',
+      boxShadow:'0 8px 40px rgba(0,0,0,0.45)'}},
+
+      el('div',{style:{padding:'14px 18px',borderBottom:'0.5px solid var(--bdr)',
+        display:'flex',alignItems:'center',justifyContent:'space-between'}},
+        el('div',null,
+          el('div',{style:{fontSize:14,fontWeight:700,color:'var(--text)',display:'flex',alignItems:'center',gap:7}},
+            el('i',{className:'ti ti-upload',style:{color:'var(--info)'}}),'Bulk Sales Upload'),
+          el('div',{style:{fontSize:10,color:'var(--text3)',marginTop:2}},
+            fileName||'One OCS export can hold every SKU — each becomes its own Post Launch entry.')
         ),
-        el('button',{onClick:onClose,style:{background:'none',border:'none',cursor:'pointer',color:'var(--text3)',fontSize:18}},el('i',{className:'ti ti-x'}))
+        el('button',{onClick:onClose,style:{background:'none',border:'none',cursor:'pointer',
+          color:'var(--text3)',fontSize:17}},el('i',{className:'ti ti-x'}))
       ),
-      el('div',{style:{flex:1,overflowY:'auto',padding:'20px'}},
+
+      el('div',{style:{padding:'16px 18px',overflowY:'auto',flex:1}},
+
         !results&&el('div',null,
-          el('div',{style:{background:'var(--ok-bg)',border:'0.5px solid var(--ok)',borderRadius:8,padding:'10px 14px',marginBottom:16,fontSize:12,color:'var(--ok)'}},
-            el('i',{className:'ti ti-info-circle',style:{marginRight:6}}),
-            'Upload one Excel file with multiple SKUs — the dashboard will detect each product automatically and update all matching SKUs at once.'
+          el('div',{onClick:()=>fileRef.current&&fileRef.current.click(),
+            style:{border:'1.5px dashed var(--bdr2)',borderRadius:10,padding:'34px 18px',
+              textAlign:'center',cursor:'pointer',background:'var(--bg2)'}},
+            busy
+              ? el('div',null,el('i',{className:'ti ti-loader-2',style:{fontSize:30,color:'var(--info)',display:'block',marginBottom:9}}),
+                  el('div',{style:{fontSize:12,color:'var(--text3)'}},'Reading every SKU in the file…'))
+              : el('div',null,
+                  el('i',{className:'ti ti-table-import',style:{fontSize:34,color:'var(--info)',display:'block',marginBottom:10}}),
+                  el('div',{style:{fontSize:13,fontWeight:600,color:'var(--text)',marginBottom:5}},'Choose an OCS sales export'),
+                  el('div',{style:{fontSize:10.5,color:'var(--text3)'}},'Needs Item Name, Store Name, Store Address, City, Order Date, Units Sold'))
           ),
-          el('div',{onDragOver:e=>e.preventDefault(),onDrop:e=>{e.preventDefault();handleFile(e.dataTransfer.files[0]);},onClick:()=>fileRef.current.click(),style:{border:'2px dashed var(--ok)',borderRadius:10,padding:'36px 20px',textAlign:'center',cursor:'pointer',background:'var(--ok-bg)',marginBottom:14}},
-            el('i',{className:'ti ti-table-import',style:{fontSize:36,color:'var(--ok)',display:'block',marginBottom:10}}),
-            el('div',{style:{fontSize:14,fontWeight:600,color:'var(--ok)',marginBottom:4}},'Drop Excel file here'),
-            el('div',{style:{fontSize:11,color:'var(--text3)'}},'Multiple SKUs in one file · OCS export format'),
-            el('input',{ref:fileRef,type:'file',accept:'.xlsx,.xls',style:{display:'none'},onChange:e=>handleFile(e.target.files[0])})
-          ),
-          busy&&el('div',{style:{textAlign:'center',color:'var(--text2)',fontSize:12,display:'flex',alignItems:'center',justifyContent:'center',gap:8}},
-            el('i',{className:'ti ti-loader-2',style:{animation:'spin 1s linear infinite',fontSize:16}}),' Parsing all SKUs…'
-          ),
-          err&&el('div',{style:{padding:'10px 14px',borderRadius:8,fontSize:12,background:'var(--err-bg)',color:'var(--err)',display:'flex',alignItems:'flex-start',gap:8}},
-            el('i',{className:'ti ti-alert-circle',style:{flexShrink:0}}),err)
+          err&&el('div',{style:{marginTop:11,padding:'9px 12px',borderRadius:8,background:'var(--bg2)',
+            border:'0.5px solid var(--err)',color:'var(--err)',fontSize:11.5}},
+            el('i',{className:'ti ti-alert-circle',style:{marginRight:6}}),err),
+          el('input',{ref:fileRef,type:'file',accept:'.xlsx,.xls',style:{display:'none'},
+            onChange:e=>{const f=e.target.files&&e.target.files[0]; if(f) handleFile(f);}})
         ),
+
         results&&el('div',null,
-          matched.length>0&&el('div',{style:{marginBottom:16}},
-            el('div',{style:{fontSize:11,fontWeight:700,color:'var(--ok)',textTransform:'uppercase',letterSpacing:'.06em',marginBottom:8}},
-              el('i',{className:'ti ti-check'}),' '+matched.length+' SKUs Ready to Update'
+          el('div',{style:{display:'flex',gap:7,marginBottom:12,flexWrap:'wrap'}},
+            tag(results.length+' SKUs in file','#5b9bd5'),
+            willUpdate.length>0&&tag(willUpdate.length+' update existing','#3ddc8a'),
+            willCreate.length>0&&tag(willCreate.length+' new','#e0a437'),
+            errored.length>0&&tag(errored.length+' failed','#ff6b5c')
+          ),
+          results.map(r=>el('div',{key:r.src,style:{padding:'10px 12px',marginBottom:7,borderRadius:8,
+            background:'var(--bg2)',border:'0.5px solid '+(r.err?'var(--err)':r.mode==='skip'?'var(--bdr)':'var(--bdr2)'),
+            opacity:r.mode==='skip'?.55:1}},
+            el('div',{style:{display:'flex',alignItems:'baseline',gap:8,marginBottom:6}},
+              el('div',{style:{fontSize:12,fontWeight:600,color:'var(--text)',flex:1,minWidth:0,
+                overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},r.src),
+              el('div',{style:{fontSize:11,fontWeight:700,fontFamily:'var(--font-mono)',
+                color:'var(--text2)'}},r.units?r.units.toLocaleString()+' u':'')
             ),
-            matched.map(r=>el('div',{key:r.name,style:{background:'var(--ok-bg)',border:'0.5px solid var(--ok)',borderRadius:7,padding:'8px 12px',marginBottom:6,fontSize:12}},
-              el('div',{style:{fontWeight:600,color:'var(--ok)'}},r.name),
-              el('div',{style:{color:'var(--text3)',marginTop:2}},
-                r.data.units.toLocaleString()+' units · '+r.data.orders+' orders · '+r.data.storeCount+' stores · '+Object.keys(r.data.weekly).length+' weeks'
-              )
-            ))
-          ),
-          unmatched.length>0&&el('div',{style:{marginBottom:12}},
-            el('div',{style:{fontSize:11,fontWeight:700,color:'var(--warn)',textTransform:'uppercase',letterSpacing:'.06em',marginBottom:8}},
-              el('i',{className:'ti ti-alert-triangle'}),' '+unmatched.length+' SKUs Not Found in Dashboard'
-            ),
-            unmatched.map(r=>el('div',{key:r.name,style:{background:'var(--warn-bg)',border:'0.5px solid var(--warn)',borderRadius:7,padding:'8px 12px',marginBottom:6,fontSize:12,color:'var(--warn)'}},r.name))
-          ),
-          errored.length>0&&el('div',{style:{marginBottom:12}},
-            errored.map(r=>el('div',{key:r.name,style:{background:'var(--err-bg)',border:'0.5px solid var(--err)',borderRadius:7,padding:'8px 12px',marginBottom:6,fontSize:12,color:'var(--err)'}},
-              el('div',{style:{fontWeight:600}},r.name),el('div',null,r.err)
-            ))
-          ),
-          matched.length>0&&el('button',{onClick:applyAll,style:{
-            width:'100%',background:'var(--ok)',border:'none',borderRadius:8,
-            padding:'12px',fontSize:14,fontFamily:'inherit',color:'#fff',fontWeight:700,cursor:'pointer',
-            display:'flex',alignItems:'center',justifyContent:'center',gap:8
-          }},el('i',{className:'ti ti-check'}),' Apply All ('+matched.length+' SKUs)'),
-          matched.length===0&&el('div',{style:{textAlign:'center',color:'var(--warn)',padding:'10px 0',fontSize:12}},'No matching SKUs found. Make sure product names match the dashboard.')
+            r.err
+              ? el('div',{style:{fontSize:10.5,color:'var(--err)'}},r.err)
+              : el('div',{style:{display:'flex',alignItems:'center',gap:7,flexWrap:'wrap'}},
+                  el('select',{value:r.mode,onChange:e=>setRow(r.src,{mode:e.target.value}),
+                    style:{fontSize:11,padding:'4px 7px',borderRadius:6,background:'var(--bg)',
+                      color:'var(--text)',border:'0.5px solid var(--bdr2)',fontFamily:'inherit'}},
+                    el('option',{value:'create'},'Add as new SKU'),
+                    keys.length>0&&el('option',{value:'update'},'Update existing'),
+                    el('option',{value:'skip'},'Skip')
+                  ),
+                  r.mode==='update'&&el('select',{value:r.target,onChange:e=>setRow(r.src,{target:e.target.value}),
+                    style:{fontSize:11,padding:'4px 7px',borderRadius:6,background:'var(--bg)',
+                      color:'var(--text)',border:'0.5px solid var(--bdr2)',flex:1,minWidth:150,
+                      maxWidth:'100%',fontFamily:'inherit'}},
+                    keys.map(k=>el('option',{key:k,value:k},k))
+                  ),
+                  r.mode==='create'&&el('span',{style:{fontSize:10,color:'var(--text3)'}},
+                    'creates “'+r.src.slice(0,40)+(r.src.length>40?'…':'')+'”')
+                )
+          )),
+          el('div',{style:{fontSize:10,color:'var(--text3)',marginTop:4}},
+            'Launch date, PC assignment and OCS settings on existing SKUs are preserved.')
         )
+      ),
+
+      el('div',{style:{padding:'12px 18px',borderTop:'0.5px solid var(--bdr)',
+        display:'flex',gap:9,justifyContent:'flex-end',alignItems:'center'}},
+        results&&el('button',{onClick:()=>{setResults(null);setErr('');setFileName('');},
+          style:{background:'transparent',border:'0.5px solid var(--bdr2)',borderRadius:7,
+            padding:'8px 14px',color:'var(--text3)',cursor:'pointer',fontSize:12,fontFamily:'inherit'}},
+          'Choose another file'),
+        el('button',{onClick:onClose,style:{background:'transparent',border:'0.5px solid var(--bdr2)',
+          borderRadius:7,padding:'8px 14px',color:'var(--text3)',cursor:'pointer',fontSize:12,fontFamily:'inherit'}},'Cancel'),
+        results&&el('button',{onClick:applyAll,disabled:totalApply===0,
+          style:{background:totalApply?'var(--info)':'var(--bg2)',border:'none',borderRadius:7,
+            padding:'8px 16px',color:totalApply?'#fff':'var(--text3)',fontWeight:700,fontSize:12,
+            cursor:totalApply?'pointer':'not-allowed',fontFamily:'inherit'}},
+          totalApply?('Import '+totalApply+' SKU'+(totalApply===1?'':'s')):'Nothing selected')
       )
     )
   );
 }
-
 
 /* ── Add SKU Modal ── */
 // Static SKU code lookup for known products (fallback when saved data lacks skuCode)
@@ -8996,6 +9241,7 @@ function App(){
             ? el(PCOverview,{
                 prods,
                 pcLabel:data.pcTabs?.find(t=>t.id===view)?.label||(view==='in_dev'?'In Development':''),
+                pcKey:view,
                 onSelect:id=>{setSelId(id);setProdView('detail');},
                 onUpdateProd:(pcKey,id,upd)=>updProd(pcKey,id,upd)
               })
