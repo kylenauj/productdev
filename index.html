@@ -7578,173 +7578,223 @@ function Launch30Snapshot({current,launchDate}){
 
 
 
-/* ── Top Stores by SKU + Store Leaderboard ── */
+
+/* ── Top Stores — banner vs specific location ──
+   OCS reports a retail *banner* ("Discounted Cannabis") in the store column.
+   A banner runs many physical locations, so the real store identity is
+   banner × city. cityStores gives us exactly that.                        */
 function TopStoresBySku({salesData, hidden, sel, onSelect}){
-  const [mode,setMode]=React.useState('sku');   // 'sku' | 'board'
+  const [mode,setMode]=React.useState('loc');   // 'loc' | 'ret' | 'sku'
   const [topN,setTopN]=React.useState(3);
 
   const prods=Object.entries(salesData||{})
     .filter(([n])=>!(hidden||[]).includes(n))
-    .filter(([,d])=>d && d.stores && Object.keys(d.stores).length);
-
+    .filter(([,d])=>d&&((d.cityStores&&Object.keys(d.cityStores).length)||(d.stores&&Object.keys(d.stores).length)));
   if(!prods.length) return null;
 
-  /* Aggregate every store across every SKU */
-  const agg={};
+  /* Walk every SKU → city → banner, building both levels at once */
+  const loc={}, ret={};
+  let missingGeo=0;
   prods.forEach(([name,d])=>{
-    const sc=d.storeCity||{};
-    Object.entries(d.stores||{}).forEach(([store,u])=>{
-      if(!agg[store]) agg[store]={units:0,skus:{},city:sc[store]||''};
-      agg[store].units+=u;
-      agg[store].skus[name]=(agg[store].skus[name]||0)+u;
-      if(!agg[store].city && sc[store]) agg[store].city=sc[store];
-    });
+    const cs=d.cityStores;
+    if(cs&&Object.keys(cs).length){
+      Object.entries(cs).forEach(([city,banners])=>{
+        Object.entries(banners).forEach(([banner,u])=>{
+          const key=banner+'\u0000'+city;
+          if(!loc[key]) loc[key]={banner,city,units:0,skus:{}};
+          loc[key].units+=u; loc[key].skus[name]=(loc[key].skus[name]||0)+u;
+          if(!ret[banner]) ret[banner]={units:0,cities:{},skus:{}};
+          ret[banner].units+=u;
+          ret[banner].cities[city]=(ret[banner].cities[city]||0)+u;
+          ret[banner].skus[name]=(ret[banner].skus[name]||0)+u;
+        });
+      });
+    } else {
+      missingGeo++;
+      Object.entries(d.stores||{}).forEach(([banner,u])=>{
+        if(!ret[banner]) ret[banner]={units:0,cities:{},skus:{}};
+        ret[banner].units+=u; ret[banner].skus[name]=(ret[banner].skus[name]||0)+u;
+      });
+    }
   });
-  const board=Object.entries(agg).sort(([,a],[,b])=>b.units-a.units);
-  const boardMax=board[0]?.[1]?.units||1;
-  const champ=board[0];
 
-  const RANK_COL=['#e0a437','#a8b0bd','#c07a4a'];
+  const locList=Object.values(loc).sort((a,b)=>b.units-a.units);
+  const retList=Object.entries(ret).sort(([,a],[,b])=>b.units-a.units);
+  const locMax=locList[0]?.units||1, retMax=retList[0]?.[1].units||1;
+  const champ=locList[0];
+  const skuCount=prods.length;
+
+  const RANK=['#e0a437','#a8b0bd','#c07a4a'];
   const hdr={padding:'7px 10px',textAlign:'left',fontSize:10,fontWeight:600,color:'var(--text3)',
     background:'var(--bg2)',borderBottom:'0.5px solid var(--bdr)',whiteSpace:'nowrap'};
   const cell={padding:'8px 10px',borderBottom:'0.5px solid var(--bdr)',fontSize:11.5};
-
-  const pill=(active,label,onClick)=>el('button',{key:label,onClick,style:{
-    background:active?'var(--info)':'transparent',
-    color:active?'#fff':'var(--text3)',
-    border:'0.5px solid '+(active?'var(--info)':'var(--bdr)'),
-    borderRadius:6,padding:'3px 10px',fontSize:10,fontWeight:600,
-    cursor:'pointer',fontFamily:'inherit'
-  }},label);
+  const mono={fontFamily:'var(--font-mono)'};
+  const pill=(on,label,fn)=>el('button',{key:label,onClick:fn,style:{
+    background:on?'var(--info)':'transparent',color:on?'#fff':'var(--text3)',
+    border:'0.5px solid '+(on?'var(--info)':'var(--bdr)'),borderRadius:6,
+    padding:'3px 10px',fontSize:10,fontWeight:600,cursor:'pointer',fontFamily:'inherit'}},label);
+  const bar=(pct,col)=>el('div',{style:{height:5,background:'var(--bdr)',borderRadius:99,overflow:'hidden'}},
+    el('div',{style:{height:'100%',width:pct+'%',background:col,borderRadius:99}}));
+  const topOf=obj=>Object.entries(obj||{}).sort(([,a],[,b])=>b-a)[0];
 
   return el('div',{style:{background:'var(--bg)',border:'0.5px solid var(--bdr)',
     borderRadius:10,padding:'16px',marginTop:16}},
 
-    /* Header */
-    el('div',{style:{display:'flex',alignItems:'center',gap:10,marginBottom:14,flexWrap:'wrap'}},
+    el('div',{style:{display:'flex',alignItems:'center',gap:10,marginBottom:6,flexWrap:'wrap'}},
       el('div',{style:{fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:'.1em',
-        color:'var(--muted)',fontFamily:'var(--font-mono)',display:'flex',alignItems:'center',gap:6}},
-        el('i',{className:'ti ti-trophy',style:{fontSize:13,color:'#e0a437'}}),
-        'Top Stores'
-      ),
+        color:'var(--muted)',...mono,display:'flex',alignItems:'center',gap:6}},
+        el('i',{className:'ti ti-trophy',style:{fontSize:13,color:'#e0a437'}}),'Top Stores'),
       el('div',{style:{display:'flex',gap:5,marginLeft:'auto'}},
-        pill(mode==='sku','By SKU',()=>setMode('sku')),
-        pill(mode==='board','Leaderboard',()=>setMode('board'))
+        pill(mode==='loc','Locations',()=>setMode('loc')),
+        pill(mode==='ret','Retailers',()=>setMode('ret')),
+        pill(mode==='sku','By SKU',()=>setMode('sku'))
       ),
       mode==='sku'&&el('div',{style:{display:'flex',gap:5}},
-        [1,3,5].map(n=>pill(topN===n,'Top '+n,()=>setTopN(n)))
-      )
+        [1,3,5].map(n=>pill(topN===n,'Top '+n,()=>setTopN(n))))
     ),
+    el('div',{style:{fontSize:10,color:'var(--text3)',marginBottom:12}},
+      mode==='loc'?'Individual storefronts — a retail banner counted separately in each city it operates in.'
+      :mode==='ret'?'Retail banners rolled up across all their locations.'
+      :'Each SKU with the specific storefronts selling the most of it.'),
 
-    /* Champion banner */
+    missingGeo>0&&el('div',{style:{fontSize:10,color:'var(--warn)',marginBottom:10,
+      padding:'7px 10px',borderRadius:6,background:'var(--bg2)',border:'0.5px solid var(--bdr)'}},
+      el('i',{className:'ti ti-alert-triangle',style:{marginRight:5}}),
+      missingGeo+' of '+skuCount+' SKUs have no city detail — re-import those sales files to split banners into locations.'),
+
+    /* Champion */
     champ&&el('div',{style:{display:'flex',alignItems:'center',gap:12,marginBottom:14,
       padding:'11px 14px',borderRadius:8,background:'var(--bg2)',
       border:'0.5px solid rgba(224,164,55,.4)',flexWrap:'wrap'}},
       el('i',{className:'ti ti-award',style:{fontSize:20,color:'#e0a437'}}),
       el('div',{style:{minWidth:0,flex:1}},
         el('div',{style:{fontSize:9,color:'var(--text3)',textTransform:'uppercase',
-          letterSpacing:'.08em',fontFamily:'var(--font-mono)',marginBottom:2}},'#1 store overall'),
-        el('div',{style:{fontSize:14,fontWeight:800,color:'var(--text)'}},champ[0]),
-        champ[1].city&&el('div',{style:{fontSize:10,color:'var(--text3)'}},champ[1].city)
+          letterSpacing:'.08em',...mono,marginBottom:2}},'#1 storefront'),
+        el('div',{style:{fontSize:14,fontWeight:800,color:'var(--text)'}},champ.banner),
+        el('div',{style:{fontSize:10,color:'var(--text3)'}},champ.city)
       ),
       el('div',{style:{textAlign:'right'}},
-        el('div',{style:{fontSize:18,fontWeight:900,color:'#e0a437',lineHeight:1}},
-          champ[1].units.toLocaleString()),
+        el('div',{style:{fontSize:18,fontWeight:900,color:'#e0a437',lineHeight:1}},champ.units.toLocaleString()),
         el('div',{style:{fontSize:9,color:'var(--text3)'}},
-          'units · '+Object.keys(champ[1].skus).length+' SKUs')
+          'units · '+Object.keys(champ.skus).length+' of '+skuCount+' SKUs')
       )
     ),
 
-    /* ── Mode: per-SKU top stores ── */
-    mode==='sku'&&el('div',{style:{display:'grid',
-      gridTemplateColumns:'repeat(auto-fit,minmax(300px,1fr))',gap:12}},
-      prods.map(([name,d])=>{
-        const sc=d.storeCity||{};
-        const list=Object.entries(d.stores||{}).sort(([,a],[,b])=>b-a).slice(0,topN);
-        const total=Object.values(d.stores||{}).reduce((s,v)=>s+v,0)||1;
-        const isSel=name===sel;
-        return el('div',{key:name,style:{
-          background:'var(--bg2)',borderRadius:8,padding:'11px 13px',
-          border:'0.5px solid '+(isSel?'var(--info)':'var(--bdr)')
-        }},
-          el('div',{onClick:()=>onSelect&&onSelect(name),style:{cursor:'pointer',marginBottom:9}},
-            el('div',{style:{fontSize:9,color:'var(--text3)',fontFamily:'var(--font-mono)',
-              textTransform:'uppercase',letterSpacing:'.07em'}},d.brand||'—'),
-            el('div',{style:{fontSize:12.5,fontWeight:700,color:isSel?'var(--info)':'var(--text)',
-              lineHeight:1.3}},name),
-            el('div',{style:{fontSize:9.5,color:'var(--text3)',marginTop:2}},
-              total.toLocaleString()+' units · '+Object.keys(d.stores||{}).length+' stores')
-          ),
-          list.map(([store,u],i)=>el('div',{key:store,style:{marginBottom:7}},
-            el('div',{style:{display:'flex',alignItems:'baseline',gap:7}},
-              el('span',{style:{fontSize:10,fontWeight:900,color:RANK_COL[i]||'var(--text3)',
-                width:14,flexShrink:0,fontFamily:'var(--font-mono)'}},'#'+(i+1)),
-              el('span',{style:{fontSize:11,color:'var(--text2)',flex:1,minWidth:0,
-                overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},store),
-              el('span',{style:{fontSize:11,fontWeight:700,color:'var(--text)',
-                fontFamily:'var(--font-mono)'}},u.toLocaleString())
-            ),
-            el('div',{style:{display:'flex',alignItems:'center',gap:6,paddingLeft:21,marginTop:2}},
-              el('span',{style:{fontSize:9,color:'var(--text3)',flexShrink:0,minWidth:70}},
-                sc[store]||'—'),
-              el('div',{style:{flex:1,height:3,background:'var(--bdr)',borderRadius:99,overflow:'hidden'}},
-                el('div',{style:{height:'100%',width:Math.round(u/total*100)+'%',
-                  background:RANK_COL[i]||'var(--info)',borderRadius:99}})
-              ),
-              el('span',{style:{fontSize:9,color:'var(--text3)',flexShrink:0,
-                fontFamily:'var(--font-mono)'}},Math.round(u/total*100)+'%')
-            )
-          ))
-        );
-      })
-    ),
-
-    /* ── Mode: store leaderboard across all SKUs ── */
-    mode==='board'&&el('div',{style:{overflowX:'auto'}},
+    /* ── Specific storefronts ── */
+    mode==='loc'&&el('div',{style:{overflowX:'auto'}},
       el('table',{style:{width:'100%',borderCollapse:'collapse'}},
         el('thead',null,el('tr',null,
           el('th',{style:{...hdr,width:34,textAlign:'center'}},'#'),
-          el('th',{style:hdr},'Store'),
+          el('th',{style:hdr},'Storefront'),
           el('th',{style:hdr},'City'),
           el('th',{style:{...hdr,textAlign:'right'}},'Units'),
           el('th',{style:{...hdr,textAlign:'center'}},'SKUs'),
           el('th',{style:hdr},'Best seller'),
-          el('th',{style:{...hdr,minWidth:90}},'Share')
+          el('th',{style:{...hdr,minWidth:90}},'vs #1')
         )),
-        el('tbody',null,
-          board.slice(0,25).map(([store,info],i)=>{
-            const best=Object.entries(info.skus).sort(([,a],[,b])=>b-a)[0];
-            return el('tr',{key:store,style:{background:i<3?'rgba(224,164,55,.06)':'transparent'}},
-              el('td',{style:{...cell,textAlign:'center',fontWeight:900,
-                color:RANK_COL[i]||'var(--text3)',fontFamily:'var(--font-mono)'}},i+1),
-              el('td',{style:{...cell,fontWeight:i<3?700:400,color:'var(--text)'}},store),
-              el('td',{style:{...cell,color:'var(--text3)'}},info.city||'—'),
-              el('td',{style:{...cell,textAlign:'right',fontWeight:700,
-                fontFamily:'var(--font-mono)'}},info.units.toLocaleString()),
-              el('td',{style:{...cell,textAlign:'center',color:'var(--info)',
-                fontWeight:700}},Object.keys(info.skus).length),
-              el('td',{style:{...cell,color:'var(--text2)',maxWidth:210,overflow:'hidden',
-                textOverflow:'ellipsis',whiteSpace:'nowrap'}},
-                el('span',{onClick:()=>onSelect&&onSelect(best[0]),
-                  style:{cursor:'pointer',borderBottom:'1px dotted var(--bdr)'}},
-                  best?best[0]:'—')
-              ),
-              el('td',{style:cell},
-                el('div',{style:{height:5,background:'var(--bdr)',borderRadius:99,overflow:'hidden'}},
-                  el('div',{style:{height:'100%',width:Math.round(info.units/boardMax*100)+'%',
-                    background:RANK_COL[i]||'var(--info)',borderRadius:99}})
-                )
-              )
-            );
-          })
-        )
+        el('tbody',null, locList.slice(0,30).map((L,i)=>{
+          const best=topOf(L.skus);
+          return el('tr',{key:L.banner+L.city,style:{background:i<3?'rgba(224,164,55,.06)':'transparent'}},
+            el('td',{style:{...cell,textAlign:'center',fontWeight:900,color:RANK[i]||'var(--text3)',...mono}},i+1),
+            el('td',{style:{...cell,fontWeight:i<3?700:400,color:'var(--text)'}},L.banner),
+            el('td',{style:{...cell,color:'var(--text2)'}},L.city),
+            el('td',{style:{...cell,textAlign:'right',fontWeight:700,...mono}},L.units.toLocaleString()),
+            el('td',{style:{...cell,textAlign:'center',color:'var(--info)',fontWeight:700}},
+              Object.keys(L.skus).length+' / '+skuCount),
+            el('td',{style:{...cell,color:'var(--text2)',maxWidth:200,overflow:'hidden',
+              textOverflow:'ellipsis',whiteSpace:'nowrap'}},
+              best&&el('span',{onClick:()=>onSelect&&onSelect(best[0]),
+                style:{cursor:'pointer',borderBottom:'1px dotted var(--bdr)'}},best[0])),
+            el('td',{style:cell},bar(Math.round(L.units/locMax*100),RANK[i]||'var(--info)'))
+          );
+        }))
       ),
-      board.length>25&&el('div',{style:{fontSize:10,color:'var(--text3)',marginTop:8,textAlign:'center'}},
-        '+'+(board.length-25)+' more stores')
+      locList.length>30&&el('div',{style:{fontSize:10,color:'var(--text3)',marginTop:8,textAlign:'center'}},
+        '+'+(locList.length-30)+' more storefronts')
+    ),
+
+    /* ── Banners rolled up ── */
+    mode==='ret'&&el('div',{style:{overflowX:'auto'}},
+      el('table',{style:{width:'100%',borderCollapse:'collapse'}},
+        el('thead',null,el('tr',null,
+          el('th',{style:{...hdr,width:34,textAlign:'center'}},'#'),
+          el('th',{style:hdr},'Retail banner'),
+          el('th',{style:{...hdr,textAlign:'center'}},'Locations'),
+          el('th',{style:{...hdr,textAlign:'right'}},'Units'),
+          el('th',{style:{...hdr,textAlign:'right'}},'Avg / loc'),
+          el('th',{style:hdr},'Strongest city'),
+          el('th',{style:hdr},'Best seller'),
+          el('th',{style:{...hdr,minWidth:90}},'vs #1')
+        )),
+        el('tbody',null, retList.slice(0,30).map(([banner,R],i)=>{
+          const nLoc=Object.keys(R.cities).length;
+          const bestCity=topOf(R.cities), best=topOf(R.skus);
+          return el('tr',{key:banner,style:{background:i<3?'rgba(224,164,55,.06)':'transparent'}},
+            el('td',{style:{...cell,textAlign:'center',fontWeight:900,color:RANK[i]||'var(--text3)',...mono}},i+1),
+            el('td',{style:{...cell,fontWeight:i<3?700:400,color:'var(--text)'}},banner),
+            el('td',{style:{...cell,textAlign:'center',color:'var(--text2)',...mono}},nLoc||'—'),
+            el('td',{style:{...cell,textAlign:'right',fontWeight:700,...mono}},R.units.toLocaleString()),
+            el('td',{style:{...cell,textAlign:'right',color:'var(--text3)',...mono}},
+              nLoc?Math.round(R.units/nLoc).toLocaleString():'—'),
+            el('td',{style:{...cell,color:'var(--text2)'}},
+              bestCity?bestCity[0]+' ('+bestCity[1].toLocaleString()+')':'—'),
+            el('td',{style:{...cell,color:'var(--text2)',maxWidth:190,overflow:'hidden',
+              textOverflow:'ellipsis',whiteSpace:'nowrap'}},
+              best&&el('span',{onClick:()=>onSelect&&onSelect(best[0]),
+                style:{cursor:'pointer',borderBottom:'1px dotted var(--bdr)'}},best[0])),
+            el('td',{style:cell},bar(Math.round(R.units/retMax*100),RANK[i]||'var(--info)'))
+          );
+        }))
+      ),
+      retList.length>30&&el('div',{style:{fontSize:10,color:'var(--text3)',marginTop:8,textAlign:'center'}},
+        '+'+(retList.length-30)+' more banners')
+    ),
+
+    /* ── Per SKU, its strongest storefronts ── */
+    mode==='sku'&&el('div',{style:{display:'grid',
+      gridTemplateColumns:'repeat(auto-fit,minmax(310px,1fr))',gap:12}},
+      prods.map(([name,d])=>{
+        const rows=[];
+        const cs=d.cityStores;
+        if(cs&&Object.keys(cs).length){
+          Object.entries(cs).forEach(([city,banners])=>
+            Object.entries(banners).forEach(([banner,u])=>rows.push({banner,city,u})));
+        } else {
+          Object.entries(d.stores||{}).forEach(([banner,u])=>rows.push({banner,city:'',u}));
+        }
+        rows.sort((a,b)=>b.u-a.u);
+        const total=rows.reduce((s,r)=>s+r.u,0)||1;
+        const isSel=name===sel;
+        return el('div',{key:name,style:{background:'var(--bg2)',borderRadius:8,padding:'11px 13px',
+          border:'0.5px solid '+(isSel?'var(--info)':'var(--bdr)')}},
+          el('div',{onClick:()=>onSelect&&onSelect(name),style:{cursor:'pointer',marginBottom:9}},
+            el('div',{style:{fontSize:9,color:'var(--text3)',...mono,textTransform:'uppercase',
+              letterSpacing:'.07em'}},d.brand||'—'),
+            el('div',{style:{fontSize:12.5,fontWeight:700,color:isSel?'var(--info)':'var(--text)',
+              lineHeight:1.3}},name),
+            el('div',{style:{fontSize:9.5,color:'var(--text3)',marginTop:2}},
+              total.toLocaleString()+' units · '+rows.length+' storefront'+(rows.length===1?'':'s'))
+          ),
+          rows.slice(0,topN).map((r,i)=>el('div',{key:r.banner+r.city+i,style:{marginBottom:7}},
+            el('div',{style:{display:'flex',alignItems:'baseline',gap:7}},
+              el('span',{style:{fontSize:10,fontWeight:900,color:RANK[i]||'var(--text3)',
+                width:14,flexShrink:0,...mono}},'#'+(i+1)),
+              el('span',{style:{fontSize:11,color:'var(--text2)',flex:1,minWidth:0,
+                overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},r.banner),
+              el('span',{style:{fontSize:11,fontWeight:700,color:'var(--text)',...mono}},r.u.toLocaleString())
+            ),
+            el('div',{style:{display:'flex',alignItems:'center',gap:6,paddingLeft:21,marginTop:2}},
+              el('span',{style:{fontSize:9,color:'var(--text3)',flexShrink:0,minWidth:74}},r.city||'—'),
+              el('div',{style:{flex:1}},bar(Math.round(r.u/total*100),RANK[i]||'var(--info)')),
+              el('span',{style:{fontSize:9,color:'var(--text3)',flexShrink:0,...mono}},
+                Math.round(r.u/total*100)+'%')
+            )
+          ))
+        );
+      })
     )
   );
 }
-
 function PostLaunchView({data,setData,addChangelogEntry}){
   // data = main dashboard data — post launch lives in data.postLaunch
   // Merge: default SALES_DATA first, then override with any saved data
