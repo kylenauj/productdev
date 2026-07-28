@@ -219,7 +219,7 @@
 /* Card elevation */
 .shell,[style*="background:var(--bg)"],[style*="background: var(--bg)"]{box-shadow:var(--shadow-card)}
 [data-theme="dark"] [style*="background:var(--bg)"]{ box-shadow:var(--shadow-card); }
-*
+
 
 /* ── Base ── */
 *{color-scheme:light}
@@ -8197,6 +8197,7 @@ function PostLaunchView({data,setData,addChangelogEntry}){
     return Object.keys(src)[0]||'';
   });
   const [activePC,setActivePC]=React.useState('pc1');
+  const [plTab,setPlTab]=React.useState('overview');
   const [hoverWk,setHoverWk]=React.useState(null);
   const [showAddSKU,setShowAddSKU]=React.useState(false);
   const [showUpdateSKU,setShowUpdateSKU]=React.useState(false);
@@ -8530,6 +8531,34 @@ function PostLaunchView({data,setData,addChangelogEntry}){
           display:'flex',alignItems:'center',gap:6
         }},el('i',{className:'ti ti-printer',style:{fontSize:13}}),' Print / PDF')
       ),
+      /* ── Section tabs ── */
+      el('div',{style:{display:'flex',gap:4,marginBottom:16,padding:'4px',
+        background:'var(--bg2)',borderRadius:10,border:'0.5px solid var(--bdr)',
+        width:'fit-content',flexWrap:'wrap'}},
+        [{id:'overview',label:'Overview',icon:'ti-layout-dashboard'},
+         {id:'trends',label:'Trends',icon:'ti-chart-line'},
+         {id:'stores',label:'Stores',icon:'ti-building-store'},
+         {id:'geo',label:'Geography',icon:'ti-map-2'}].map(t=>el('button',{key:t.id,onClick:()=>setPlTab(t.id),style:{
+          display:'flex',alignItems:'center',gap:6,padding:'7px 15px',borderRadius:7,
+          border:'none',cursor:'pointer',fontFamily:'inherit',fontSize:12.5,
+          fontWeight:plTab===t.id?700:400,
+          background:plTab===t.id?'var(--info)':'transparent',
+          color:plTab===t.id?'#fff':'var(--text2)',transition:'all .12s'
+        }},el('i',{className:'ti '+t.icon,style:{fontSize:14}}),t.label))
+      ),
+      plTab==='overview'&&el(React.Fragment,null,
+      el('div',{style:{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:10,marginBottom:16}},
+        [{l:'Total Units Sold',v:current.units.toLocaleString(),s:'all orders',c:'var(--ok)',g:'var(--grad-ok)'},
+         {l:'Stores Reached',v:current.storeCount,s:'retail locations',c:'var(--info)',g:'var(--grad-info)'},
+         {l:'Total Orders',v:current.orders,s:'from OCS',c:'var(--warn)',g:'var(--grad-warn)'},
+         {l:'Avg Units / Order',v:Math.round(current.units/current.orders),s:'per order',c:'var(--text)',g:'var(--grad-accent)'},
+        ].map((m2,i)=>el('div',{key:i,style:{background:'var(--bg)',border:'0.5px solid var(--bdr)',borderRadius:'var(--r)',padding:'14px 16px',position:'relative',overflow:'hidden'}},
+          el('div',{style:{position:'absolute',left:0,top:0,right:0,height:3,background:m2.g}}),
+          el('div',{style:{fontSize:11,color:'var(--text2)',marginBottom:6,fontWeight:500}},m2.l),
+          el('div',{style:{fontSize:26,fontWeight:700,fontFamily:'var(--font-mono)',color:m2.c,lineHeight:1}},m2.v),
+          el('div',{style:{fontSize:10,color:'var(--text3)',marginTop:4}},m2.s)
+        ))
+      ),
       (()=>{
         const sw=Object.entries(current.weekly||{}).sort(([a],[b])=>a.localeCompare(b));
         const lw=sw.length>=1?sw[sw.length-1][1]:0;
@@ -8556,28 +8585,10 @@ function PostLaunchView({data,setData,addChangelogEntry}){
           )
         ):null;
       })(),
-      el(Launch30Snapshot,{current,launchDate:effectiveLaunchDate}),
-      el(DailyLineChart,{daily:current.daily,brand:current.brand,skuClass:current.ocs?.skuClass,launchDate:effectiveLaunchDate,globalMax:globalDailyMax}),
-      el(VelocityCard,{ocs:current.ocs,weekly:current.weekly}),
-      el(StoreDistributionCard,{
-        storeMetrics:current.storeMetrics,
-        storeCity:current.storeCity,
-        vel:(()=>{const s=Object.entries(current.weekly).sort(([a],[b])=>a.localeCompare(b));return s.length>=1?s[s.length-1][1]/ONTARIO_STORES:0;})(),
-        prevVel:(()=>{const s=Object.entries(current.weekly).sort(([a],[b])=>a.localeCompare(b));return s.length>=2?s[s.length-2][1]/ONTARIO_STORES:null;})(),
-        clsCol:'var(--info)'
-      }),
-      el('div',{style:{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:10,marginBottom:16}},
-        [{l:'Total Units Sold',v:current.units.toLocaleString(),s:'all orders',c:'var(--ok)',g:'var(--grad-ok)'},
-         {l:'Stores Reached',v:current.storeCount,s:'retail locations',c:'var(--info)',g:'var(--grad-info)'},
-         {l:'Total Orders',v:current.orders,s:'from OCS',c:'var(--warn)',g:'var(--grad-warn)'},
-         {l:'Avg Units / Order',v:Math.round(current.units/current.orders),s:'per order',c:'var(--text)',g:'var(--grad-accent)'},
-        ].map((m2,i)=>el('div',{key:i,style:{background:'var(--bg)',border:'0.5px solid var(--bdr)',borderRadius:'var(--r)',padding:'14px 16px',position:'relative',overflow:'hidden'}},
-          el('div',{style:{position:'absolute',left:0,top:0,right:0,height:3,background:m2.g}}),
-          el('div',{style:{fontSize:11,color:'var(--text2)',marginBottom:6,fontWeight:500}},m2.l),
-          el('div',{style:{fontSize:26,fontWeight:700,fontFamily:'var(--font-mono)',color:m2.c,lineHeight:1}},m2.v),
-          el('div',{style:{fontSize:10,color:'var(--text3)',marginTop:4}},m2.s)
-        ))
+      el(Launch30Snapshot,{current,launchDate:effectiveLaunchDate})
       ),
+      plTab==='trends'&&el(React.Fragment,null,
+      el(DailyLineChart,{daily:current.daily,brand:current.brand,skuClass:current.ocs?.skuClass,launchDate:effectiveLaunchDate,globalMax:globalDailyMax}),
       el('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16,marginBottom:16}},
         el('div',{style:{background:'var(--bg)',border:'0.5px solid var(--bdr)',borderRadius:10,padding:'16px'}},
           el(WeeklyChart,{weekly:current.weekly,monthly:current.monthly})
@@ -8589,6 +8600,19 @@ function PostLaunchView({data,setData,addChangelogEntry}){
           el(RegionBar,{regions:current.regions})
         )
       ),
+      el(VelocityCard,{ocs:current.ocs,weekly:current.weekly})
+      ),
+      plTab==='stores'&&el(React.Fragment,null,
+      el(StoreDistributionCard,{
+        storeMetrics:current.storeMetrics,
+        storeCity:current.storeCity,
+        vel:(()=>{const s=Object.entries(current.weekly).sort(([a],[b])=>a.localeCompare(b));return s.length>=1?s[s.length-1][1]/ONTARIO_STORES:0;})(),
+        prevVel:(()=>{const s=Object.entries(current.weekly).sort(([a],[b])=>a.localeCompare(b));return s.length>=2?s[s.length-2][1]/ONTARIO_STORES:null;})(),
+        clsCol:'var(--info)'
+      }),
+      el(TopStoresBySku,{salesData, hidden, sel, onSelect:setSel})
+      ),
+      plTab==='geo'&&el(React.Fragment,null,
       el('div',{style:{display:'grid',gridTemplateColumns:'1.4fr 1fr',gap:16}},
         el('div',{style:{background:'var(--bg)',border:'1px solid var(--bdr)',borderRadius:'var(--r)',padding:'14px',display:'flex',flexDirection:'column'}},
           el('div',{style:{fontSize:11,fontWeight:700,textTransform:'uppercase',letterSpacing:'.07em',color:'var(--text2)',marginBottom:10,display:'flex',alignItems:'center',gap:6}},
@@ -8603,8 +8627,8 @@ function PostLaunchView({data,setData,addChangelogEntry}){
           el('div',{style:{borderTop:'0.5px solid var(--bdr)',marginTop:16,paddingTop:16}}),
           el(TopCities,{cities:current.cities})
         )
-      ),
-      el(TopStoresBySku,{salesData, hidden, sel, onSelect:setSel})
+      )
+      )
     )
   );
 }
