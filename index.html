@@ -4098,7 +4098,8 @@ function DailyLineChart({daily,brand,skuClass,launchDate,showCumulative=true,glo
 
 
 /* ── Store Distribution Card ── */
-function StoreDistributionCard({storeMetrics,vel,prevVel,clsCol}){
+function StoreDistributionCard({storeMetrics,vel,prevVel,clsCol,storeCity}){
+  const [hoverWk,setHoverWk]=React.useState(null);
   if(!storeMetrics)return null;
   const wkEntries=Object.entries(storeMetrics.weekMetrics).sort(([a],[b])=>a.localeCompare(b));
   const lw=wkEntries[wkEntries.length-1]?.[1]||{};
@@ -4175,11 +4176,19 @@ function StoreDistributionCard({storeMetrics,vel,prevVel,clsCol}){
           el('tbody',null,
             wkEntries.map(([wk,m],i)=>{
               const isLw=i===wkEntries.length-1;
+              const isHov=hoverWk===wk;
               const rrPct=m.prevActive>0?Math.round(m.repeat/m.prevActive*100):null;
               const rrCol=rrPct==null?'var(--text3)':rrPct>=50?'var(--ok)':rrPct>=25?'var(--warn)':'var(--err)';
               const maxA=Math.max(...wkEntries.map(([,x])=>x.active),1);
               const barW=Math.round(m.active/maxA*100);
-              return el('tr',{key:wk,style:{background:isLw?'rgba(91,155,213,0.06)':'transparent'}},
+              return el('tr',{key:wk,
+                onMouseEnter:()=>setHoverWk(wk),
+                onMouseLeave:()=>setHoverWk(null),
+                style:{
+                  background:isHov?'rgba(91,155,213,0.14)':isLw?'rgba(91,155,213,0.06)':'transparent',
+                  cursor:(m.newList||m.repeatList)?'help':'default',
+                  transition:'background 120ms'
+                }},
                 /* Week */
                 el('td',{style:{padding:'9px 12px',borderBottom:'0.5px solid var(--bdr)',whiteSpace:'nowrap'}},
                   el('span',{style:{fontSize:12,fontWeight:isLw?700:400,color:isLw?'var(--info)':'var(--text2)'}},fmtWeek(wk)),
@@ -4219,6 +4228,57 @@ function StoreDistributionCard({storeMetrics,vel,prevVel,clsCol}){
           )
         )
       ),
+      /* Hovered week — store detail by city */
+      (()=>{
+        if(!hoverWk) return null;
+        const m=(storeMetrics.weekMetrics||{})[hoverWk];
+        if(!m) return null;
+        const sc=storeCity||{};
+        const byCity=(list)=>{
+          const g={};
+          (list||[]).forEach(s=>{ const c=sc[s]||'Unknown'; (g[c]=g[c]||[]).push(s); });
+          return Object.entries(g).sort((a,b)=>b[1].length-a[1].length);
+        };
+        const groups=[
+          {key:'repeatList', label:'Repeat purchases', col:'var(--info)', hint:'reordered from the previous week'},
+          {key:'newList',    label:'New stores',       col:'var(--ok)',   hint:'first-ever order'},
+          {key:'lapsedList', label:'Lapsed',           col:'var(--err)',  hint:'active last week, not this week'},
+        ].filter(g=>(m[g.key]||[]).length);
+        if(!groups.length) return el('div',{style:{
+          marginTop:12,padding:'10px 14px',borderRadius:8,fontSize:11,
+          background:'var(--bg2)',border:'0.5px solid var(--bdr)',color:'var(--text3)'
+        }},'No store-level detail for '+fmtWeek(hoverWk)+' — re-import the sales file to capture it.');
+        return el('div',{style:{
+          marginTop:12,padding:'12px 14px',borderRadius:10,
+          background:'var(--bg2)',border:'0.5px solid var(--info)'
+        }},
+          el('div',{style:{fontSize:11,fontWeight:700,color:'var(--info)',marginBottom:10,
+            display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}},
+            el('i',{className:'ti ti-building-store',style:{fontSize:13}}),
+            'Week of '+fmtWeek(hoverWk),
+            el('span',{style:{fontWeight:400,color:'var(--text3)'}},
+              m.active+' active · '+m.new+' new · '+m.repeat+' repeat')
+          ),
+          el('div',{style:{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(230px,1fr))',gap:14}},
+            groups.map(g=>el('div',{key:g.key},
+              el('div',{style:{fontSize:10,fontWeight:700,color:g.col,marginBottom:2}},
+                g.label+' ('+(m[g.key]||[]).length+')'),
+              el('div',{style:{fontSize:9,color:'var(--text3)',marginBottom:6}},g.hint),
+              byCity(m[g.key]).map(([city,list])=>el('div',{key:city,style:{marginBottom:7}},
+                el('div',{style:{fontSize:10,fontWeight:700,color:'var(--text2)',
+                  display:'flex',justifyContent:'space-between',gap:8}},
+                  el('span',null,city),
+                  el('span',{style:{color:g.col,fontWeight:700}},list.length)
+                ),
+                el('div',{style:{fontSize:10,color:'var(--text3)',lineHeight:1.5,paddingLeft:8,
+                  borderLeft:'2px solid '+g.col, marginTop:2}},
+                  list.slice(0,8).join(' · ')+(list.length>8?' · +'+(list.length-8)+' more':'')
+                )
+              ))
+            ))
+          )
+        );
+      })(),
       /* Legend */
       el('div',{style:{display:'flex',gap:20,marginTop:12,flexWrap:'wrap'}},
         [['var(--ok)','New — first-ever order from that store'],
@@ -4663,7 +4723,7 @@ function parseExcelSalesData(buffer, existingProdName){
     throw new Error('No rows for "'+targetName+'". Products in file: '+productNames.join(', '));
 
   // ── Aggregate ──
-  const cities={}, stores={}, regions={}, weeks={}, months={}, daily={}, storeWeeks={}, storeRegions={}, cityStores={};
+  const cities={}, stores={}, regions={}, weeks={}, months={}, daily={}, storeWeeks={}, storeRegions={}, cityStores={}, storeCity={};
   let totalUnits=0, totalOrders=0, brand='';
 
   dataRows.forEach(row=>{
@@ -4687,6 +4747,7 @@ function parseExcelSalesData(buffer, existingProdName){
     stores[store] = (stores[store] ||0)+units;
     if(!cityStores[city]) cityStores[city]={};
     cityStores[city][store] = (cityStores[city][store]||0)+units;
+    if(!storeCity[store]) storeCity[store]=city;
     if(reg) regions[reg]=(regions[reg]||0)+units;
     if(reg&&!storeRegions[store]) storeRegions[store]=reg;
     totalUnits+=units;
@@ -4741,7 +4802,11 @@ function parseExcelSalesData(buffer, existingProdName){
     );
     const newS=new Set([...active].filter(s=>storeFirst[s]===wk));
     const repeat=new Set([...active].filter(s=>prev.has(s)));
-    weekMetrics[wk]={active:active.size,new:newS.size,repeat:repeat.size,prevActive:prev.size};
+    const lapsed=new Set([...prev].filter(s=>!active.has(s)));
+    weekMetrics[wk]={
+      active:active.size, new:newS.size, repeat:repeat.size, prevActive:prev.size,
+      newList:[...newS].sort(), repeatList:[...repeat].sort(), lapsedList:[...lapsed].sort()
+    };
     prev=active;
   });
 
@@ -4761,6 +4826,7 @@ function parseExcelSalesData(buffer, existingProdName){
         c, Object.fromEntries(Object.entries(s).sort(([,a],[,b])=>b-a))
       ])),
         storeRegions,
+      storeCity,
       regions,
       weekly:  Object.fromEntries(Object.entries(weeks).sort()),
       monthly: Object.fromEntries(Object.entries(months).sort()),
@@ -5500,7 +5566,7 @@ function Home3DView({data, setData, setView, setSels, setProdView}){
       x:b.x0+1.4+Math.random()*Math.max(1,(b.x1-b.x0-2.8)),
       y:b.y0+1.4+Math.random()*Math.max(1,(b.y1-b.y0-2.8)),
       z:b.z,
-      rot:(Math.random()-.5)*.14,color:STICKY_COLORS[Math.floor(Math.random()*STICKY_COLORS.length)]};
+      rot:(Math.random()-.5)*.14,s:1,color:STICKY_COLORS[Math.floor(Math.random()*STICKY_COLORS.length)]};
     setData(d=>({...d,home3dStickies:[...(d.home3dStickies||[]),st]}));
     setStickyEdit({...st});
   };
@@ -5771,26 +5837,43 @@ function Home3DView({data, setData, setView, setSels, setProdView}){
       const size=440;
       const c=document.createElement('canvas'); c.width=size; c.height=size;
       const x=c.getContext('2d');
+      const txt=String(st.text||'');
+
+      // Wrap at a given font size
+      const wrapAt=f=>{
+        x.font='700 '+f+'px Syne, sans-serif';
+        const out=[]; let line='';
+        txt.split(/\s+/).filter(Boolean).forEach(w=>{
+          const t=line?line+' '+w:w;
+          if(x.measureText(t).width>size-52){ if(line) out.push(line); line=w; }
+          else line=t;
+        });
+        if(line) out.push(line);
+        return out;
+      };
+      // Largest font that fits the note; long notes step down gracefully
+      let fs=66, lines=wrapAt(fs);
+      while(fs>34 && lines.length*(fs*1.14) > size-104){ fs-=4; lines=wrapAt(fs); }
+      lines=lines.slice(0,12);
+
       x.fillStyle=st.color||'#ffd54a'; x.fillRect(0,0,size,size);
       x.fillStyle='rgba(0,0,0,.09)'; x.fillRect(0,0,size,40);
       x.fillStyle='#3a3220';
-      x.font='700 60px Syne, sans-serif';
+      x.font='700 '+fs+'px Syne, sans-serif';
       x.textAlign='left'; x.textBaseline='top';
-      const words=String(st.text||'').split(/\s+/);
-      const lines=[]; let line='';
-      words.forEach(w=>{
-        const test=line?line+' '+w:w;
-        if(x.measureText(test).width>size-48){lines.push(line);line=w;}
-        else line=test;
-      });
-      if(line) lines.push(line);
-      lines.slice(0,6).forEach((ln,i)=>x.fillText(ln,24,62+i*66));
+      const lh=fs*1.14;
+      const startY=Math.max(58,(size-lines.length*lh)/2);
+      lines.forEach((ln,i)=>x.fillText(ln,26,startY+i*lh));
+
       const tex=new T.CanvasTexture(c); tex.encoding=T.sRGBEncoding;
       const front=new T.MeshStandardMaterial({map:tex,roughness:.85});
       const side=new T.MeshStandardMaterial({color:0xcfae3d,roughness:.85});
       const mesh=new T.Mesh(new T.BoxGeometry(2.5,2.5,.06),[side,side,side,side,front,side]);
       mesh.position.set(st.x??0, st.y??5, st.z??-2.9);
       mesh.rotation.z=st.rot??0;
+      // More text -> physically larger note, so type stays readable
+      const auto=Math.min(1.85, 1 + Math.max(0, lines.length-3)*0.115);
+      mesh.scale.setScalar((st.s??1)*auto);
       mesh.userData={sticky:st,isSticky:true};
       mesh.castShadow=true;
       return mesh;
@@ -6305,11 +6388,17 @@ function Home3DView({data, setData, setView, setSels, setProdView}){
 
     /* ── Sticky notes in scene ── */
     const stickyPickables=[];
+    const stickyMap={};
     (data.home3dStickies||[]).forEach(st=>{
       const sm=stickyMesh(st);
       scene.add(sm);
       stickyPickables.push(sm);
+      stickyMap[st.id]=sm;
     });
+    stateRef.current.liveSticky=(id,patch)=>{
+      const m=stickyMap[id]; if(!m) return;
+      if(patch.s!==undefined) m.scale.setScalar(patch.s*(m.userData.autoScale||1));
+    };
 
     /* ── Controls: orbit + drag icons + drag stickies ── */
     const cs = stateRef.current.cam;
@@ -6382,7 +6471,7 @@ function Home3DView({data, setData, setView, setSels, setProdView}){
         setMouse(e);
         const hits=raycaster.intersectObjects(placeSurfaces);
         if(hits.length){
-          const p=hits[0].point, HALF=1.25;   // grabbed by its top edge
+          const p=hits[0].point, HALF=1.25*(dragSticky.scale.x||1);   // grabbed by its top edge
           if(hits[0].object.userData.isBoard){
             dragSticky.position.set(p.x, p.y-HALF, p.z+.09);
           } else {
@@ -6808,8 +6897,13 @@ function Home3DView({data, setData, setView, setSels, setProdView}){
           border:stickyEdit.color===c?'2px solid #fff':'2px solid transparent'
         }}))
       ),
+      el('div',{style:{fontFamily:'var(--font-mono)',fontSize:9,color:'#7b8393',marginBottom:4}},'Size'),
+      el('input',{type:'range',min:.4,max:2.6,step:.05,value:stickyEdit.s??1,
+        onChange:e=>{const v=+e.target.value;setStickyEdit(s=>({...s,s:v}));stateRef.current.liveSticky?.(stickyEdit.id,{s:v});},
+        onMouseUp:e=>saveSticky(stickyEdit.id,{s:+e.target.value}),
+        style:{width:'100%',marginBottom:12}}),
       el('div',{style:{display:'flex',gap:8}},
-        el('button',{onClick:()=>{saveSticky(stickyEdit.id,{text:stickyEdit.text,color:stickyEdit.color});setStickyEdit(null);},style:{
+        el('button',{onClick:()=>{saveSticky(stickyEdit.id,{text:stickyEdit.text,color:stickyEdit.color,s:stickyEdit.s??1});setStickyEdit(null);},style:{
           flex:1,background:'linear-gradient(135deg,#ffd54a,#e8a622)',border:'none',borderRadius:8,
           padding:'8px',color:'#3a3220',cursor:'pointer',fontSize:12,fontWeight:700,fontFamily:'inherit'
         }},'Save'),
@@ -7483,6 +7577,174 @@ function Launch30Snapshot({current,launchDate}){
 }
 
 
+
+/* ── Top Stores by SKU + Store Leaderboard ── */
+function TopStoresBySku({salesData, hidden, sel, onSelect}){
+  const [mode,setMode]=React.useState('sku');   // 'sku' | 'board'
+  const [topN,setTopN]=React.useState(3);
+
+  const prods=Object.entries(salesData||{})
+    .filter(([n])=>!(hidden||[]).includes(n))
+    .filter(([,d])=>d && d.stores && Object.keys(d.stores).length);
+
+  if(!prods.length) return null;
+
+  /* Aggregate every store across every SKU */
+  const agg={};
+  prods.forEach(([name,d])=>{
+    const sc=d.storeCity||{};
+    Object.entries(d.stores||{}).forEach(([store,u])=>{
+      if(!agg[store]) agg[store]={units:0,skus:{},city:sc[store]||''};
+      agg[store].units+=u;
+      agg[store].skus[name]=(agg[store].skus[name]||0)+u;
+      if(!agg[store].city && sc[store]) agg[store].city=sc[store];
+    });
+  });
+  const board=Object.entries(agg).sort(([,a],[,b])=>b.units-a.units);
+  const boardMax=board[0]?.[1]?.units||1;
+  const champ=board[0];
+
+  const RANK_COL=['#e0a437','#a8b0bd','#c07a4a'];
+  const hdr={padding:'7px 10px',textAlign:'left',fontSize:10,fontWeight:600,color:'var(--text3)',
+    background:'var(--bg2)',borderBottom:'0.5px solid var(--bdr)',whiteSpace:'nowrap'};
+  const cell={padding:'8px 10px',borderBottom:'0.5px solid var(--bdr)',fontSize:11.5};
+
+  const pill=(active,label,onClick)=>el('button',{key:label,onClick,style:{
+    background:active?'var(--info)':'transparent',
+    color:active?'#fff':'var(--text3)',
+    border:'0.5px solid '+(active?'var(--info)':'var(--bdr)'),
+    borderRadius:6,padding:'3px 10px',fontSize:10,fontWeight:600,
+    cursor:'pointer',fontFamily:'inherit'
+  }},label);
+
+  return el('div',{style:{background:'var(--bg)',border:'0.5px solid var(--bdr)',
+    borderRadius:10,padding:'16px',marginTop:16}},
+
+    /* Header */
+    el('div',{style:{display:'flex',alignItems:'center',gap:10,marginBottom:14,flexWrap:'wrap'}},
+      el('div',{style:{fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:'.1em',
+        color:'var(--muted)',fontFamily:'var(--font-mono)',display:'flex',alignItems:'center',gap:6}},
+        el('i',{className:'ti ti-trophy',style:{fontSize:13,color:'#e0a437'}}),
+        'Top Stores'
+      ),
+      el('div',{style:{display:'flex',gap:5,marginLeft:'auto'}},
+        pill(mode==='sku','By SKU',()=>setMode('sku')),
+        pill(mode==='board','Leaderboard',()=>setMode('board'))
+      ),
+      mode==='sku'&&el('div',{style:{display:'flex',gap:5}},
+        [1,3,5].map(n=>pill(topN===n,'Top '+n,()=>setTopN(n)))
+      )
+    ),
+
+    /* Champion banner */
+    champ&&el('div',{style:{display:'flex',alignItems:'center',gap:12,marginBottom:14,
+      padding:'11px 14px',borderRadius:8,background:'var(--bg2)',
+      border:'0.5px solid rgba(224,164,55,.4)',flexWrap:'wrap'}},
+      el('i',{className:'ti ti-award',style:{fontSize:20,color:'#e0a437'}}),
+      el('div',{style:{minWidth:0,flex:1}},
+        el('div',{style:{fontSize:9,color:'var(--text3)',textTransform:'uppercase',
+          letterSpacing:'.08em',fontFamily:'var(--font-mono)',marginBottom:2}},'#1 store overall'),
+        el('div',{style:{fontSize:14,fontWeight:800,color:'var(--text)'}},champ[0]),
+        champ[1].city&&el('div',{style:{fontSize:10,color:'var(--text3)'}},champ[1].city)
+      ),
+      el('div',{style:{textAlign:'right'}},
+        el('div',{style:{fontSize:18,fontWeight:900,color:'#e0a437',lineHeight:1}},
+          champ[1].units.toLocaleString()),
+        el('div',{style:{fontSize:9,color:'var(--text3)'}},
+          'units · '+Object.keys(champ[1].skus).length+' SKUs')
+      )
+    ),
+
+    /* ── Mode: per-SKU top stores ── */
+    mode==='sku'&&el('div',{style:{display:'grid',
+      gridTemplateColumns:'repeat(auto-fit,minmax(300px,1fr))',gap:12}},
+      prods.map(([name,d])=>{
+        const sc=d.storeCity||{};
+        const list=Object.entries(d.stores||{}).sort(([,a],[,b])=>b-a).slice(0,topN);
+        const total=Object.values(d.stores||{}).reduce((s,v)=>s+v,0)||1;
+        const isSel=name===sel;
+        return el('div',{key:name,style:{
+          background:'var(--bg2)',borderRadius:8,padding:'11px 13px',
+          border:'0.5px solid '+(isSel?'var(--info)':'var(--bdr)')
+        }},
+          el('div',{onClick:()=>onSelect&&onSelect(name),style:{cursor:'pointer',marginBottom:9}},
+            el('div',{style:{fontSize:9,color:'var(--text3)',fontFamily:'var(--font-mono)',
+              textTransform:'uppercase',letterSpacing:'.07em'}},d.brand||'—'),
+            el('div',{style:{fontSize:12.5,fontWeight:700,color:isSel?'var(--info)':'var(--text)',
+              lineHeight:1.3}},name),
+            el('div',{style:{fontSize:9.5,color:'var(--text3)',marginTop:2}},
+              total.toLocaleString()+' units · '+Object.keys(d.stores||{}).length+' stores')
+          ),
+          list.map(([store,u],i)=>el('div',{key:store,style:{marginBottom:7}},
+            el('div',{style:{display:'flex',alignItems:'baseline',gap:7}},
+              el('span',{style:{fontSize:10,fontWeight:900,color:RANK_COL[i]||'var(--text3)',
+                width:14,flexShrink:0,fontFamily:'var(--font-mono)'}},'#'+(i+1)),
+              el('span',{style:{fontSize:11,color:'var(--text2)',flex:1,minWidth:0,
+                overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},store),
+              el('span',{style:{fontSize:11,fontWeight:700,color:'var(--text)',
+                fontFamily:'var(--font-mono)'}},u.toLocaleString())
+            ),
+            el('div',{style:{display:'flex',alignItems:'center',gap:6,paddingLeft:21,marginTop:2}},
+              el('span',{style:{fontSize:9,color:'var(--text3)',flexShrink:0,minWidth:70}},
+                sc[store]||'—'),
+              el('div',{style:{flex:1,height:3,background:'var(--bdr)',borderRadius:99,overflow:'hidden'}},
+                el('div',{style:{height:'100%',width:Math.round(u/total*100)+'%',
+                  background:RANK_COL[i]||'var(--info)',borderRadius:99}})
+              ),
+              el('span',{style:{fontSize:9,color:'var(--text3)',flexShrink:0,
+                fontFamily:'var(--font-mono)'}},Math.round(u/total*100)+'%')
+            )
+          ))
+        );
+      })
+    ),
+
+    /* ── Mode: store leaderboard across all SKUs ── */
+    mode==='board'&&el('div',{style:{overflowX:'auto'}},
+      el('table',{style:{width:'100%',borderCollapse:'collapse'}},
+        el('thead',null,el('tr',null,
+          el('th',{style:{...hdr,width:34,textAlign:'center'}},'#'),
+          el('th',{style:hdr},'Store'),
+          el('th',{style:hdr},'City'),
+          el('th',{style:{...hdr,textAlign:'right'}},'Units'),
+          el('th',{style:{...hdr,textAlign:'center'}},'SKUs'),
+          el('th',{style:hdr},'Best seller'),
+          el('th',{style:{...hdr,minWidth:90}},'Share')
+        )),
+        el('tbody',null,
+          board.slice(0,25).map(([store,info],i)=>{
+            const best=Object.entries(info.skus).sort(([,a],[,b])=>b-a)[0];
+            return el('tr',{key:store,style:{background:i<3?'rgba(224,164,55,.06)':'transparent'}},
+              el('td',{style:{...cell,textAlign:'center',fontWeight:900,
+                color:RANK_COL[i]||'var(--text3)',fontFamily:'var(--font-mono)'}},i+1),
+              el('td',{style:{...cell,fontWeight:i<3?700:400,color:'var(--text)'}},store),
+              el('td',{style:{...cell,color:'var(--text3)'}},info.city||'—'),
+              el('td',{style:{...cell,textAlign:'right',fontWeight:700,
+                fontFamily:'var(--font-mono)'}},info.units.toLocaleString()),
+              el('td',{style:{...cell,textAlign:'center',color:'var(--info)',
+                fontWeight:700}},Object.keys(info.skus).length),
+              el('td',{style:{...cell,color:'var(--text2)',maxWidth:210,overflow:'hidden',
+                textOverflow:'ellipsis',whiteSpace:'nowrap'}},
+                el('span',{onClick:()=>onSelect&&onSelect(best[0]),
+                  style:{cursor:'pointer',borderBottom:'1px dotted var(--bdr)'}},
+                  best?best[0]:'—')
+              ),
+              el('td',{style:cell},
+                el('div',{style:{height:5,background:'var(--bdr)',borderRadius:99,overflow:'hidden'}},
+                  el('div',{style:{height:'100%',width:Math.round(info.units/boardMax*100)+'%',
+                    background:RANK_COL[i]||'var(--info)',borderRadius:99}})
+                )
+              )
+            );
+          })
+        )
+      ),
+      board.length>25&&el('div',{style:{fontSize:10,color:'var(--text3)',marginTop:8,textAlign:'center'}},
+        '+'+(board.length-25)+' more stores')
+    )
+  );
+}
+
 function PostLaunchView({data,setData,addChangelogEntry}){
   // data = main dashboard data — post launch lives in data.postLaunch
   // Merge: default SALES_DATA first, then override with any saved data
@@ -7497,6 +7759,7 @@ function PostLaunchView({data,setData,addChangelogEntry}){
     return Object.keys(src)[0]||'';
   });
   const [activePC,setActivePC]=React.useState('pc1');
+  const [hoverWk,setHoverWk]=React.useState(null);
   const [showAddSKU,setShowAddSKU]=React.useState(false);
   const [showUpdateSKU,setShowUpdateSKU]=React.useState(false);
   const [showBulkUpload,setShowBulkUpload]=React.useState(false);
@@ -7860,6 +8123,7 @@ function PostLaunchView({data,setData,addChangelogEntry}){
       el(VelocityCard,{ocs:current.ocs,weekly:current.weekly}),
       el(StoreDistributionCard,{
         storeMetrics:current.storeMetrics,
+        storeCity:current.storeCity,
         vel:(()=>{const s=Object.entries(current.weekly).sort(([a],[b])=>a.localeCompare(b));return s.length>=1?s[s.length-1][1]/ONTARIO_STORES:0;})(),
         prevVel:(()=>{const s=Object.entries(current.weekly).sort(([a],[b])=>a.localeCompare(b));return s.length>=2?s[s.length-2][1]/ONTARIO_STORES:null;})(),
         clsCol:'var(--info)'
@@ -7901,7 +8165,8 @@ function PostLaunchView({data,setData,addChangelogEntry}){
           el('div',{style:{borderTop:'0.5px solid var(--bdr)',marginTop:16,paddingTop:16}}),
           el(TopCities,{cities:current.cities})
         )
-      )
+      ),
+      el(TopStoresBySku,{salesData, hidden, sel, onSelect:setSel})
     )
   );
 }
