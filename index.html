@@ -7851,6 +7851,7 @@ function Launch30Snapshot({current,launchDate}){
 function TopStoresBySku({salesData, hidden, sel, onSelect}){
   const [mode,setMode]=React.useState('loc');   // 'loc' | 'ret' | 'sku'
   const [topN,setTopN]=React.useState(3);
+  const [hov,setHov]=React.useState(null);      // {kind,row,x,y}
 
   const prods=Object.entries(salesData||{})
     .filter(([n])=>!(hidden||[]).includes(n))
@@ -7891,6 +7892,12 @@ function TopStoresBySku({salesData, hidden, sel, onSelect}){
   const cleanAddr=a=>String(a||'').split(/[\r\n]+/)[0].replace(/\s+/g,' ').trim();
   // Ties are common (most stores order a fixed case size), so sort them stably
   // and use competition ranking so equal volumes share a rank.
+  const skuTotals={};
+  prods.forEach(([name,d])=>{
+    skuTotals[name]=Array.isArray(d.locations)&&d.locations.length
+      ? d.locations.reduce((s,L)=>s+L.units,0)
+      : Object.values(d.stores||{}).reduce((s,v)=>s+v,0);
+  });
   const locList=Object.values(loc).sort((a,b)=>b.units-a.units||a.banner.localeCompare(b.banner));
   let _r=0,_p=null;
   locList.forEach((L,i)=>{ if(L.units!==_p){_r=i+1;_p=L.units;} L.rank=_r; });
@@ -7994,7 +8001,11 @@ function TopStoresBySku({salesData, hidden, sel, onSelect}){
         el('tbody',null, locList.slice(0,30).map((L,i)=>{
           const best=topOf(L.skus);
           const rc=RANK[L.rank-1]||'var(--text3)';
-          return el('tr',{key:L.banner+L.city+L.addr,style:{background:L.rank<=3?'rgba(224,164,55,.06)':'transparent'}},
+          return el('tr',{key:L.banner+L.city+L.addr,
+            onMouseEnter:e=>setHov({kind:'loc',row:L,x:e.clientX,y:e.clientY}),
+            onMouseMove:e=>setHov(h=>h&&h.row===L?{...h,x:e.clientX,y:e.clientY}:h),
+            onMouseLeave:()=>setHov(null),
+            style:{background:L.rank<=3?'rgba(224,164,55,.06)':'transparent',cursor:'help'}},
             el('td',{style:{...cell,textAlign:'center',fontWeight:900,color:rc,...mono}},L.rank),
             el('td',{style:{...cell,fontWeight:L.rank<=3?700:400,color:'var(--text)'}},
               el('div',{style:{display:'flex',alignItems:'center',gap:6,flexWrap:'wrap'}},
@@ -8066,6 +8077,64 @@ function TopStoresBySku({salesData, hidden, sel, onSelect}){
       retList.length>30&&el('div',{style:{fontSize:10,color:'var(--text3)',marginTop:8,textAlign:'center'}},
         '+'+(retList.length-30)+' more banners')
     ),
+
+    /* ── Hover breakdown ── */
+    hov&&hov.kind==='loc'&&(()=>{
+      const L=hov.row;
+      const carried=Object.entries(L.skus).sort(([,a],[,b])=>b-a);
+      const missing=prods.map(([n])=>n).filter(n=>!L.skus[n]);
+      const W=380, H=Math.min(430, 168+carried.length*22+(missing.length?46:0));
+      const x=Math.min(hov.x+16, (window.innerWidth||1200)-W-12);
+      const y=Math.min(hov.y+14, Math.max(12,(window.innerHeight||800)-H-12));
+      const th={padding:'4px 6px',fontSize:8.5,color:'var(--text3)',textAlign:'right',
+        textTransform:'uppercase',letterSpacing:'.06em',...mono,fontWeight:600};
+      return el('div',{style:{position:'fixed',left:x,top:y,width:W,zIndex:900,
+        background:'rgba(16,19,28,.985)',border:'0.5px solid rgba(224,164,55,.45)',
+        borderRadius:10,padding:'12px 14px',pointerEvents:'none',
+        boxShadow:'0 12px 40px rgba(0,0,0,.6)'}},
+        el('div',{style:{fontSize:13,fontWeight:800,color:'var(--text)'}},L.banner),
+        el('div',{style:{fontSize:10,color:'var(--text3)',marginBottom:9}},
+          [cleanAddr(L.addr),L.city].filter(Boolean).join(' · ')),
+        el('div',{style:{display:'flex',gap:14,marginBottom:9,paddingBottom:8,
+          borderBottom:'0.5px solid var(--bdr)'}},
+          el('div',null,
+            el('div',{style:{fontSize:15,fontWeight:900,color:'#e0a437',...mono}},L.units.toLocaleString()),
+            el('div',{style:{fontSize:8.5,color:'var(--text3)'}},'total units')),
+          el('div',null,
+            el('div',{style:{fontSize:15,fontWeight:900,color:'var(--info)',...mono}},
+              carried.length+'/'+prods.length),
+            el('div',{style:{fontSize:8.5,color:'var(--text3)'}},'SKUs carried')),
+          el('div',null,
+            el('div',{style:{fontSize:15,fontWeight:900,color:'var(--text2)',...mono}},'#'+L.rank),
+            el('div',{style:{fontSize:8.5,color:'var(--text3)'}},'of '+locList.length+' stores'))
+        ),
+        el('table',{style:{width:'100%',borderCollapse:'collapse'}},
+          el('thead',null,el('tr',null,
+            el('th',{style:{...th,textAlign:'left'}},'Product'),
+            el('th',{style:th},'Qty'),
+            el('th',{style:th},'of store'),
+            el('th',{style:th},'of SKU')
+          )),
+          el('tbody',null, carried.map(([n,u])=>el('tr',{key:n},
+            el('td',{style:{padding:'3px 6px',fontSize:10.5,color:'var(--text2)',maxWidth:186,
+              overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},n),
+            el('td',{style:{padding:'3px 6px',fontSize:11,fontWeight:700,color:'var(--text)',
+              textAlign:'right',...mono}},u.toLocaleString()),
+            el('td',{style:{padding:'3px 6px',fontSize:10,color:'var(--text3)',textAlign:'right',...mono}},
+              Math.round(u/L.units*100)+'%'),
+            el('td',{style:{padding:'3px 6px',fontSize:10,color:'var(--info)',textAlign:'right',...mono}},
+              skuTotals[n]?(u/skuTotals[n]*100).toFixed(1)+'%':'—')
+          )))
+        ),
+        missing.length>0&&el('div',{style:{marginTop:9,paddingTop:8,
+          borderTop:'0.5px solid var(--bdr)'}},
+          el('div',{style:{fontSize:8.5,color:'var(--text3)',textTransform:'uppercase',
+            letterSpacing:'.06em',...mono,marginBottom:3}},'Not carried ('+missing.length+')'),
+          el('div',{style:{fontSize:10,color:'var(--warn)',lineHeight:1.45}},
+            missing.slice(0,3).join(' · ')+(missing.length>3?' +'+(missing.length-3)+' more':''))
+        )
+      );
+    })(),
 
     /* ── Per SKU, its strongest storefronts ── */
     mode==='sku'&&el('div',{style:{display:'grid',
