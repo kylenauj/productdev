@@ -8336,24 +8336,53 @@ const KEY_ACCOUNTS=[
   {name:'One Plant',tier:'TBD',stores:72,status:'Pending'},
 ];
 const KA_TIER_COL={A:'var(--accent)',B:'var(--info)',C:'#7c9cbf',TBD:'var(--text3)'};
+/* Curated aliases for banners the rules can't reach on their own */
+const KA_ALIAS={hollandaze:['hollanddaze'],hunnypot:['hunnypot'],spiritlead:['spiritleaf']};
 const KA_STOP=new Set(['cannabis','co','company','the','store','stores','shop',
   'retail','inc','ltd','on','ontario']);
-const kaToks=s=>String(s||'').toLowerCase().replace(/[^a-z0-9]+/g,' ')
-  .replace(/\b(\d)\s+/g,'$1').split(' ').filter(w=>w&&!KA_STOP.has(w));
+const kaWords=s=>String(s||'').toLowerCase().replace(/[^a-z0-9]+/g,' ')
+  .replace(/\b(\d)\s+/g,'$1').split(' ').filter(Boolean);
+const kaToks=s=>kaWords(s).filter(w=>!KA_STOP.has(w));
 const kaSquash=s=>String(s||'').toLowerCase().replace(/[^a-z0-9]/g,'');
+
+/* Squashed name must begin AND end on a word boundary of the banner —
+   without this "T-Cannabis" swallows "Cost Cannabis", "Harvest Cannabis"… */
+function kaBoundaryHit(asq, bw){
+  const joined=bw.join(''); let pos=0; const starts=[], ends=new Set();
+  for(const w of bw){ starts.push(pos); pos+=w.length; ends.add(pos); }
+  return starts.some(st=>joined.startsWith(asq,st)&&ends.has(st+asq.length));
+}
+/* One-character slip: Hollandaze vs HOLLAND DAZE */
+function kaLev1(a,b){
+  if(Math.abs(a.length-b.length)>1) return false;
+  if(a===b) return true;
+  if(a.length===b.length){
+    let d=0; for(let i=0;i<a.length;i++) if(a[i]!==b[i]&&++d>1) return false;
+    return d===1;
+  }
+  const s=a.length<b.length?a:b, l=a.length<b.length?b:a;
+  for(let i=0;i<l.length;i++) if(l.slice(0,i)+l.slice(i+1)===s) return true;
+  return false;
+}
 
 /* banner -> {name,tier} or null */
 function keyAccountFor(banner){
   if(!banner) return null;
-  const bt=new Set(kaToks(banner)), bs=kaSquash(banner);
+  const bw=kaWords(banner), bt=new Set(kaToks(banner)), bs=bw.join('');
   let best=null;
   for(const a of KEY_ACCOUNTS){
     const at=kaToks(a.name), asq=kaSquash(a.name);
     if(!at.length) continue;
     const sig=at.reduce((s,w)=>s+w.length,0);
-    let ok = sig>=5 && at.every(w=>bt.has(w));
-    let score=sig;
-    if(!ok && asq.length>=7 && bs.indexOf(asq)===0){ ok=true; score=asq.length; }
+    let ok=false, score=0;
+    if(sig>=4 && at.every(w=>bt.has(w))){ ok=true; score=sig; }
+    if(!ok && asq.length>=7 && kaBoundaryHit(asq,bw)){ ok=true; score=asq.length; }
+    if(!ok && asq.length>=8 && kaLev1(asq,bs)){ ok=true; score=asq.length-1; }
+    if(!ok){
+      for(const al of (KA_ALIAS[asq]||[])){
+        if(al.length>=7 && (kaBoundaryHit(al,bw)||kaLev1(al,bs))){ ok=true; score=al.length; break; }
+      }
+    }
     if(ok && (!best||score>best.score)) best={...a,score};
   }
   return best;
