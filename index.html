@@ -7913,7 +7913,7 @@ function TopStoresBySku({salesData, hidden, sel, onSelect}){
   const champ=locList[0];
   const skuCount=prods.length;
 
-  const RANK=['#e0a437','#a8b0bd','#c07a4a'];
+  const RANK=['var(--warn)','var(--warn)','var(--warn)'];
   const hdr={padding:'7px 10px',textAlign:'left',fontSize:10,fontWeight:600,color:'var(--text3)',
     background:'var(--bg2)',borderBottom:'0.5px solid var(--bdr)',whiteSpace:'nowrap'};
   const cell={padding:'8px 10px',borderBottom:'0.5px solid var(--bdr)',fontSize:11.5};
@@ -7932,7 +7932,7 @@ function TopStoresBySku({salesData, hidden, sel, onSelect}){
     el('div',{style:{display:'flex',alignItems:'center',gap:10,marginBottom:6,flexWrap:'wrap'}},
       el('div',{style:{fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:'.1em',
         color:'var(--muted)',...mono,display:'flex',alignItems:'center',gap:6}},
-        el('i',{className:'ti ti-trophy',style:{fontSize:13,color:'#e0a437'}}),'Top Stores'),
+        el('i',{className:'ti ti-trophy',style:{fontSize:13,color:'var(--warn)'}}),'Top Stores'),
       el('div',{style:{display:'flex',gap:5,marginLeft:'auto'}},
         pill(mode==='loc','Locations',()=>setMode('loc')),
         pill(mode==='ret','Retailers',()=>setMode('ret')),
@@ -7972,7 +7972,7 @@ function TopStoresBySku({salesData, hidden, sel, onSelect}){
       return el('div',{style:{display:'flex',alignItems:'center',gap:12,marginBottom:14,
         padding:'11px 14px',borderRadius:8,background:'var(--bg2)',
         border:'0.5px solid rgba(224,164,55,.4)',flexWrap:'wrap'}},
-        el('i',{className:'ti ti-award',style:{fontSize:20,color:'#e0a437'}}),
+        el('i',{className:'ti ti-award',style:{fontSize:20,color:'var(--warn)'}}),
         el('div',{style:{minWidth:0,flex:1}},
           el('div',{style:{fontSize:9,color:'var(--text3)',textTransform:'uppercase',
             letterSpacing:'.08em',...mono,marginBottom:2}},label),
@@ -7980,7 +7980,7 @@ function TopStoresBySku({salesData, hidden, sel, onSelect}){
           el('div',{style:{fontSize:10,color:'var(--text3)'}},sub2)
         ),
         el('div',{style:{textAlign:'right'}},
-          el('div',{style:{fontSize:18,fontWeight:900,color:'#e0a437',lineHeight:1}},units.toLocaleString()),
+          el('div',{style:{fontSize:18,fontWeight:900,color:'var(--warn)',lineHeight:1}},units.toLocaleString()),
           el('div',{style:{fontSize:9,color:'var(--text3)'}},'units · '+nSku+' of '+skuCount+' SKUs')
         )
       );
@@ -8005,7 +8005,7 @@ function TopStoresBySku({salesData, hidden, sel, onSelect}){
             onMouseEnter:e=>setHov({kind:'loc',row:L,x:e.clientX,y:e.clientY}),
             onMouseMove:e=>setHov(h=>h&&h.row===L?{...h,x:e.clientX,y:e.clientY}:h),
             onMouseLeave:()=>setHov(null),
-            style:{background:L.rank<=3?'rgba(224,164,55,.06)':'transparent',cursor:'help'}},
+            style:{background:L.rank<=3?'var(--warn-bg,rgba(224,164,55,.06))':'transparent',cursor:'help'}},
             el('td',{style:{...cell,textAlign:'center',fontWeight:900,color:rc,...mono}},L.rank),
             el('td',{style:{...cell,fontWeight:L.rank<=3?700:400,color:'var(--text)'}},
               el('div',{style:{display:'flex',alignItems:'center',gap:6,flexWrap:'wrap'}},
@@ -8048,7 +8048,7 @@ function TopStoresBySku({salesData, hidden, sel, onSelect}){
         el('tbody',null, retList.slice(0,30).map(([banner,R],i)=>{
           const nLoc=Object.keys(R.sites||{}).length||Object.keys(R.cities).length;
           const bestCity=topOf(R.cities), best=topOf(R.skus);
-          return el('tr',{key:banner,style:{background:i<3?'rgba(224,164,55,.06)':'transparent'}},
+          return el('tr',{key:banner,style:{background:i<3?'var(--warn-bg,rgba(224,164,55,.06))':'transparent'}},
             el('td',{style:{...cell,textAlign:'center',fontWeight:900,color:RANK[i]||'var(--text3)',...mono}},i+1),
             el('td',{style:{...cell,fontWeight:i<3?700:400,color:'var(--text)'}},banner),
             el('td',{style:{...cell,textAlign:'center',color:'var(--text2)',...mono}},nLoc||'—'),
@@ -8098,7 +8098,7 @@ function TopStoresBySku({salesData, hidden, sel, onSelect}){
         el('div',{style:{display:'flex',gap:14,marginBottom:9,paddingBottom:8,
           borderBottom:'0.5px solid var(--bdr)'}},
           el('div',null,
-            el('div',{style:{fontSize:15,fontWeight:900,color:'#e0a437',...mono}},L.units.toLocaleString()),
+            el('div',{style:{fontSize:15,fontWeight:900,color:'var(--warn)',...mono}},L.units.toLocaleString()),
             el('div',{style:{fontSize:8.5,color:'var(--text3)'}},'total units')),
           el('div',null,
             el('div',{style:{fontSize:15,fontWeight:900,color:'var(--info)',...mono}},
@@ -8198,6 +8198,7 @@ function PostLaunchView({data,setData,addChangelogEntry}){
   });
   const [activePC,setActivePC]=React.useState('pc1');
   const [plTab,setPlTab]=React.useState('overview');
+  const [showMore,setShowMore]=React.useState(false);
   const [hoverWk,setHoverWk]=React.useState(null);
   const [showAddSKU,setShowAddSKU]=React.useState(false);
   const [showUpdateSKU,setShowUpdateSKU]=React.useState(false);
@@ -8291,7 +8292,7 @@ function PostLaunchView({data,setData,addChangelogEntry}){
 
   if(Object.keys(salesData).filter(k=>!hidden.includes(k)).length===0)
     return el('div',{style:{padding:40,textAlign:'center',color:'var(--text2)'}},
-      el('i',{className:'ti ti-chart-off',style:{fontSize:36,display:'block',marginBottom:12,opacity:.4}}),
+      el('i',{className:'ti ti-chart-off',style:{fontSize:32,display:'block',marginBottom:12,opacity:.4}}),
       'All products hidden.',el('br',null),
       el('div',{style:{marginTop:16,display:'flex',gap:8,justifyContent:'center',flexWrap:'wrap'}},
         hidden.map(name=>el('button',{key:name,onClick:()=>restoreProduct(name),className:'btn'},el('i',{className:'ti ti-eye'}),' '+name.slice(0,30)))
@@ -8299,135 +8300,85 @@ function PostLaunchView({data,setData,addChangelogEntry}){
     );
 
   return el('div',{style:{padding:'20px'}},
-    /* ── PC Tab bar ── */
-    el('div',{style:{display:'flex',gap:0,borderBottom:'0.5px solid var(--bdr)',marginBottom:16,overflowX:'auto'}},
-      PC_GROUPS.map(pc=>{
-        const count=Object.keys(salesData).filter(k=>!hidden.includes(k)&&(salesData[k]?.pc||'other')===pc.id).length;
-        if(count===0)return null;
-        const isOn=activePC===pc.id;
-        return el('button',{key:pc.id,onClick:()=>setActivePC(pc.id),style:{
-          background:'transparent',border:'none',
-          borderBottom:isOn?'2.5px solid var(--info)':'2.5px solid transparent',
-          cursor:'pointer',padding:'8px 18px',fontSize:13,fontFamily:'inherit',
-          color:isOn?'var(--info)':'var(--text2)',fontWeight:isOn?700:'normal',
-          display:'flex',alignItems:'center',gap:7,whiteSpace:'nowrap',
-          marginBottom:-1,
-        }},
-          pc.label,
-          el('span',{style:{fontSize:10,background:isOn?'var(--info-bg)':'var(--bg2)',color:isOn?'var(--info)':'var(--text3)',borderRadius:10,padding:'1px 7px',fontWeight:700}},count)
-        );
-      }),
-      el('button',{
-        onClick:()=>setShowComparator(s=>!s),
-        style:{
-          marginLeft:'auto',padding:'6px 14px',fontSize:12,fontFamily:'inherit',
-          border:'1px solid '+(showComparator?'var(--accent)':'var(--bdr)'),
-          borderRadius:'var(--rs)',cursor:'pointer',
-          background:showComparator?'var(--accent-bg)':'var(--bg)',
-          color:showComparator?'var(--accent)':'var(--text2)',
-          fontWeight:showComparator?700:400,
-          display:'flex',alignItems:'center',gap:6,whiteSpace:'nowrap',marginBottom:-1
-        }
-      },el('i',{className:'ti ti-chart-dots'}),' Compare SKUs')
-    ),
-
-  showComparator&&el(SKUComparator,{salesData,hidden,activePC,onClose:()=>setShowComparator(false)}),
-
-    /* ── Product cards for active PC ── */
-    el('div',{style:{marginBottom:20}},
-      el('div',{style:{display:'flex',gap:10,flexWrap:'wrap',alignItems:'flex-start'}},
-        visibleProds.map(name=>{
-          const d=salesData[name];const isOn=sel===name;
-          return el('div',{key:name,style:{position:'relative',display:'inline-block'}},
-            el('div',{onClick:()=>setSel(name),style:{
-              background:isOn?'var(--info-bg)':'var(--bg)',
-              border:'0.5px solid '+(isOn?'var(--info)':'var(--bdr)'),
-              borderRadius:10,padding:'12px 16px',cursor:'pointer',minWidth:190,
-              boxShadow:isOn?'0 0 0 1px var(--info)':'none',transition:'all .12s'
-            }},
-              el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:4}},
-                el('div',{style:{display:'flex',alignItems:'center',gap:5}},
-                  el('div',{style:{fontSize:10,color:isOn?'var(--info)':'var(--text3)',fontWeight:700,textTransform:'uppercase',letterSpacing:'.07em'}},d.brand),
-                  getSkuCode(name,d)&&el('span',{style:{
-                    fontSize:9,fontWeight:800,
-                    background:isOn?'var(--info)':'var(--bg3)',
-                    color:isOn?'#fff':'var(--text3)',
-                    borderRadius:'var(--pill)',padding:'1px 6px',letterSpacing:'.04em'
-                  }},getSkuCode(name,d))
-                ),
-                (()=>{
-                  const sw=Object.entries(d.weekly||{}).sort(([a],[b])=>a.localeCompare(b));
-                  const lw=sw.length>=1?sw[sw.length-1][1]:0;
-                  const pw=sw.length>=2?sw[sw.length-2][1]:null;
-                  if(pw==null) return null;
-                  const delta=lw-pw;
-                  return el('span',{style:{fontSize:10,fontWeight:700,color:delta>=0?'var(--ok)':'var(--err)'}},
-                    el('i',{className:'ti '+(delta>=0?'ti-trending-up':'ti-trending-down'),style:{fontSize:10}}),
-                    ' '+(delta>=0?'+':'')+delta
-                  );
-                })()
-              ),
-              el('div',{style:{fontSize:13,fontWeight:700,color:isOn?'var(--info)':'var(--text)',marginBottom:6,lineHeight:1.3}},name),
-              el('div',{style:{display:'flex',gap:8,fontSize:11,color:isOn?'var(--info)':'var(--text2)',flexWrap:'wrap',alignItems:'center'}},
-                el('span',null,d.units.toLocaleString()+' units'),
-                el('span',null,d.storeCount+' stores'),
-                (()=>{
-                  const skuClass=(()=>{const sw=Object.entries(d.weekly||{}).sort(([a],[b])=>a.localeCompare(b));const lw=sw.length?sw[sw.length-1][1]:0;const v=lw/ONTARIO_STORES;return ocsClass(v,null);})();
-                  const CLS_G={A:'linear-gradient(135deg,#fde68a,#f0c030)',B:'linear-gradient(135deg,#86efac,#4dbb6a)',C:'linear-gradient(135deg,#93c5fd,#5b9bd5)',D:'linear-gradient(135deg,#fcd34d,#e09b3d)',E:'linear-gradient(135deg,#fca5a5,#e07878)',N:'var(--grad-accent)'};
-                  return el('span',{style:{
-                    fontWeight:800,fontSize:11,color:'#fff',
-                    background:CLS_G[skuClass]||'var(--text3)',
-                    borderRadius:'var(--pill)',padding:'2px 10px',
-                    boxShadow:'0 1px 4px rgba(0,0,0,.15)'
-                  }},'Class '+skuClass);
-                })()
-              ),
-              lastUpdated[name]&&el('div',{style:{fontSize:9,color:'var(--text3)',marginTop:4}},
-                el('i',{className:'ti ti-refresh',style:{fontSize:9}}),
-                ' Updated '+new Date(lastUpdated[name]).toLocaleDateString('en-CA',{month:'short',day:'numeric'})
-              )
-            ),
-            el('button',{onClick:e=>{e.stopPropagation();if(confirm('Remove "'+name+'" from Post Launch?'))removeProduct(name);},
-              title:'Remove',className:'rm-btn',
-              style:{position:'absolute',top:-6,right:-6,background:'var(--bg2)',border:'0.5px solid var(--bdr2)',borderRadius:'50%',width:20,height:20,cursor:'pointer',display:'none',alignItems:'center',justifyContent:'center',color:'var(--text3)',fontSize:11,padding:0}
-            },el('i',{className:'ti ti-x'})),
-            isOn&&el('button',{onClick:e=>{e.stopPropagation();setSel(name);setShowUpdateSKU(true);},
-              title:'Update sales data',
-              style:{position:'absolute',bottom:-6,right:-6,background:'var(--ok)',border:'none',borderRadius:'50%',width:22,height:22,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontSize:11,padding:0,boxShadow:'0 1px 4px rgba(0,0,0,.3)'}
-            },el('i',{className:'ti ti-refresh'}))
-          );
-        }),
-        /* Restore hidden products in this PC */
-        hidden.filter(name=>(salesData[name]?.pc||'other')===activePC).map(name=>
-          el('button',{key:name,onClick:()=>restoreProduct(name),style:{
-            background:'var(--bg2)',border:'0.5px dashed var(--bdr2)',borderRadius:8,
-            cursor:'pointer',padding:'8px 12px',fontSize:11,color:'var(--text2)',
-            fontFamily:'inherit',display:'flex',alignItems:'center',gap:5
-          }},el('i',{className:'ti ti-eye',style:{fontSize:11}}),name.slice(0,22)+'…')
-        ),
-        /* Bulk upload button */
-        el('button',{onClick:()=>setShowBulkUpload(true),style:{
-          background:'var(--bg)',border:'0.5px dashed var(--ok)',borderRadius:10,
-          padding:'12px 16px',cursor:'pointer',minWidth:160,
-          display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',
-          gap:6,color:'var(--ok)',fontFamily:'inherit',transition:'all .12s'
-        }},
-          el('i',{className:'ti ti-table-import',style:{fontSize:20}}),
-          el('span',{style:{fontSize:11,fontWeight:600}},'Bulk Upload')
-        ),
-        /* Add SKU button */
-        el('button',{onClick:()=>setShowAddSKU(true),style:{
-          background:'var(--bg)',border:'0.5px dashed var(--info)',borderRadius:10,
-          padding:'12px 16px',cursor:'pointer',minWidth:160,
-          display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',
-          gap:6,color:'var(--info)',fontFamily:'inherit',transition:'all .12s'
-        }},
-          el('i',{className:'ti ti-plus',style:{fontSize:20}}),
-          el('span',{style:{fontSize:11,fontWeight:600}},'Add SKU')
+    /* ── SKU selector — replaces the PC bar and the card wall ── */
+    (()=>{
+      const byPc={};
+      Object.keys(salesData).filter(n=>!hidden.includes(n)).forEach(n=>{
+        const g=salesData[n]?.pc||'other'; (byPc[g]=byPc[g]||[]).push(n);
+      });
+      const groups=PC_GROUPS.filter(g=>byPc[g.id]&&byPc[g.id].length);
+      const cls=current?(()=>{const sw=Object.entries(current.weekly||{}).sort(([a],[b])=>a.localeCompare(b));
+        const lw=sw.length?sw[sw.length-1][1]:0;return ocsClass(lw/ONTARIO_STORES,null);})():null;
+      const CLSC={A:'#d9a441',B:'#4dbb6a',C:'#5b9bd5',D:'#e09b3d',E:'#e07878',N:'var(--text3)'};
+      return el('div',{style:{display:'flex',alignItems:'center',gap:10,marginBottom:12,flexWrap:'wrap'}},
+        el('select',{
+          value:sel,
+          onChange:e=>{const n=e.target.value; setSel(n); setActivePC(salesData[n]?.pc||'other');},
+          style:{background:'var(--bg)',border:'0.5px solid var(--bdr2)',borderRadius:8,
+            padding:'9px 12px',fontSize:14,fontWeight:700,color:'var(--text)',
+            fontFamily:'inherit',minWidth:320,maxWidth:'100%',cursor:'pointer'}
+        }, groups.map(g=>el('optgroup',{key:g.id,label:g.label},
+             byPc[g.id].map(n=>el('option',{key:n,value:n},n))))),
+        current&&el('span',{style:{fontSize:11,color:'var(--text3)'}},current.brand),
+        cls&&el('span',{style:{fontSize:11,fontWeight:700,color:'#fff',background:CLSC[cls],
+          borderRadius:'var(--pill)',padding:'2px 10px'}},'Class '+cls),
+        el('span',{style:{marginLeft:'auto',display:'flex',gap:6,alignItems:'center'}},
+          el('button',{onClick:()=>setShowBulkUpload(true),style:{
+            background:'var(--info)',border:'none',borderRadius:7,cursor:'pointer',
+            padding:'8px 14px',fontSize:12,fontWeight:700,color:'#fff',fontFamily:'inherit',
+            display:'flex',alignItems:'center',gap:6}},
+            el('i',{className:'ti ti-table-import',style:{fontSize:14}}),'Upload sales'),
+          el('button',{onClick:()=>setShowMore(v=>!v),title:'More actions',style:{
+            background:showMore?'var(--bg2)':'var(--bg)',border:'0.5px solid var(--bdr2)',
+            borderRadius:7,cursor:'pointer',padding:'8px 11px',fontSize:14,
+            color:'var(--text2)',fontFamily:'inherit'}},
+            el('i',{className:'ti ti-dots'}))
         )
+      );
+    })(),
+
+    /* ── Overflow panel ── */
+    showMore&&el('div',{style:{display:'flex',gap:16,alignItems:'flex-end',flexWrap:'wrap',
+      background:'var(--bg2)',border:'0.5px solid var(--bdr)',borderRadius:10,
+      padding:'12px 14px',marginBottom:12}},
+      current&&el('div',null,
+        el('div',{style:{fontSize:11,color:'var(--text3)',marginBottom:4}},'SKU code'),
+        el('input',{type:'text',value:getSkuCode(sel,current),placeholder:'VA083',
+          onChange:e=>{const u={...current,skuCode:e.target.value.toUpperCase()};
+            const n={...salesData,[sel]:u}; setSalesData(n); setData(d=>({...d,postLaunch:n}));},
+          style:{width:100,background:'var(--bg)',border:'0.5px solid var(--bdr2)',borderRadius:6,
+            padding:'6px 9px',fontSize:12,fontWeight:700,color:'var(--text)',fontFamily:'inherit'}})),
+      current&&el('div',null,
+        el('div',{style:{fontSize:11,color:'var(--text3)',marginBottom:4}},'Launch date'),
+        el('input',{type:'date',value:effectiveLaunchDate||'',
+          onChange:e=>{const u={...current,launchDate:e.target.value};
+            const n={...salesData,[sel]:u}; setSalesData(n); setData(d=>({...d,postLaunch:n}));
+            if(addChangelogEntry) addChangelogEntry('Launch date set to '+e.target.value,sel);},
+          style:{background:'var(--bg)',border:'0.5px solid var(--bdr2)',borderRadius:6,
+            padding:'6px 9px',fontSize:12,color:'var(--text)',fontFamily:'inherit'}})),
+      el('div',{style:{display:'flex',gap:7,marginLeft:'auto'}},
+        [{i:'ti-plus',l:'Add SKU',f:()=>setShowAddSKU(true)},
+         {i:'ti-refresh',l:'Update sales',f:()=>setShowUpdateSKU(true)},
+         {i:'ti-chart-dots',l:'Compare',f:()=>setShowComparator(s=>!s)},
+         {i:'ti-history',l:'Changelog',f:()=>setShowChangelog(true)},
+         {i:'ti-printer',l:'Print',f:()=>window.print()}
+        ].map(b=>el('button',{key:b.l,onClick:b.f,style:{
+          background:'var(--bg)',border:'0.5px solid var(--bdr2)',borderRadius:7,cursor:'pointer',
+          padding:'7px 12px',fontSize:12,color:'var(--text2)',fontFamily:'inherit',
+          display:'flex',alignItems:'center',gap:6}},
+          el('i',{className:'ti '+b.i,style:{fontSize:12}}),b.l))
+      ),
+      hidden.length>0&&el('div',{style:{width:'100%',display:'flex',gap:6,flexWrap:'wrap',
+        borderTop:'0.5px solid var(--bdr)',paddingTop:10}},
+        el('span',{style:{fontSize:11,color:'var(--text3)'}},'Hidden:'),
+        hidden.map(n=>el('button',{key:n,onClick:()=>restoreProduct(n),style:{
+          background:'var(--bg)',border:'0.5px dashed var(--bdr2)',borderRadius:6,cursor:'pointer',
+          padding:'4px 9px',fontSize:11,color:'var(--text2)',fontFamily:'inherit'}},
+          el('i',{className:'ti ti-eye',style:{fontSize:11,marginRight:4}}),n.slice(0,28)))
       )
     ),
 
+    showComparator&&el(SKUComparator,{salesData,hidden,activePC,onClose:()=>setShowComparator(false)}),
 
     showChangelog&&el(ChangelogPanel,{onClose:()=>setShowChangelog(false)}),
     showUpdateSKU&&current&&el(UpdateSKUModal,{
@@ -8468,69 +8419,9 @@ function PostLaunchView({data,setData,addChangelogEntry}){
       },
       onClose:()=>setShowAddSKU(false)
     }),
-    /* ── Product detail ── */
-    !current?el('div',{style:{color:'var(--text2)',padding:20,textAlign:'center'}},'No products in this product call yet.'):
+
+    !current?el('div',{style:{color:'var(--text2)',padding:20,textAlign:'center'}},'No products yet — use Upload sales to import an OCS export.'):
     el('div',null,
-      /* ── Action toolbar ── */
-      el('div',{style:{display:'flex',gap:8,alignItems:'center',marginBottom:16,flexWrap:'wrap'}},
-
-
-        el('button',{onClick:()=>setShowChangelog(true),style:{
-          background:'var(--bg)',border:'0.5px solid var(--bdr2)',borderRadius:7,cursor:'pointer',
-          padding:'7px 14px',fontSize:12,fontFamily:'inherit',color:'var(--text2)',
-          display:'flex',alignItems:'center',gap:6
-        }},el('i',{className:'ti ti-history',style:{fontSize:13}}),' Changelog'),
-        el('div',{style:{
-          display:'flex',alignItems:'center',gap:6,
-          background:'var(--grad-accent)',borderRadius:'var(--pill)',
-          padding:'5px 6px 5px 14px',boxShadow:'var(--shadow-accent)'
-        }},
-          el('i',{className:'ti ti-tag',style:{fontSize:12,color:'rgba(255,255,255,.8)'}}),
-          el('span',{style:{fontSize:11,color:'rgba(255,255,255,.7)',fontWeight:600}},'SKU'),
-          el('input',{
-            type:'text',
-            value:getSkuCode(sel,current),
-            placeholder:'e.g. VA083',
-            onChange:e=>{
-              const updated={...current,skuCode:e.target.value.toUpperCase()};
-              const next={...salesData,[sel]:updated};
-              setSalesData(next);
-              setData(d=>({...d,postLaunch:next}));
-            },
-            style:{
-              width:72,background:'rgba(255,255,255,.2)',border:'none',outline:'none',
-              borderRadius:'var(--rs)',padding:'3px 8px',fontSize:13,fontWeight:900,
-              color:'#fff',letterSpacing:'.06em',fontFamily:'inherit',textAlign:'center'
-            }
-          })
-        ),
-        el('div',{style:{
-          display:'flex',alignItems:'center',gap:6,marginLeft:getSkuCode(sel,current)?0:'auto',
-          background:'var(--bg)',border:'0.5px solid var(--bdr2)',borderRadius:'var(--pill)',
-          padding:'6px 12px'
-        }},
-          el('i',{className:'ti ti-rocket',style:{fontSize:13,color:'var(--accent)'}}),
-          el('span',{style:{fontSize:11,color:'var(--text3)',fontWeight:600}},'Launch Date'),
-          el('input',{
-            type:'date',
-            className:'ei',
-            value:effectiveLaunchDate||'',
-            style:{width:130,padding:'2px 6px',fontSize:12,border:'none',background:'transparent'},
-            onChange:e=>{
-              const updated={...current,launchDate:e.target.value};
-              const next={...salesData,[sel]:updated};
-              setSalesData(next);
-              setData(d=>({...d,postLaunch:next}));
-              if(addChangelogEntry) addChangelogEntry('Launch date set to '+e.target.value,sel);
-            }
-          })
-        ),
-        el('button',{onClick:()=>window.print(),style:{
-          background:'var(--bg)',border:'0.5px solid var(--bdr2)',borderRadius:7,cursor:'pointer',
-          padding:'7px 14px',fontSize:12,fontFamily:'inherit',color:'var(--text2)',
-          display:'flex',alignItems:'center',gap:6
-        }},el('i',{className:'ti ti-printer',style:{fontSize:13}}),' Print / PDF')
-      ),
       /* ── Section tabs ── */
       el('div',{style:{display:'flex',gap:4,marginBottom:16,padding:'4px',
         background:'var(--bg2)',borderRadius:10,border:'0.5px solid var(--bdr)',
@@ -8540,7 +8431,7 @@ function PostLaunchView({data,setData,addChangelogEntry}){
          {id:'stores',label:'Stores',icon:'ti-building-store'},
          {id:'geo',label:'Geography',icon:'ti-map-2'}].map(t=>el('button',{key:t.id,onClick:()=>setPlTab(t.id),style:{
           display:'flex',alignItems:'center',gap:6,padding:'7px 15px',borderRadius:7,
-          border:'none',cursor:'pointer',fontFamily:'inherit',fontSize:12.5,
+          border:'none',cursor:'pointer',fontFamily:'inherit',fontSize:12,
           fontWeight:plTab===t.id?700:400,
           background:plTab===t.id?'var(--info)':'transparent',
           color:plTab===t.id?'#fff':'var(--text2)',transition:'all .12s'
@@ -8555,8 +8446,8 @@ function PostLaunchView({data,setData,addChangelogEntry}){
         ].map((m2,i)=>el('div',{key:i,style:{background:'var(--bg)',border:'0.5px solid var(--bdr)',borderRadius:'var(--r)',padding:'14px 16px',position:'relative',overflow:'hidden'}},
           el('div',{style:{position:'absolute',left:0,top:0,right:0,height:3,background:m2.g}}),
           el('div',{style:{fontSize:11,color:'var(--text2)',marginBottom:6,fontWeight:500}},m2.l),
-          el('div',{style:{fontSize:26,fontWeight:700,fontFamily:'var(--font-mono)',color:m2.c,lineHeight:1}},m2.v),
-          el('div',{style:{fontSize:10,color:'var(--text3)',marginTop:4}},m2.s)
+          el('div',{style:{fontSize:32,fontWeight:700,fontFamily:'var(--font-mono)',color:m2.c,lineHeight:1}},m2.v),
+          el('div',{style:{fontSize:11,color:'var(--text3)',marginTop:4}},m2.s)
         ))
       ),
       (()=>{
@@ -8572,11 +8463,11 @@ function PostLaunchView({data,setData,addChangelogEntry}){
         }},
           el('div',{style:{position:'absolute',left:0,top:0,bottom:0,width:4,background:delta>=0?'var(--grad-ok)':'var(--grad-err)'}}),
           el('div',{style:{fontSize:11,color:'var(--text3)',fontWeight:600}},'WEEK OVER WEEK'),
-          el('div',{style:{fontSize:22,fontWeight:900,color:delta>=0?'var(--ok)':'var(--err)'}},
-            el('i',{className:'ti '+(delta>=0?'ti-arrow-up-right':'ti-arrow-down-right'),style:{fontSize:18}}),
+          el('div',{style:{fontSize:20,fontWeight:900,color:delta>=0?'var(--ok)':'var(--err)'}},
+            el('i',{className:'ti '+(delta>=0?'ti-arrow-up-right':'ti-arrow-down-right'),style:{fontSize:20}}),
             ' '+(delta>=0?'+':'')+delta.toLocaleString()+' units'
           ),
-          el('div',{style:{fontSize:13,color:delta>=0?'var(--ok)':'var(--err)',fontWeight:600}},
+          el('div',{style:{fontSize:12,color:delta>=0?'var(--ok)':'var(--err)',fontWeight:600}},
             (pct>=0?'+':'')+pct.toFixed(1)+'% vs last week'
           ),
           el('div',{style:{borderLeft:'0.5px solid var(--bdr)',paddingLeft:10,marginLeft:2,fontSize:11,color:'var(--text3)'}},
@@ -8613,19 +8504,20 @@ function PostLaunchView({data,setData,addChangelogEntry}){
       el(TopStoresBySku,{salesData, hidden, sel, onSelect:setSel})
       ),
       plTab==='geo'&&el(React.Fragment,null,
-      el('div',{style:{display:'grid',gridTemplateColumns:'1.4fr 1fr',gap:16}},
+      el('div',{style:{display:'grid',gridTemplateColumns:'2fr 1fr',gap:16}},
         el('div',{style:{background:'var(--bg)',border:'1px solid var(--bdr)',borderRadius:'var(--r)',padding:'14px',display:'flex',flexDirection:'column'}},
           el('div',{style:{fontSize:11,fontWeight:700,textTransform:'uppercase',letterSpacing:'.07em',color:'var(--text2)',marginBottom:10,display:'flex',alignItems:'center',gap:6}},
             el('i',{className:'ti ti-map-pin',style:{color:'#a78bfa'}}), 'Ontario Distribution'
           ),
-          el('div',{style:{flex:1,minHeight:360}},
+          el('div',{style:{flex:1,minHeight:460}},
             el(OntarioMap,{cityData:current.cities, cityStores:current.cityStores})
           )
         ),
-        el('div',{style:{background:'var(--bg)',border:'0.5px solid var(--bdr)',borderRadius:10,padding:'16px',overflowY:'auto',maxHeight:520}},
-          el(TopStores,{stores:current.stores}),
-          el('div',{style:{borderTop:'0.5px solid var(--bdr)',marginTop:16,paddingTop:16}}),
-          el(TopCities,{cities:current.cities})
+        el('div',{style:{background:'var(--bg)',border:'0.5px solid var(--bdr)',borderRadius:10,padding:'16px'}},
+          el(TopCities,{cities:current.cities}),
+          el('div',{style:{marginTop:14,paddingTop:12,borderTop:'0.5px solid var(--bdr)',
+            fontSize:11,color:'var(--text3)',lineHeight:1.5}},
+            'Store-level rankings live in the Stores tab, split by storefront, retailer and SKU.')
         )
       )
       )
