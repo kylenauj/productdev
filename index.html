@@ -8388,6 +8388,88 @@ function keyAccountFor(banner){
   return best;
 }
 
+
+/* ── KA vs independent split for the selected SKU ── */
+function ChannelSplitCard({current}){
+  if(!current) return null;
+  const rows=[];
+  if(Array.isArray(current.locations)&&current.locations.length){
+    current.locations.forEach(L=>rows.push({banner:L.banner,units:L.units}));
+  } else if(current.cityStores&&Object.keys(current.cityStores).length){
+    Object.values(current.cityStores).forEach(bs=>
+      Object.entries(bs).forEach(([b,u])=>rows.push({banner:b,units:u})));
+  } else {
+    Object.entries(current.stores||{}).forEach(([b,u])=>rows.push({banner:b,units:u}));
+  }
+  if(!rows.length) return null;
+
+  const tiers={A:{u:0,n:0},B:{u:0,n:0},C:{u:0,n:0},TBD:{u:0,n:0}};
+  let kaU=0,kaN=0,inU=0,inN=0;
+  const names={};
+  rows.forEach(r=>{
+    const ka=keyAccountFor(r.banner);
+    if(ka){ const t=tiers[ka.tier]||tiers.TBD;
+      t.u+=r.units; t.n++; kaU+=r.units; kaN++;
+      names[ka.name]=(names[ka.name]||0)+r.units;
+    } else { inU+=r.units; inN++; }
+  });
+  const total=kaU+inU||1;
+  const top=Object.entries(names).sort(([,a],[,b])=>b-a).slice(0,4);
+  const seg=[['A',tiers.A],['B',tiers.B],['C',tiers.C],['TBD',tiers.TBD]].filter(([,v])=>v.u>0);
+  const mono={fontFamily:'var(--font-mono)'};
+
+  return el('div',{style:{background:'var(--bg)',border:'0.5px solid var(--bdr)',
+    borderRadius:10,padding:'14px 16px',marginBottom:16}},
+    el('div',{style:{display:'flex',alignItems:'baseline',gap:10,marginBottom:11}},
+      el('div',{style:{fontSize:11,fontWeight:700,textTransform:'uppercase',letterSpacing:'.1em',
+        color:'var(--text3)',...mono}},'Channel split'),
+      el('div',{style:{marginLeft:'auto',fontSize:11,color:'var(--text3)'}},
+        (kaN+inN)+' storefronts')),
+
+    /* One bar, tier-segmented, independents in grey */
+    el('div',{style:{display:'flex',height:10,borderRadius:99,overflow:'hidden',
+      background:'var(--bdr)',marginBottom:11}},
+      seg.map(([t,v])=>el('div',{key:t,title:'Tier '+t+' · '+v.u.toLocaleString()+' units',
+        style:{width:(v.u/total*100)+'%',background:KA_TIER_COL[t]||'var(--text3)'}})),
+      inU>0&&el('div',{title:'Independents · '+inU.toLocaleString()+' units',
+        style:{width:(inU/total*100)+'%',background:'var(--text3)',opacity:.35}})),
+
+    el('div',{style:{display:'flex',gap:20,flexWrap:'wrap',alignItems:'flex-start'}},
+      el('div',null,
+        el('div',{style:{fontSize:20,fontWeight:800,color:'var(--accent)',...mono,lineHeight:1.1}},
+          Math.round(kaU/total*100)+'%'),
+        el('div',{style:{fontSize:11,color:'var(--text2)',fontWeight:600}},'Key accounts'),
+        el('div',{style:{fontSize:11,color:'var(--text3)'}},
+          kaU.toLocaleString()+' units · '+kaN+' stores')),
+      el('div',null,
+        el('div',{style:{fontSize:20,fontWeight:800,color:'var(--text2)',...mono,lineHeight:1.1}},
+          Math.round(inU/total*100)+'%'),
+        el('div',{style:{fontSize:11,color:'var(--text2)',fontWeight:600}},'Independents'),
+        el('div',{style:{fontSize:11,color:'var(--text3)'}},
+          inU.toLocaleString()+' units · '+inN+' stores')),
+
+      /* Tier chips */
+      el('div',{style:{display:'flex',gap:6,flexWrap:'wrap',alignSelf:'center'}},
+        seg.map(([t,v])=>el('div',{key:t,style:{border:'0.5px solid '+(KA_TIER_COL[t]||'var(--bdr2)'),
+          borderRadius:6,padding:'3px 9px',lineHeight:1.25}},
+          el('div',{style:{fontSize:11,fontWeight:700,...mono,color:KA_TIER_COL[t]||'var(--text3)'}},
+            'Tier '+t),
+          el('div',{style:{fontSize:11,color:'var(--text3)',...mono}},
+            v.u.toLocaleString()+' · '+v.n+'st')))),
+
+      /* Who the volume actually sits with */
+      top.length>0&&el('div',{style:{marginLeft:'auto',minWidth:150}},
+        el('div',{style:{fontSize:11,color:'var(--text3)',...mono,textTransform:'uppercase',
+          letterSpacing:'.07em',marginBottom:3}},'Top accounts'),
+        top.map(([n,u])=>el('div',{key:n,style:{display:'flex',gap:10,fontSize:11,
+          justifyContent:'space-between'}},
+          el('span',{style:{color:'var(--text2)',overflow:'hidden',textOverflow:'ellipsis',
+            whiteSpace:'nowrap',maxWidth:120}},n),
+          el('span',{style:{color:'var(--text3)',...mono}},u.toLocaleString()))))
+    )
+  );
+}
+
 function TopStoresBySku({salesData, hidden, sel, onSelect}){
   const [mode,setMode]=React.useState('loc');   // 'loc' | 'ret' | 'sku'
   const [topN,setTopN]=React.useState(3);
@@ -9012,6 +9094,7 @@ function PostLaunchView({data,setData,addChangelogEntry}){
         }},el('i',{className:'ti '+t.icon,style:{fontSize:14}}),t.label))
       ),
       plTab==='overview'&&el(React.Fragment,null,
+      el(ChannelSplitCard,{current}),
       el('div',{style:{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:10,marginBottom:16}},
         [{l:'Total Units Sold',v:current.units.toLocaleString(),s:'all orders',c:'var(--ok)',g:'var(--grad-ok)'},
          {l:'Stores Reached',v:current.storeCount,s:'retail locations',c:'var(--info)',g:'var(--grad-info)'},
