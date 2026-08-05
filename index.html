@@ -5780,6 +5780,7 @@ function BulkUploadModal({salesData,onUpdate,onClose}){
   const applyAll=()=>{
     if(!results) return;
     const now=new Date().toISOString();
+    const batch={}, stamps={};
     results.filter(r=>!r.err&&r.mode!=='skip').forEach(r=>{
       const key=r.mode==='update'?r.target:r.src;
       const existing=salesData[key]||{};
@@ -5788,9 +5789,13 @@ function BulkUploadModal({salesData,onUpdate,onClose}){
       if(existing.pc!==undefined) updated.pc=existing.pc;
       if(existing.launchDate!==undefined) updated.launchDate=existing.launchDate;
       if(existing.ocs!==undefined) updated.ocs=existing.ocs;
+      if(existing.upwCat!==undefined) updated.upwCat=existing.upwCat;
       if(existing.brand&&!updated.brand) updated.brand=existing.brand;
-      onUpdate(key, updated, {[key]:now});
+      batch[key]=updated; stamps[key]=now;
     });
+    // One call — writing per-SKU in a loop reads a stale salesData each time
+    // and every SKU but the last is discarded.
+    onUpdate(batch, stamps);
     onClose();
   };
 
@@ -9222,13 +9227,16 @@ function PostLaunchView({data,setData,addChangelogEntry}){
     }),
     showBulkUpload&&el(BulkUploadModal,{
       salesData,
-      onUpdate:(name,prod,lu)=>{
-        const next={...salesData,[name]:prod};
+      onUpdate:(batch,stamps)=>{
+        const next={...salesData,...batch};
         setSalesData(next);
-        const luAll={...lastUpdated,...lu};
+        const luAll={...lastUpdated,...stamps};
         setLastUpdated(luAll);
         setData(d=>({...d,postLaunch:next,postLaunchLastUpdated:luAll}));
-        if(addChangelogEntry) addChangelogEntry('Bulk sales data updated',Object.keys(lu).join(', '));
+        const names=Object.keys(batch);
+        if(!sel||!next[sel]) setSel(names[0]||'');
+        if(addChangelogEntry)
+          addChangelogEntry('Bulk sales import — '+names.length+' SKU'+(names.length===1?'':'s'),names.join(', '));
       },
       onClose:()=>setShowBulkUpload(false)
     }),
