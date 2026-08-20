@@ -9713,13 +9713,145 @@ const LIVE_PORTFOLIO=[
  ['Shatterizer','Concentrate','Slurricane Shatter','310241','85.7%',15,'1g','FT','']
 ].map(r=>({brand:r[0],cat:r[1],name:r[2],sku:r[3],thc:r[4],cases:r[5],fmt:r[6],stock:r[7],tag:r[8]}));
 
+/* Timeline runs Sep 2026 → Dec 2027. The 2026 columns are the runway: they
+   carry the submission/NTP/PO milestones you work back from, and the launch
+   windows of the prior fiscal's calls (whose submissions have already shut). */
 const PLAN_MONTHS=[
-  {k:'2027-01',s:'Jan',q:'Q1'},{k:'2027-02',s:'Feb',q:'Q1'},{k:'2027-03',s:'Mar',q:'Q1'},
-  {k:'2027-04',s:'Apr',q:'Q2'},{k:'2027-05',s:'May',q:'Q2'},{k:'2027-06',s:'Jun',q:'Q2'},
-  {k:'2027-07',s:'Jul',q:'Q3'},{k:'2027-08',s:'Aug',q:'Q3'},{k:'2027-09',s:'Sep',q:'Q3'},
-  {k:'2027-10',s:'Oct',q:'Q4'},{k:'2027-11',s:'Nov',q:'Q4'},{k:'2027-12',s:'Dec',q:'Q4'}
+  {k:'2026-09',s:'Sep',y:2026,q:'Q3 2026'},{k:'2026-10',s:'Oct',y:2026,q:'Q4 2026'},
+  {k:'2026-11',s:'Nov',y:2026,q:'Q4 2026'},{k:'2026-12',s:'Dec',y:2026,q:'Q4 2026'},
+  {k:'2027-01',s:'Jan',y:2027,q:'Q1 2027'},{k:'2027-02',s:'Feb',y:2027,q:'Q1 2027'},
+  {k:'2027-03',s:'Mar',y:2027,q:'Q1 2027'},{k:'2027-04',s:'Apr',y:2027,q:'Q2 2027'},
+  {k:'2027-05',s:'May',y:2027,q:'Q2 2027'},{k:'2027-06',s:'Jun',y:2027,q:'Q2 2027'},
+  {k:'2027-07',s:'Jul',y:2027,q:'Q3 2027'},{k:'2027-08',s:'Aug',y:2027,q:'Q3 2027'},
+  {k:'2027-09',s:'Sep',y:2027,q:'Q3 2027'},{k:'2027-10',s:'Oct',y:2027,q:'Q4 2027'},
+  {k:'2027-11',s:'Nov',y:2027,q:'Q4 2027'},{k:'2027-12',s:'Dec',y:2027,q:'Q4 2027'}
 ];
-const PLAN_QUARTERS=[{q:'Q1',n:3},{q:'Q2',n:3},{q:'Q3',n:3},{q:'Q4',n:3}];
+const PLAN_PLAN_YEAR_MONTHS=PLAN_MONTHS.filter(m=>m.y===2027);
+const PLAN_QUARTERS=(()=>{const r=[];PLAN_MONTHS.forEach(m=>{
+  const l=r[r.length-1];if(l&&l.q===m.q)l.n++;else r.push({q:m.q,n:1});});return r;})();
+
+/* ── OCS Annual Product Call schedule — PROJECTED 2027/28 ──────────
+   Not an OCS-published calendar. Extrapolated from the two published
+   years: 34 of 40 milestones held the same ISO week and 26 of 40 the
+   same calendar date, so each date was rolled forward a year and
+   corrected to the nearest business day (pulling back ahead of a long
+   weekend). Calls 2 and 4 land ±1 day; Calls 1, 3 and 5 ±2–3 days —
+   those are the blocks OCS has actually moved between years.
+   OCS normally publishes the real calendar late Sep / early Oct 2026.
+   `months` = the 2027 grid columns each call's launch windows cover.
+   ──────────────────────────────────────────────────────────────── */
+const PLAN_CALL_SRC='Projected 2027/28 — re-baseline when OCS publishes (late Sep/Oct 2026)';
+const PLAN_CALLS=[
+  {n:1,col:'var(--cat-pre)',    subOpen:'28-Oct-26',subDue:'12-Nov-26',
+   ntpOpen:'10-Dec-26',ntpDue:'18-Dec-26',po1:'18–25 Feb 27',po2:'24–31 Mar 27',
+   l1:'April 2027',l2:'May 2027',months:['2027-04','2027-05'],dueISO:'2026-11-12',ms:[{m:'2026-10',k:'open',t:'C1 subs open',d:'28 Oct'},{m:'2026-11',k:'due',t:'C1 SUBMIT',d:'12 Nov'},{m:'2026-12',k:'ntp',t:'C1 NTP/attr',d:'10–18 Dec'},{m:'2027-02',k:'po',t:'C1 PO L1',d:'18–25 Feb'},{m:'2027-03',k:'po',t:'C1 PO L2',d:'24–31 Mar'}]},
+  {n:2,col:'var(--cat-infused)',subOpen:'15-Jan-27',subDue:'29-Jan-27',
+   ntpOpen:'2-Mar-27',ntpDue:'11-Mar-27',po1:'29 Apr–6 May 27',po2:'4–11 Jun 27',
+   l1:'June 2027',l2:'July 2027',months:['2027-06','2027-07'],dueISO:'2027-01-29',ms:[{m:'2027-01',k:'open',t:'C2 subs open',d:'15 Jan'},{m:'2027-01',k:'due',t:'C2 SUBMIT',d:'29 Jan'},{m:'2027-03',k:'ntp',t:'C2 NTP/attr',d:'2–11 Mar'},{m:'2027-04',k:'po',t:'C2 PO L1',d:'29 Apr–6 May'},{m:'2027-06',k:'po',t:'C2 PO L2',d:'4–11 Jun'}]},
+  {n:3,col:'var(--cat-vape)',   subOpen:'30-Mar-27',subDue:'15-Apr-27',
+   ntpOpen:'13-May-27',ntpDue:'25-May-27',po1:'9–16 Jul 27',po2:'17–24 Aug 27',
+   l1:'Aug/Sep 2027',l2:'October 2027',months:['2027-08','2027-09','2027-10'],dueISO:'2027-04-15',ms:[{m:'2027-03',k:'open',t:'C3 subs open',d:'30 Mar'},{m:'2027-04',k:'due',t:'C3 SUBMIT',d:'15 Apr'},{m:'2027-05',k:'ntp',t:'C3 NTP/attr',d:'13–25 May'},{m:'2027-07',k:'po',t:'C3 PO L1',d:'9–16 Jul'},{m:'2027-08',k:'po',t:'C3 PO L2',d:'17–24 Aug'}]},
+  {n:4,col:'var(--cat-extract)',subOpen:'11-Jun-27',subDue:'25-Jun-27',
+   ntpOpen:'23-Jul-27',ntpDue:'5-Aug-27',po1:'22–29 Sep 27',po2:'29 Oct–5 Nov 27',
+   l1:'November 2027',l2:'Dec 2027/Jan 2028',months:['2027-11','2027-12'],dueISO:'2027-06-25',ms:[{m:'2027-06',k:'open',t:'C4 subs open',d:'11 Jun'},{m:'2027-06',k:'due',t:'C4 SUBMIT',d:'25 Jun'},{m:'2027-07',k:'ntp',t:'C4 NTP/attr',d:'23 Jul–5 Aug'},{m:'2027-09',k:'po',t:'C4 PO L1',d:'22–29 Sep'},{m:'2027-10',k:'po',t:'C4 PO L2',d:'29 Oct–5 Nov'}]},
+  {n:5,col:'var(--x-violet)',   subOpen:'20-Aug-27',subDue:'3-Sep-27',
+   ntpOpen:'6-Oct-27',ntpDue:'15-Oct-27',po1:'3–10 Dec 27',po2:'12–19 Jan 28',
+   l1:'Jan/Feb 2028',l2:'Feb/Mar 2028',months:[],dueISO:'2027-09-03',ms:[{m:'2027-08',k:'open',t:'C5 subs open',d:'20 Aug'},{m:'2027-09',k:'due',t:'C5 SUBMIT',d:'3 Sep'},{m:'2027-10',k:'ntp',t:'C5 NTP/attr',d:'6–15 Oct'},{m:'2027-12',k:'po',t:'C5 PO L1',d:'3–10 Dec'}]}
+];
+/* Jan–Mar 2027 launches belong to the PRIOR fiscal's calls. The one hard
+   date we have is 2026/27 Call 5: submission closes 4 Sep 2026 — the last
+   door into the current fiscal before the April 2027 slot. */
+/* Prior-fiscal (2026/27) calls own every launch month before April 2027.
+   Their submission windows are already shut, so no date is invented for
+   Calls 3 and 4 — only Call 5, whose close the user supplied. */
+const PLAN_PRIOR_CALLS=[
+  {n:null,short:'2026/27 C3',title:'2026/27 Call 3',col:'var(--muted)',
+   subDue:null,dueISO:null,closed:true,months:['2026-09','2026-10'],
+   note:'Prior fiscal — submission window closed'},
+  {n:null,short:'2026/27 C4',title:'2026/27 Call 4',col:'var(--muted)',
+   subDue:null,dueISO:null,closed:true,months:['2026-11','2026-12'],
+   note:'Prior fiscal — submission window closed'},
+  {n:null,short:'2026/27 C5',title:'2026/27 Call 5',col:'var(--muted)',
+   subDue:'4-Sep-26',dueISO:'2026-09-04',months:['2027-01','2027-02','2027-03'],
+   ms:[{m:'2026-09',k:'due',t:'2026/27 C5 SUBMIT',d:'4 Sep'}],
+   note:'Last door into the current fiscal'}
+];
+const PLAN_PRIOR_CALL=PLAN_PRIOR_CALLS[2];
+const PLAN_MONTH_CALL=(()=>{
+  const m={};
+  PLAN_PRIOR_CALLS.forEach(c=>c.months.forEach(k=>{m[k]=c;}));
+  PLAN_CALLS.forEach(c=>c.months.forEach(k=>{m[k]=c;}));
+  return m;
+})();
+/* Every milestone that lands inside the visible window, grouped by month. */
+const PLAN_MS_BY_MONTH=(()=>{
+  const out={};
+  [...PLAN_PRIOR_CALLS,...PLAN_CALLS].forEach(c=>(c.ms||[]).forEach(x=>{
+    (out[x.m]=out[x.m]||[]).push({...x,col:c.col,
+      lm:x.k==='due'?((c.months||[]).length
+        ? (c.months.map(k=>{const m=PLAN_MONTHS.find(y=>y.k===k);return m?m.s+" '"+String(m.y).slice(2):k;}).join('/'))
+        : (c.l1||'')):''});}));
+  Object.keys(out).forEach(k=>out[k].sort((a,z)=>
+    (a.k==='due'?0:1)-(z.k==='due'?0:1)));
+  return out;
+})();
+const planCallFor=mk=>PLAN_MONTH_CALL[mk]||null;
+/* Submit ▸ launch connectors. One bar per call, running from the column
+   holding its submission deadline to the last column of its launch window.
+   Bars overlap in time, so they're greedily packed into lanes. Calls with no
+   published deadline (prior-fiscal C3/C4) get no bar — nothing to connect. */
+const PLAN_FLOWS=(()=>{
+  const idx=k=>PLAN_MONTHS.findIndex(m=>m.k===k);
+  const rows=[];
+  [...PLAN_PRIOR_CALLS,...PLAN_CALLS].forEach(c=>{
+    const due=(c.ms||[]).find(x=>x.k==='due');
+    if(!due)return;
+    const s0=idx(due.m); if(s0<0)return;
+    const lm=(c.months||[]).map(idx).filter(i=>i>-1);
+    const offGrid=lm.length===0;
+    const end=offGrid?PLAN_MONTHS.length-1:Math.max(...lm);
+    if(end<s0)return;
+    rows.push({call:c,due,start:s0,end,launchStart:offGrid?null:Math.min(...lm),offGrid});
+  });
+  rows.sort((a,b)=>a.start-b.start||a.end-b.end);
+  const laneEnd=[];
+  rows.forEach(r=>{let l=0;while(laneEnd[l]!==undefined&&laneEnd[l]>=r.start)l++;
+    laneEnd[l]=r.end;r.lane=l;});
+  return {rows,lanes:laneEnd.length};
+})();
+const planLaunchLabel=c=>{
+  const ms=(c.months||[]).map(k=>PLAN_MONTHS.find(x=>x.k===k)).filter(Boolean);
+  if(!ms.length)return c.l1?(c.l1+(c.l2?' / '+c.l2:'')):'';
+  return ms.map(m=>m.s).join('/')+" '"+String(ms[0].y).slice(2);
+};
+/* Prepare-by = the submission deadline of the call that owns this launch
+   month. In-market = the month itself. Both are what a block is judged on. */
+function planPrepBy(month){
+  const c=planCallFor(month);
+  if(!c)return null;
+  if(!c.dueISO)return {call:c,date:null,days:null,state:'shut'};
+  const d=planDaysTo(c.dueISO);
+  return {call:c,date:c.subDue,days:d,
+    state:d<0?'closed':(d<=45?'urgent':(d<=120?'soon':'ok'))};
+}
+function planInMarket(month){
+  const m=PLAN_MONTHS.find(x=>x.k===month);
+  return m?m.s+' '+m.y:'';
+}
+const PLAN_PREP_COL={shut:'var(--text4)',closed:'var(--err)',urgent:'var(--err)',
+  soon:'var(--warn)',ok:'var(--muted)'};
+function planDaysTo(iso){
+  if(!iso)return null;
+  const a=String(iso).split('-').map(Number);
+  const t=new Date();t.setHours(0,0,0,0);
+  return Math.round((new Date(a[0],a[1]-1,a[2])-t)/86400000);
+}
+const planDueChip=c=>{
+  if(!c.dueISO)return '';
+  const d=planDaysTo(c.dueISO);
+  if(d===null)return '';
+  return d<0?'closed':(d===0?'today':(d<400?'in '+d+'d':''));
+};
 const PLAN_BRANDS_SEED=['Litti','Greazy','Buddy Blooms','Countryside','Ellevia','Shatterizer'];
 const PLAN_CATS=['Pre-Roll','Infused Pre-Roll','Vape — AIO','Vape — 510','Concentrate'];
 /* Categories retired after a taxonomy change. Anything with a replacement is
@@ -9827,9 +9959,10 @@ function PlanSectionHead({title,sub,right,open,onToggle}){
     right&&el('div',{style:{marginLeft:'auto'}},right)
   );
 }
-function usePlanFold(key){
+function usePlanFold(key,dflt){
+  const d0=dflt===false?'0':'1';
   const [open,setOpen]=React.useState(()=>{
-    try{return localStorage.getItem('au_plan_fold_'+key)!=='0';}catch{return true;}
+    try{return (localStorage.getItem('au_plan_fold_'+key)||d0)!=='0';}catch{return dflt!==false;}
   });
   return [open,()=>setOpen(v=>{
     try{localStorage.setItem('au_plan_fold_'+key,v?'0':'1');}catch{}
@@ -9975,6 +10108,8 @@ function Plan2027View({data,setData}){
   const [metric,setMetric]=React.useState('sku');
   const [coverHover,setCoverHover]=React.useState(null);
   const [openCov,toggleCov]=usePlanFold('coverage');
+  const [openCal,toggleCal]=usePlanFold('calls',false);
+  const [showFlow,toggleFlow]=usePlanFold('flow');
   const [newBrand,setNewBrand]=React.useState('');
   const gridRef=React.useRef(null);
 
@@ -10057,8 +10192,10 @@ function Plan2027View({data,setData}){
 
   const monthCount=m=>blocks.filter(b=>b.month===m).length;
   const maxMonth=Math.max(1,...PLAN_MONTHS.map(m=>monthCount(m.k)));
-  const emptyMonths=PLAN_MONTHS.filter(m=>monthCount(m.k)===0).length;
+  const emptyMonths=PLAN_PLAN_YEAR_MONTHS.filter(m=>monthCount(m.k)===0).length;
   const scheduled=blocks.filter(b=>b.month).length;
+  const pastPrep=blocks.filter(b=>{const pr=b.month&&planPrepBy(b.month);
+    return pr&&pr.days<0;}).length;
   const backlog=blocks.filter(b=>!b.month);
 
   const rowsFor=b=>{
@@ -10068,7 +10205,10 @@ function Plan2027View({data,setData}){
     return [...known,...extra];
   };
 
-  const leastLoadedMonth=()=>PLAN_MONTHS.reduce((a,m)=>monthCount(m.k)<monthCount(a.k)?m:a,PLAN_MONTHS[0]).k;
+  const monthTint=mk=>{const c=planCallFor(mk);
+    return c?'color-mix(in oklab,'+c.col+',transparent 95%)':'transparent';};
+  const leastLoadedMonth=()=>PLAN_PLAN_YEAR_MONTHS.reduce(
+    (a,m)=>monthCount(m.k)<monthCount(a.k)?m:a,PLAN_PLAN_YEAR_MONTHS[0]).k;
 
   const planIt=(b,c)=>{
     addRow(b,c);
@@ -10081,10 +10221,14 @@ function Plan2027View({data,setData}){
 
   const exportCSV=()=>{
     const esc=v=>'"'+String(v==null?'':v).replace(/"/g,'""')+'"';
-    const head=['Brand','Category','Month','Product','Format','Status','Notes'];
+    const head=['Brand','Category','Product','Format','Status',
+      'Prepare by (submission deadline)','OCS call','In market','Notes'];
     const rows=[...blocks].sort((a,z)=>
       (a.brand+'|'+a.cat+'|'+(a.month||'zz')).localeCompare(z.brand+'|'+z.cat+'|'+(z.month||'zz')))
-      .map(b=>[b.brand,b.cat,b.month||'Unscheduled',b.name,b.format||'',b.status||'',b.notes||'']);
+      .map(b=>{const pr=b.month?planPrepBy(b.month):null;
+        return [b.brand,b.cat,b.name,b.format||'',b.status||'',
+          pr?pr.date:'',pr?(pr.call.n?'Call '+pr.call.n:pr.call.title):'',
+          b.month?planInMarket(b.month):'Unscheduled',b.notes||''];});
     const csv=[head,...rows].map(r=>r.map(esc).join(',')).join('\r\n');
     const url=URL.createObjectURL(new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'}));
     const a=document.createElement('a');a.href=url;a.download='2027-launch-plan.csv';
@@ -10101,7 +10245,17 @@ function Plan2027View({data,setData}){
       onDragStart:e=>{e.dataTransfer.setData('text/plain',b.id);e.dataTransfer.effectAllowed='move';setDragId(b.id);},
       onDragEnd:()=>{setDragId(null);setOverKey('');},
       onClick:()=>setEditId(b.id),
-      title:b.name+(b.notes?' — '+b.notes:''),
+      title:(()=>{
+        const pr=b.month?planPrepBy(b.month):null;
+        return b.name
+          +(pr?('\n'+(pr.state==='shut'
+                ? 'Submission window closed — '+pr.call.title+' (prior fiscal)'
+                : 'Prepare by '+pr.date+' — '+(pr.days<0?'submission closed':pr.days+' days')
+                  +' ('+(pr.call.n?'OCS Call '+pr.call.n:pr.call.title)+')')
+              +'\nIn market '+planInMarket(b.month))
+             :'\nUnscheduled — no submission deadline yet')
+          +(b.notes?'\n\n'+b.notes:'');
+      })(),
       style:{background:'var(--surface)',border:'1px solid var(--border)',
         borderLeft:'3px solid '+cc,borderRadius:8,padding:'6px 8px'}},
       el('div',{style:{fontSize:11,fontWeight:600,lineHeight:1.3,color:'var(--fg)',
@@ -10114,7 +10268,26 @@ function Plan2027View({data,setData}){
           el('span',{style:{fontFamily:'var(--mono)',fontSize:8,fontWeight:700,color:col,
             textTransform:'uppercase',letterSpacing:'.07em'}},b.status||'Idea')
         )
-      )
+      ),
+      (()=>{
+        if(!b.month) return el('div',{style:{marginTop:5,paddingTop:4,
+          borderTop:'1px solid var(--border-soft)',fontFamily:'var(--mono)',fontSize:9,
+          color:'var(--text4)',display:'flex',alignItems:'center',gap:4}},
+          el('i',{className:'ti ti-flag-off',style:{fontSize:10}}),'no dates yet');
+        const pr=planPrepBy(b.month), mkt=planInMarket(b.month);
+        const pc=pr?PLAN_PREP_COL[pr.state]:'var(--muted)';
+        return el('div',{style:{marginTop:5,paddingTop:4,
+          borderTop:'1px solid var(--border-soft)',display:'flex',alignItems:'center',
+          gap:4,fontFamily:'var(--mono)',fontSize:9}},
+          el('i',{className:'ti '+(pr&&pr.state==='shut'?'ti-lock'
+            :(pr&&pr.state==='closed'?'ti-alert-triangle-filled':'ti-flag')),
+            style:{fontSize:10,color:pc,flexShrink:0}}),
+          el('span',{style:{color:pc,fontWeight:pr&&pr.state==='shut'?400:700,
+            overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},
+            pr?(pr.date||'window closed'):'—'),
+          el('span',{style:{marginLeft:'auto',color:'var(--text4)',flexShrink:0}},'▸ '+mkt)
+        );
+      })()
     );
   };
 
@@ -10152,8 +10325,11 @@ function Plan2027View({data,setData}){
       style:{position:'sticky',top:28,zIndex:4,height:46,background:'var(--surface-warm)',
         borderLeft:'1px solid var(--border)',borderBottom:'2px solid var(--accent)',
         padding:'6px 8px',display:'flex',flexDirection:'column',justifyContent:'center',gap:4}},
-      el('div',{style:{display:'flex',alignItems:'baseline',gap:6}},
-        el('span',{style:{fontSize:12,fontWeight:600,color:'var(--fg)'}},m.s),
+      el('div',{style:{display:'flex',alignItems:'baseline',gap:4}},
+        el('span',{style:{fontSize:12,fontWeight:600,
+          color:m.y===2027?'var(--fg)':'var(--muted)'}},m.s),
+        el('span',{style:{fontFamily:'var(--mono)',fontSize:8,color:'var(--text4)'}},
+          "'"+String(m.y).slice(2)),
         el('span',{style:{fontFamily:'var(--mono)',fontSize:9,color:n?'var(--accent)':'var(--text4)',
           marginLeft:'auto',fontWeight:700}},n||'—')
       ),
@@ -10161,6 +10337,137 @@ function Plan2027View({data,setData}){
         el('div',{style:{height:'100%',width:(n/maxMonth*100)+'%',background:'var(--accent)'}}))
     ));
   });
+
+  /* Product-call overlay — contiguous runs of months sharing a call */
+  const callRuns=(()=>{const r=[];PLAN_MONTHS.forEach(m=>{
+    const c=planCallFor(m.k),last=r[r.length-1];
+    if(last&&last.c===c)last.n++;else r.push({c,n:1});});return r;})();
+  gridKids.push(el('div',{key:'cbl',style:{position:'sticky',left:0,top:74,zIndex:7,height:44,
+    background:'var(--surface-warm)',borderRight:'1px solid var(--border)',
+    borderBottom:'1px solid var(--border)',padding:'0 12px',display:'flex',
+    flexDirection:'column',justifyContent:'center'}},
+    el('span',{style:{fontFamily:'var(--mono)',fontSize:9,fontWeight:700,letterSpacing:'.1em',
+      textTransform:'uppercase',color:'var(--muted)'}},'OCS product call'),
+    el('span',{style:{fontFamily:'var(--mono)',fontSize:8,color:'var(--text4)',
+      letterSpacing:'.06em',marginTop:2}},'projected')));
+  callRuns.forEach((r,i)=>{
+    const c=r.c, chip=c?planDueChip(c):'';
+    const past=c&&planDaysTo(c.dueISO)<0;
+    gridKids.push(el('div',{key:'cb'+i,
+      title:c?((c.n?'Call '+c.n:c.title)
+        +(c.subDue?' — submission deadline '+c.subDue
+                  :' — submission window closed (prior fiscal)')
+        +(c.l1?'  ·  launches '+c.l1+(c.l2?' / '+c.l2:''):'')):'',
+      style:{gridColumn:'span '+r.n,position:'sticky',top:74,zIndex:4,height:44,
+        background:c?'color-mix(in oklab,'+c.col+',var(--surface-warm) 86%)':'var(--surface-warm)',
+        borderLeft:'1px solid var(--border)',borderBottom:'1px solid var(--border)',
+        borderTop:'2px solid '+(c?c.col:'var(--border)'),
+        padding:'5px 9px',display:'flex',flexDirection:'column',justifyContent:'center',gap:2,
+        opacity:past?.62:1}},
+      el('div',{style:{display:'flex',alignItems:'baseline',gap:7}},
+        el('span',{style:{fontFamily:'var(--mono)',fontSize:9,fontWeight:700,letterSpacing:'.1em',
+          textTransform:'uppercase',color:c?c.col:'var(--muted)'}},
+          c?(c.n?'Call '+c.n:c.short):'—'),
+        chip&&el('span',{style:{fontFamily:'var(--mono)',fontSize:8,fontWeight:700,
+          letterSpacing:'.06em',textTransform:'uppercase',marginLeft:'auto',
+          color:past?'var(--text4)':'var(--accent)'}},chip)),
+      c&&el('div',{style:{fontFamily:'var(--mono)',fontSize:9,
+        color:c.subDue?'var(--muted)':'var(--text4)',
+        overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',
+        display:'flex',alignItems:'center',gap:4}},
+        !c.subDue&&el('i',{className:'ti ti-lock',style:{fontSize:9,flexShrink:0}}),
+        c.subDue?('submit by '+c.subDue):'window closed')
+    ));
+  });
+
+  /* Milestone track — every submission / NTP / PO date inside the window */
+  gridKids.push(el('div',{key:'msl',style:{position:'sticky',left:0,top:118,zIndex:7,height:46,
+    background:'var(--surface-warm)',borderRight:'1px solid var(--border)',
+    borderBottom:'2px solid var(--accent)',padding:'0 12px',display:'flex',
+    flexDirection:'column',justifyContent:'center'}},
+    el('span',{style:{fontFamily:'var(--mono)',fontSize:9,fontWeight:700,letterSpacing:'.1em',
+      textTransform:'uppercase',color:'var(--muted)'}},'Key dates'),
+    el('span',{style:{fontFamily:'var(--mono)',fontSize:8,color:'var(--text4)',
+      letterSpacing:'.06em',marginTop:2}},'★ = submit by')));
+  PLAN_MONTHS.forEach(m=>{
+    const list=PLAN_MS_BY_MONTH[m.k]||[];
+    gridKids.push(el('div',{key:'ms'+m.k,
+      title:list.length?list.map(x=>x.t+' — '+x.d
+        +(x.k==='due'&&x.lm?'   ▸ in market '+x.lm:'')).join('\n'):'',
+      style:{position:'sticky',top:118,zIndex:4,height:46,background:'var(--surface-warm)',
+        borderLeft:'1px solid var(--border)',borderBottom:'2px solid var(--accent)',
+        padding:'4px 7px',display:'flex',flexDirection:'column',justifyContent:'center',gap:1,
+        overflow:'hidden'}},
+      list.slice(0,2).map((x,i)=>el('div',{key:i,
+        style:{display:'flex',alignItems:'baseline',gap:4,fontFamily:'var(--mono)',
+          fontSize:x.k==='due'?9:8,fontWeight:x.k==='due'?700:400,
+          color:x.k==='due'?x.col:'var(--text4)',
+          overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},
+        el('span',{style:{flexShrink:0}},x.k==='due'?'★':'·'),
+        el('span',{style:{overflow:'hidden',textOverflow:'ellipsis'}},x.t),
+        el('span',{style:{marginLeft:'auto',flexShrink:0,
+          color:x.k==='due'?x.col:'var(--text4)'}},x.d))),
+      list.length>2&&el('div',{style:{fontFamily:'var(--mono)',fontSize:8,
+        color:'var(--text4)'}},'+'+(list.length-2)+' more'),
+      !list.length&&el('span',{style:{fontFamily:'var(--mono)',fontSize:9,
+        color:'var(--text4)'}},'—')
+    ));
+  });
+
+  /* Submit ▸ launch connector lanes */
+  if(showFlow) for(let ln=0;ln<PLAN_FLOWS.lanes;ln++){
+    const last=ln===PLAN_FLOWS.lanes-1;
+    gridKids.push(el('div',{key:'fl'+ln,style:{position:'sticky',left:0,zIndex:2,height:26,
+      background:'var(--bg)',borderRight:'1px solid var(--border)',
+      borderBottom:last?'1px solid var(--border)':'none',
+      padding:'0 12px',display:'flex',alignItems:'center'}},
+      ln===0&&el('span',{style:{fontFamily:'var(--mono)',fontSize:9,fontWeight:700,
+        letterSpacing:'.1em',textTransform:'uppercase',color:'var(--muted)'}},'Submit ▸ launch')));
+    const lane=PLAN_FLOWS.rows.filter(r=>r.lane===ln).sort((a,z)=>a.start-z.start);
+    let cur=0;
+    lane.forEach((r,i)=>{
+      if(r.start>cur)gridKids.push(el('div',{key:'fg'+ln+'_'+i,
+        style:{gridColumn:'span '+(r.start-cur),height:26,
+          borderBottom:last?'1px solid var(--border)':'none'}}));
+      const c=r.call, span=r.end-r.start+1;
+      const leadCols=r.offGrid?span:(r.launchStart-r.start);
+      const launchCols=span-leadCols;
+      const mk=planLaunchLabel(c);
+      gridKids.push(el('div',{key:'fb'+ln+'_'+i,
+        title:(c.n?'OCS Call '+c.n:c.title)
+          +'\nSubmit by '+(c.subDue||r.due.d)
+          +'  →  '+leadCols+' month'+(leadCols===1?'':'s')+' of prep'
+          +'  →  in market '+(c.l1||mk)+(c.l2?' / '+c.l2:''),
+        style:{gridColumn:'span '+span,height:26,padding:'3px 1px',
+          borderBottom:last?'1px solid var(--border)':'none'}},
+        el('div',{style:{display:'flex',height:'100%',minWidth:0,
+          borderRadius:'var(--pill)',overflow:'hidden'}},
+          el('div',{style:{flex:leadCols||0.001,minWidth:0,display:'flex',alignItems:'center',
+            gap:6,padding:'0 8px',
+            background:'repeating-linear-gradient(90deg,'
+              +'color-mix(in oklab,'+c.col+',transparent 88%) 0 5px,transparent 5px 11px)'}},
+            el('span',{style:{fontFamily:'var(--mono)',fontSize:9,fontWeight:700,color:c.col,
+              whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}},'★ '+r.due.d),
+            el('span',{style:{marginLeft:'auto',fontFamily:'var(--mono)',fontSize:8,
+              color:'var(--text4)',whiteSpace:'nowrap',overflow:'hidden'}},
+              r.offGrid?('▸ '+(c.l1||'')+' — past this grid')
+                       :(leadCols+' mo prep ▸'))),
+          launchCols>0&&el('div',{style:{flex:launchCols,minWidth:0,display:'flex',
+            alignItems:'center',gap:6,padding:'0 9px',
+            borderLeft:'2px solid '+c.col,
+            background:'color-mix(in oklab,'+c.col+',transparent 80%)'}},
+            el('span',{style:{fontFamily:'var(--mono)',fontSize:9,fontWeight:700,color:c.col,
+              whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}},
+              (c.n?'CALL '+c.n:c.short)+' IN MARKET'),
+            el('span',{style:{marginLeft:'auto',fontFamily:'var(--mono)',fontSize:9,
+              fontWeight:700,color:'var(--fg)',whiteSpace:'nowrap'}},mk))
+        )));
+      cur=r.end+1;
+    });
+    if(cur<PLAN_MONTHS.length)gridKids.push(el('div',{key:'fz'+ln,
+      style:{gridColumn:'span '+(PLAN_MONTHS.length-cur),height:26,
+        borderBottom:last?'1px solid var(--border)':'none'}}));
+  }
 
   brands.forEach(b=>{
     const rws=rowsFor(b);
@@ -10172,7 +10479,7 @@ function Plan2027View({data,setData}){
       background:'var(--x-inset)',borderTop:'1px solid var(--border)',
       borderBottom:'1px solid var(--border)'}},
       el('div',{style:{position:'sticky',left:0,display:'inline-flex',alignItems:'center',
-        gap:10,padding:'8px 12px',maxWidth:PLAN_LABEL_W+12*PLAN_COL_W}},
+        gap:10,padding:'8px 12px',maxWidth:PLAN_LABEL_W+PLAN_MONTHS.length*PLAN_COL_W}},
         el('span',{style:{fontFamily:'var(--font-display)',fontSize:14,letterSpacing:'.01em'}},b),
         el('span',{className:'plan-chip',style:{color:'var(--muted)'}},
           bBlocks.filter(x=>x.month).length+' planned'),
@@ -10210,7 +10517,7 @@ function Plan2027View({data,setData}){
           style:{minHeight:56,padding:5,display:'flex',flexDirection:'column',gap:5,
             borderLeft:'1px solid var(--border-soft)',
             borderBottom:'1px solid var(--border-soft)',
-            background:mi%6<3?'transparent':'var(--surface-warm)'}},dropProps(b,c,m.k)),
+            background:monthTint(m.k)}},dropProps(b,c,m.k)),
           cb.map(Block),
           composing?el(PlanCompose,{brand:b,cat:c,month:m.k,onCommit:(cc,nm)=>{addBlock(b,cc,m.k,nm);setCompose(null);},onCancel:()=>setCompose(null)}):
           el('button',{className:'plan-add',title:'Add a product here',
@@ -10242,7 +10549,7 @@ function Plan2027View({data,setData}){
         style:{minHeight:40,padding:5,display:'flex',flexDirection:'column',
           borderLeft:'1px solid var(--border-soft)',
           borderBottom:'1px solid var(--border)',
-          background:mi%6<3?'transparent':'var(--surface-warm)'}},
+          background:monthTint(m.k)}},
         composing?el(PlanCompose,{brand:b,cat:null,month:m.k,onCommit:(cc,nm)=>{addBlock(b,cc,m.k,nm);setCompose(null);},onCancel:()=>setCompose(null)}):
         el('button',{className:'plan-add always',title:'Type a new product into '+m.s+' 2027',
           onClick:()=>setCompose({brand:b,cat:null,month:m.k}),
@@ -10278,9 +10585,13 @@ function Plan2027View({data,setData}){
         el('div',{style:{fontFamily:'var(--font-display)',fontSize:20,letterSpacing:'-0.01em'}},'2027 Launch Plan'),
         el('div',{style:{fontFamily:'var(--mono)',fontSize:10,color:'var(--muted)',
           letterSpacing:'.08em',textTransform:'uppercase',marginTop:3}},
-          'Portfolio coverage · gap analysis · brand ▸ category × month')
+          'Sep 2026 → Dec 2027 · runway, submission deadlines and launch windows')
       ),
       el('div',{style:{marginLeft:'auto',display:'flex',gap:8,flexWrap:'wrap'}},
+        el('button',{className:'btn',onClick:toggleFlow,
+          title:'Show the submit ▸ launch connectors on the grid'},
+          el('i',{className:'ti '+(showFlow?'ti-timeline-event-x':'ti-timeline-event')}),
+          showFlow?'Hide flow':'Show flow'),
         el('button',{className:'btn',onClick:()=>setShowBrands(v=>!v)},
           el('i',{className:'ti ti-tags'}),'Brand rows'),
         el('button',{className:'btn',onClick:exportCSV,disabled:!blocks.length},
@@ -10313,8 +10624,9 @@ function Plan2027View({data,setData}){
       gap:1,background:'var(--border)',borderBottom:'1px solid var(--border)'}},
       el(PlanKpi,{k:'Live SKUs',v:live.length,s:LIVE_PORTFOLIO_SRC}),
       el(PlanKpi,{k:'In development',v:flight.length+rd.length,s:'PC calls + R&D'}),
-      el(PlanKpi,{k:'Planned 2027',v:scheduled,s:backlog.length?(backlog.length+' unscheduled'):'blocks in the grid',
-        col:'var(--accent)'}),
+      el(PlanKpi,{k:'Planned 2027',v:scheduled,
+        s:pastPrep?(pastPrep+' past submission'):(backlog.length?(backlog.length+' unscheduled'):'blocks in the grid'),
+        col:pastPrep?'var(--err)':'var(--accent)'}),
       el(PlanKpi,{k:'Coverage gaps',v:gaps.length,
         s:'of '+(brands.length*PLAN_CATS.length)+' brand × category'
           +(naCount?' · '+naCount+' N/A':''),
@@ -10410,6 +10722,44 @@ function Plan2027View({data,setData}){
     ),
 
 
+    /* ── OCS product call schedule ── */
+    el('div',{style:{padding:'18px 20px',borderBottom:'1px solid var(--border)'}},
+      el(PlanSectionHead,{title:'OCS product call schedule',open:openCal,onToggle:toggleCal,
+        sub:PLAN_CALL_SRC}),
+      openCal&&el('div',null,
+        el('div',{style:{overflowX:'auto',border:'1px solid var(--border)',
+          borderRadius:'var(--r)'}},
+          el('table',{className:'task-tbl',style:{minWidth:920}},
+            el('thead',null,el('tr',null,
+              ['Call','Sub opens','Sub deadline','NTP/Attr opens','NTP/Attr deadline',
+               'PO L1','PO L2','Launch 1','Launch 2'].map(h=>el('th',{key:h},h)))),
+            el('tbody',null,
+              PLAN_CALLS.map(c=>{
+                const d=planDaysTo(c.dueISO), past=d<0;
+                return el('tr',{key:c.n,style:{opacity:past?.55:1}},
+                  el('td',{style:{fontFamily:'var(--font-body)'}},
+                    el('span',{style:{display:'inline-flex',alignItems:'center',gap:7}},
+                      el('span',{style:{width:3,height:15,borderRadius:2,background:c.col}}),
+                      el('span',{style:{fontWeight:700}},'Call '+c.n),
+                      c.months.length>0&&el('span',{className:'plan-chip',
+                        style:{color:'var(--muted)'}},
+                        c.months.map(m=>(PLAN_MONTHS.find(x=>x.k===m)||{}).s).join('/')))),
+                  el('td',null,c.subOpen),
+                  el('td',{style:{fontWeight:700,color:past?'var(--muted)':'var(--accent)'}},
+                    c.subDue+(planDueChip(c)?'  ('+planDueChip(c)+')':'')),
+                  el('td',null,c.ntpOpen),el('td',null,c.ntpDue),
+                  el('td',null,c.po1),el('td',null,c.po2),
+                  el('td',null,c.l1),el('td',null,c.l2));
+              }))
+          )
+        ),
+        el('div',{style:{fontFamily:'var(--mono)',fontSize:10,color:'var(--muted)',
+          marginTop:9,lineHeight:1.6}},
+          'Jan–Mar 2027 launches sit in the prior fiscal — '+PLAN_PRIOR_CALL.note+'. ',
+          'Call 5 launches Jan–Mar 2028, past the right edge of this grid.')
+      )
+    ),
+
     /* ── Backlog tray ── */
     el('div',Object.assign({
       className:'plan-cell'+(overKey===cellKey('','',null)?' over':''),
@@ -10440,12 +10790,19 @@ function Plan2027View({data,setData}){
     el('div',{ref:gridRef,className:'plan-scroll',
       style:{overflow:'auto',maxHeight:'74vh',background:'var(--bg)'}},
       el('div',{style:{display:'grid',
-        gridTemplateColumns:PLAN_LABEL_W+'px repeat(12,minmax('+PLAN_COL_W+'px,1fr))',
-        minWidth:PLAN_LABEL_W+12*PLAN_COL_W}},gridKids)
+        gridTemplateColumns:PLAN_LABEL_W+'px repeat('+PLAN_MONTHS.length+',minmax('+PLAN_COL_W+'px,1fr))',
+        minWidth:PLAN_LABEL_W+PLAN_MONTHS.length*PLAN_COL_W}},gridKids)
     ),
     el('div',{style:{padding:'10px 20px',fontFamily:'var(--mono)',fontSize:10,
       color:'var(--muted)',letterSpacing:'.04em',borderTop:'1px solid var(--border)'}},
-      'Click + in any month to type a product straight into the plan · drag a block to any other brand, category or month · click a block to edit it'),
+      'Click + in any month to type a product straight into the plan · drag a block to any other brand, category or month · click a block to edit it',
+      el('span',{style:{display:'block',marginTop:5,color:'var(--text4)'}},
+        'On every block: ⚑ prepare-by (the OCS submission deadline for that launch month) ▸ in-market month. '
+        +'Amber inside 120 days, red inside 45 or once submission has lapsed; '
+        +'a lock means the prior fiscal\u2019s window is already shut.',
+        el('span',{style:{display:'block',marginTop:3}},
+          'The Submit ▸ launch lanes run each call from its \u2605 deadline, through the '
+          +'dashed prep runway, into the solid months it reaches market.'))),
 
     /* ── Coverage hover card ── */
     coverHover&&(()=>{
@@ -10506,6 +10863,42 @@ function PlanBlockEditor({block,brands,onChange,onDelete,onClose}){
         onChange:e=>onChange({month:e.target.value||null})},
         el('option',{value:''},'Unscheduled (backlog)'),
         PLAN_MONTHS.map(m=>el('option',{key:m.k,value:m.k},m.s+' 2027')))),
+      (()=>{
+        const c=planCallFor(b.month);
+        if(!c) return b.month?null:el('div',{style:{fontFamily:'var(--mono)',fontSize:10,
+          color:'var(--muted)',marginBottom:13}},'Unscheduled — no product call applies yet.');
+        const pr=planPrepBy(b.month);
+        const rows=[
+          ['▶ Prepare by',c.subDue
+            ? c.subDue+(c.subOpen?'   (window opens '+c.subOpen+')':'')
+            : 'submission window closed',true],
+          c.ntpDue&&['NTP / attributes',c.ntpOpen+' → '+c.ntpDue],
+          c.po1&&['PO issue',c.po1+'  ·  '+c.po2],
+          ['▶ In market',planInMarket(b.month)||c.l1,true],
+          c.l1&&['Call launch windows',c.l1+(c.l2?'  ·  '+c.l2:'')]].filter(Boolean);
+
+        return el('div',{style:{marginBottom:13,border:'1px solid var(--border)',
+          borderLeft:'3px solid '+c.col,borderRadius:'var(--rs)',
+          background:'var(--surface-warm)',padding:'10px 12px'}},
+          el('div',{style:{display:'flex',alignItems:'baseline',gap:8,marginBottom:6}},
+            el('span',{style:{fontFamily:'var(--mono)',fontSize:9,fontWeight:700,
+              letterSpacing:'.1em',textTransform:'uppercase',color:c.col}},
+              c.n?'OCS Call '+c.n:c.title),
+            el('span',{style:{fontFamily:'var(--mono)',fontSize:9,marginLeft:'auto',
+              color:(!pr||pr.state==='shut')?'var(--text4)'
+                :(pr.days<0?'var(--err)':'var(--accent)'),fontWeight:700}},
+              (!pr||pr.state==='shut')?'submission closed'
+                :(pr.days<0?'submission closed':(pr.days+' days to submit')))),
+          rows.map(r=>el('div',{key:r[0],style:{display:'flex',gap:10,padding:'3px 0',
+            borderTop:r[2]?'1px solid var(--border-soft)':'none'}},
+            el('span',{style:{fontFamily:'var(--mono)',fontSize:9,
+              color:r[2]?c.col:'var(--muted)',fontWeight:r[2]?700:400,
+              width:118,flexShrink:0}},r[0]),
+            el('span',{style:{fontFamily:'var(--mono)',fontSize:r[2]?11:10,
+              fontWeight:r[2]?700:400,color:'var(--fg)'}},r[1]))),
+          el('div',{style:{fontFamily:'var(--mono)',fontSize:8,color:'var(--text4)',
+            marginTop:7,letterSpacing:'.06em',textTransform:'uppercase'}},'Projected dates'));
+      })(),
       field('Notes',el('textarea',{className:'ei',value:b.notes||'',
         placeholder:'Rationale, input needed, dependency…',
         onChange:e=>onChange({notes:e.target.value})})),
