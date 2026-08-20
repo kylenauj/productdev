@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Tenor+Sans&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script type="module" src="https://studio.mera.shapeshifter.me/.webmcp/bridge.js"></script><link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Tenor+Sans&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Countryside Cannabis Co — Product Launch Dashboard 2026</title>
@@ -615,6 +615,28 @@ div:hover > .rm-btn{display:flex!important;}
   box-shadow:0 8px 26px rgba(0,0,0,.55);
 }
 .leaflet-tooltip.city-store-tip::before{ border-top-color:rgba(18,20,26,.97); }
+
+/* ── 2027 Portfolio Planner ── */
+.plan-wrap{background:var(--bg);}
+.plan-cell{position:relative;}
+.plan-cell .plan-add{opacity:0;transition:opacity 120ms,border-color 120ms,color 120ms;}
+.plan-cell:hover .plan-add{opacity:1;}
+.plan-cell .plan-add.always{opacity:.55;}
+.plan-cell:hover .plan-add.always{opacity:1;border-color:var(--accent);color:var(--accent);}
+.plan-fold{background:transparent;border:none;cursor:pointer;color:var(--muted);padding:2px 6px;
+  border-radius:var(--rs);display:inline-flex;align-items:center;transition:color 140ms;}
+.plan-fold:hover{color:var(--accent);}
+.plan-cell.over{background:var(--accent-bg)!important;box-shadow:inset 0 0 0 2px var(--accent);}
+.plan-block{cursor:grab;transition:box-shadow 140ms,transform 140ms;}
+.plan-block:active{cursor:grabbing;}
+.plan-block:hover{box-shadow:var(--elev-raised);transform:translateY(-1px);}
+.plan-block.dragging{opacity:.32;}
+.plan-mx-cell{transition:box-shadow 120ms,transform 120ms;}
+.plan-mx-cell:hover{transform:translateY(-1px);box-shadow:var(--elev-raised);}
+.plan-chip{font-family:var(--mono);font-size:9px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;}
+.plan-scroll::-webkit-scrollbar{height:11px;width:11px;}
+.plan-scroll::-webkit-scrollbar-thumb{background:var(--bdr2);border-radius:6px;}
+.plan-scroll::-webkit-scrollbar-track{background:transparent;}
 </style>
 
 </head>
@@ -701,6 +723,7 @@ const BLANK_PROD=pcLabel=>({
 const INITIAL={
 pcTabs:[{id:'pc1',label:'PC#1 2026'},{id:'pc2',label:'PC#2 2026'},{id:'pc3',label:'PC#3 2026'}],
   in_dev:[],
+  plan2027:{brands:[],rows:{},blocks:[]},
   rejected:[],
   actionItems:[],
   team:[],
@@ -9599,6 +9622,816 @@ function WorkloadViewComp({data,setView,setSels,setProdView}){
     );
 }
 
+/* ══════════════════════════════════════════════════════════════
+   2027 PORTFOLIO PLANNER  ·  In Development
+   Live-portfolio coverage → gap detection → drag/drop month grid
+   Rows: brand ▸ category (categories appear as products are placed)
+   Cols: Jan–Dec 2027
+   All figures below are computed from data already in this app —
+   nothing is seeded or estimated.
+   ══════════════════════════════════════════════════════════════ */
+
+/* ── Live portfolio ─────────────────────────────────────────────
+   Source: Countryside / Mera OCS availability eblast, 17 Aug 2026.
+   61 SKU listings, verbatim from that send. Category = the eblast's own
+   section heading; Vapes are split AIO vs 510 off the product name.
+   Hash and rosin sit under Concentrate — the eblast's own taxonomy.
+   Cases = cases available on that date, NOT sell-through.
+   [brand, category, product, sku, thc, cases, format, FT|Stk, tag]
+   ────────────────────────────────────────────────────────────── */
+const LIVE_PORTFOLIO_SRC='OCS availability list · 17 Aug 2026';
+const LIVE_PORTFOLIO=[
+ ['Greazy','Vape — AIO','Golden Pineapple Live Resin & Liquid Diamonds AIO','309198','93.1%',146,'1g','FT','HOT'],
+ ['Greazy','Vape — AIO','Peach Panther Liquid Diamonds AIO','302226','95.8%',72,'1g','FT',''],
+ ['Greazy','Vape — 510','Super Lemon Haze Live Resin 510 Thread Cartridge','302344','76.7%',57,'1g','FT',''],
+ ['Litti','Vape — AIO','Berry Blaze Liquid Diamonds AIO','302513','98%',90,'1g','FT',''],
+ ['Litti','Vape — 510','Bussn\' Blackberry 510 Thread Cartridge','302174','93.7%',70,'1g','Stk',''],
+ ['Litti','Vape — AIO','Cherry Chonk Liquid Diamonds AIO','302514','98%',47,'1g','FT',''],
+ ['Litti','Vape — AIO','Chillberry CBD + CBG AIO','302345','23%',173,'1g','FT',''],
+ ['Litti','Vape — 510','Grape Escape 510 Thread Cartridge','302227','93.7%',47,'1g','FT',''],
+ ['Litti','Vape — 510','Guava Mama 510 Thread Cartridge','302442','93.7%',60,'1g','FT',''],
+ ['Litti','Vape — 510','Gulupa Gulp 510 Thread Cartridge','302003','93.7%',89,'1g','Stk',''],
+ ['Litti','Vape — 510','HELLA BUBBA. 510 Thread Cartridge','300818','93.7%',76,'1g','Stk',''],
+ ['Litti','Vape — 510','Lovely Leechi 510 Thread Cartridge','302297','93.7%',22,'1g','FT',''],
+ ['Litti','Vape — 510','Pushn\' Peach 510 Thread Cartridge','302175','93.7%',19,'1g','Stk',''],
+ ['Litti','Vape — 510','Slappn\' Berry 510 Thread Cartridge','302004','93.7%',109,'1g','Stk',''],
+ ['Litti','Vape — 510','Sunrise Smash 510 Thread Cartridge','302176','93.7%',95,'1g','Stk',''],
+ ['Litti','Vape — 510','Watermelon Whammy Liquid Diamonds 510','309197','98%',144,'1g','FT','HOT'],
+ ['Greazy','Infused Pre-Roll','Bling Infused Blunt','312127','55.5%',90,'1x1.5g','FT',''],
+ ['Greazy','Infused Pre-Roll','Chemdawg 60+ Double Infused','312335','62.6%',48,'3x0.5g','FT',''],
+ ['Greazy','Infused Pre-Roll','Hash Oil Infused','312218','44%',73,'3x0.5g','FT',''],
+ ['Greazy','Infused Pre-Roll','MAC10 Diamonds & Sauce Infused','312004','49.9%',122,'1x1g','Stk',''],
+ ['Greazy','Infused Pre-Roll','Orange Kush CK Double Infused','312118','45.8%',155,'1g','FT',''],
+ ['Litti','Infused Pre-Roll','PB&J WTF?! Infused','312124','44%',60,'1x1g','FT',''],
+ ['Litti','Infused Pre-Roll','Peach Tingz Double Diamond Infused','312370','50%',122,'5x0.4g','FT',''],
+ ['Litti','Infused Pre-Roll','Punch\'d Up Double Diamond Infused','312422','50%',67,'5x0.4g','FT',''],
+ ['Litti','Infused Pre-Roll','Sunrise Smash Diamond Infused','312272','40%',56,'5x0.5g','FT',''],
+ ['Litti','Infused Pre-Roll','The Juici Pack Double Diamond Infused','312371','50%',61,'5x0.4g','FT',''],
+ ['Litti','Infused Pre-Roll','Ting-a-ling Zing! 60+ Diamond Infused','312333','62.6%',71,'3x0.5g','FT',''],
+ ['Shatterizer','Infused Pre-Roll','8 Ball Kush Shatter Double Infused','310282','45.8%',119,'1x1g','Stk',''],
+ ['Shatterizer','Infused Pre-Roll','Electric Grapefruit Infused','312201','40%',38,'5x0.5g','FT',''],
+ ['Shatterizer','Infused Pre-Roll','Granddaddy Purple 60+ Diamonds & Shatter Infused','319145','62.6%',85,'3x0.5g','FT',''],
+ ['Shatterizer','Infused Pre-Roll','Granddaddy Purple Shatter Infused','312308','40%',161,'5x0.5g','FT',''],
+ ['Shatterizer','Infused Pre-Roll','Northern Lights 60+ Diamonds & Shatter Infused Blunt','319144','62.6%',91,'1x1g','FT','HOT'],
+ ['Shatterizer','Infused Pre-Roll','Northern Lights 60+ Diamonds & Shatter Infused','312516','62.6%',288,'3x0.5g','FT',''],
+ ['Shatterizer','Infused Pre-Roll','Pink Gas Infused','312202','44%',96,'3x0.5g','FT',''],
+ ['Shatterizer','Infused Pre-Roll','Pink Gas Shatter Double Infused','312374','45.8%',77,'1x1g','Stk',''],
+ ['Shatterizer','Infused Pre-Roll','Rockstar Shatter Diamonds & Kief Triple Infused','312005','49.8%',205,'1x1g','Stk',''],
+ ['Shatterizer','Infused Pre-Roll','SLURRICANE Double Infused','312047','45.8%',166,'1x1g','Stk',''],
+ ['Buddy Blooms','Pre-Roll','10th Planet','102779','27.5%',489,'10x0.5g','Stk',''],
+ ['Buddy Blooms','Pre-Roll','Big Buddy Indica','103719','25.5%',14,'5x1g','FT',''],
+ ['Buddy Blooms','Pre-Roll','Big Buddy Indica','103719','25.5%',425,'2x1g','Stk',''],
+ ['Buddy Blooms','Pre-Roll','Big Buddy Sativa','102875','25.5%',94,'5x1g','Stk',''],
+ ['Buddy Blooms','Pre-Roll','Big Buddy Sativa','102875','25.5%',849,'2x1g','Stk',''],
+ ['Buddy Blooms','Pre-Roll','Ethos Glue','105457','27%',180,'10x0.5g','Stk',''],
+ ['Buddy Blooms','Pre-Roll','Highbrid','105644','30.7%',157,'10x0.5g','Stk',''],
+ ['Buddy Blooms','Pre-Roll','Indica','103235','25.6%',93,'1x1g','Stk',''],
+ ['Buddy Blooms','Pre-Roll','Lil Buddy Indica','103718','25.5%',79,'5x0.5g','FT',''],
+ ['Buddy Blooms','Pre-Roll','Lil Buddy Indica','103718','25.5%',149,'1x0.5g','Stk',''],
+ ['Buddy Blooms','Pre-Roll','Lil Buddy Sativa','103717','25.6%',65,'5x0.5g','FT',''],
+ ['Buddy Blooms','Pre-Roll','Lil Buddy Sativa','103717','25.6%',189,'1x0.5g','Stk',''],
+ ['Buddy Blooms','Pre-Roll','Purple Haze & Strawberry OG Best Buds Mix\'d','112408','27.5%',353,'10x0.5g','Stk','NEW'],
+ ['Buddy Blooms','Pre-Roll','Purple Haze','105643','27.5%',713,'10x0.5g','Stk',''],
+ ['Buddy Blooms','Pre-Roll','Sativa','103236','25.5%',119,'1x1g','Stk',''],
+ ['Buddy Blooms','Pre-Roll','Strawberry OG','104157','30.7%',572,'10x0.5g','Stk',''],
+ ['Countryside','Pre-Roll','Grape Diamonds','104156','27.5%',339,'1x1g','Stk',''],
+ ['Ellevia','Concentrate','RSO','310145','74.1%',110,'1g','Stk',''],
+ ['Greazy','Concentrate','Afghan Black Hash','312417','48%',55,'2g','FT',''],
+ ['Greazy','Concentrate','Black Cherry Punch Live Rosin','319176','73.2%',17,'1g','Stk','NEW'],
+ ['Shatterizer','Concentrate','8 Ball Kush Shatter','310076','85.7%',93,'1g','Stk',''],
+ ['Shatterizer','Concentrate','Electric Grapefruit Shatter','312213','85.7%',88,'1g','FT',''],
+ ['Shatterizer','Concentrate','Pink Gas Shatter','312207','85.7%',14,'1g','FT',''],
+ ['Shatterizer','Concentrate','Slurricane Shatter','310241','85.7%',15,'1g','FT','']
+].map(r=>({brand:r[0],cat:r[1],name:r[2],sku:r[3],thc:r[4],cases:r[5],fmt:r[6],stock:r[7],tag:r[8]}));
+
+const PLAN_MONTHS=[
+  {k:'2027-01',s:'Jan',q:'Q1'},{k:'2027-02',s:'Feb',q:'Q1'},{k:'2027-03',s:'Mar',q:'Q1'},
+  {k:'2027-04',s:'Apr',q:'Q2'},{k:'2027-05',s:'May',q:'Q2'},{k:'2027-06',s:'Jun',q:'Q2'},
+  {k:'2027-07',s:'Jul',q:'Q3'},{k:'2027-08',s:'Aug',q:'Q3'},{k:'2027-09',s:'Sep',q:'Q3'},
+  {k:'2027-10',s:'Oct',q:'Q4'},{k:'2027-11',s:'Nov',q:'Q4'},{k:'2027-12',s:'Dec',q:'Q4'}
+];
+const PLAN_QUARTERS=[{q:'Q1',n:3},{q:'Q2',n:3},{q:'Q3',n:3},{q:'Q4',n:3}];
+const PLAN_BRANDS_SEED=['Litti','Greazy','Buddy Blooms','Countryside','Ellevia','Shatterizer'];
+const PLAN_CATS=['Pre-Roll','Infused Pre-Roll','Vape — AIO','Vape — 510','Concentrate'];
+/* Categories retired after a taxonomy change. Anything with a replacement is
+   folded into it on read; anything without (Dried Flower — not a category we
+   play in) simply drops out of the coverage universe, but an existing block
+   still renders as a trailing row so nothing is silently lost. */
+const PLAN_CAT_MERGED={'Hash & Rosin':'Concentrate'};
+const PLAN_CAT_COL={
+  'Pre-Roll':'var(--cat-pre)','Infused Pre-Roll':'var(--cat-infused)',
+  'Dried Flower':'var(--cat-flower)', /* retired — kept so legacy rows keep their colour */
+  'Vape — AIO':'var(--cat-vape)','Vape — 510':'var(--cat-vape)','Concentrate':'var(--cat-extract)'
+};
+const PLAN_STATUSES=['Idea','Likely','Committed','Stretch','At Risk'];
+const PLAN_STATUS_COL={
+  'Idea':'var(--text3)','Likely':'var(--info)','Committed':'var(--ok)',
+  'Stretch':'var(--warn)','At Risk':'var(--err)'
+};
+const PLAN_LABEL_W=228, PLAN_COL_W=142;
+
+/* Map any brand string in the app onto one of the configured row brands. */
+function planBrandOf(raw,brands){
+  const s=String(raw||'').toLowerCase().replace(/[^a-z0-9]/g,'');
+  if(!s) return '';
+  for(const b of brands){
+    const t=String(b).toLowerCase().replace(/[^a-z0-9]/g,'');
+    if(t&&(s===t||s.indexOf(t)>-1||t.indexOf(s)>-1)) return b;
+  }
+  return String(raw).trim();
+}
+
+/* Derive a canonical category from a spec category and/or a product name. */
+function planCatOf(catRaw,nameRaw){
+  const s=((catRaw||'')+' '+(nameRaw||'')).toLowerCase();
+  if(!s.trim()) return '';
+  const preRoll=/pre-?\s?rolls?|preroll|blunt|\bjoints?\b/.test(s);
+  const vape=/vape|510|all-?in-?one|\baio\b|\bcarts?\b|cartridge|disposable/.test(s);
+  const infusedish=/infus|diamond|hash|rosin|resin|shatter|honey oil|sauce|caviar|bubble|kief/.test(s);
+  if(vape&&!preRoll) return /510|\bcarts?\b|cartridge/.test(s)?'Vape — 510':'Vape — AIO';
+  if(preRoll) return infusedish?'Infused Pre-Roll':'Pre-Roll';
+  if(/extracts?|concentrates?|\brso\b|resin|rosin|\bhash\b|shatter|diamonds?|honey oil|distillate|sauce/.test(s)) return 'Concentrate';
+  if(/flower|\bbuds?\b/.test(s)) return 'Dried Flower';
+  return (catRaw||'').trim()||'Uncategorised';
+}
+
+/* Read the real portfolio out of the dashboard's own data. */
+function planScanPortfolio(data,brands){
+  const flight=[],rd=[];
+  /* Live = the OCS availability list embedded above. Brand + category are
+     already resolved on each record, so nothing is inferred here. */
+  const live=LIVE_PORTFOLIO.map(r=>({...r,brand:planBrandOf(r.brand,brands)}));
+  (data.pcTabs||[]).forEach(t=>{
+    (data[t.id]||[]).forEach(p=>{
+      if((p.tags||[]).indexOf('Rejected')>-1)return;
+      flight.push({name:p.shortName||p.name,brand:planBrandOf(p.brand,brands),
+        cat:planCatOf((p.specs||{})['Category'],p.name),pc:t.label,launchDate:p.launchDate||''});
+    });
+  });
+  (data.in_dev||[]).forEach(p=>{
+    rd.push({name:p.shortName||p.name,brand:planBrandOf(p.brand,brands),
+      cat:planCatOf((p.specs||{})['Category'],p.name)});
+  });
+  return {live,flight,rd};
+}
+
+/* ── In Development sub-tabs ── */
+function DevSubTabs({devTab,setDevTab,rdCount,planCount}){
+  const T=[
+    {id:'plan',label:'2027 Plan',icon:'ti-layout-grid',n:planCount},
+    {id:'products',label:'R&D Products',icon:'ti-flask',n:rdCount}
+  ];
+  return el('div',{className:'sectabs',style:{background:'var(--surface)'}},
+    T.map(t=>el('button',{key:t.id,className:'stab '+(devTab===t.id?'on':''),
+      onClick:()=>setDevTab(t.id),
+      style:{display:'inline-flex',alignItems:'center',gap:6}},
+      el('i',{className:'ti '+t.icon,style:{fontSize:14}}),t.label,
+      t.n>0&&el('span',{style:{fontFamily:'var(--mono)',fontSize:9,fontWeight:700,
+        background:'var(--surface-warm)',border:'1px solid var(--border)',
+        borderRadius:'var(--pill)',padding:'1px 6px',color:'var(--muted)'}},t.n)
+    ))
+  );
+}
+
+/* ── Small shared bits ── */
+function PlanKpi({k,v,s,col}){
+  return el('div',{style:{background:'var(--surface)',padding:'13px 16px'}},
+    el('div',{style:{fontFamily:'var(--mono)',fontSize:9,color:'var(--muted)',
+      letterSpacing:'.1em',textTransform:'uppercase',marginBottom:7}},k),
+    el('div',{style:{fontFamily:'var(--mono)',fontSize:24,fontWeight:600,lineHeight:1,
+      letterSpacing:'-0.01em',color:col||'var(--fg)'}},v),
+    el('div',{style:{fontFamily:'var(--mono)',fontSize:10,marginTop:6,color:'var(--muted)'}},s)
+  );
+}
+function PlanSectionHead({title,sub,right,open,onToggle}){
+  return el('div',{style:{display:'flex',alignItems:'flex-end',gap:12,
+    marginBottom:open===false?0:12,flexWrap:'wrap'}},
+    onToggle&&el('button',{className:'plan-fold',onClick:onToggle,
+      title:open?'Collapse':'Expand',style:{alignSelf:'center'}},
+      el('i',{className:'ti '+(open?'ti-chevron-down':'ti-chevron-right'),style:{fontSize:16}})),
+    el('div',{style:{cursor:onToggle?'pointer':'default'},onClick:onToggle||undefined},
+      el('div',{style:{fontFamily:'var(--font-display)',fontSize:16,letterSpacing:'-0.01em'}},title),
+      sub&&el('div',{style:{fontFamily:'var(--mono)',fontSize:10,color:'var(--muted)',
+        letterSpacing:'.06em',marginTop:3}},sub)
+    ),
+    right&&el('div',{style:{marginLeft:'auto'}},right)
+  );
+}
+function usePlanFold(key){
+  const [open,setOpen]=React.useState(()=>{
+    try{return localStorage.getItem('au_plan_fold_'+key)!=='0';}catch{return true;}
+  });
+  return [open,()=>setOpen(v=>{
+    try{localStorage.setItem('au_plan_fold_'+key,v?'0':'1');}catch{}
+    return !v;
+  })];
+}
+
+/* ── Coverage-matrix hover card — the SKUs behind a cell ── */
+function PlanCoverCard({info}){
+  if(!info) return null;
+  const {rect,brand,cat,live}=info;
+  const W=360,G=10,MAX=12;
+  const below=(window.innerHeight-rect.bottom)>320||rect.top<340;
+  const st={position:'fixed',width:W,zIndex:860,pointerEvents:'none',
+    left:Math.round(Math.min(Math.max(8,rect.left-8),Math.max(8,window.innerWidth-W-8))),
+    background:'var(--surface)',border:'1px solid var(--border)',
+    borderRadius:'var(--radius-lg)',boxShadow:'0 18px 44px rgba(15,23,42,.28)',
+    padding:'12px 14px',maxHeight:'min(72vh,540px)',overflow:'hidden'};
+  if(below) st.top=Math.round(rect.bottom+G);
+  else st.bottom=Math.round(window.innerHeight-rect.top+G);
+  const cs=live.reduce((a,x)=>a+(x.cases||0),0);
+  const head=(t,col)=>el('div',{style:{fontFamily:'var(--mono)',fontSize:8,fontWeight:700,
+    letterSpacing:'.12em',textTransform:'uppercase',color:col||'var(--muted)',
+    margin:'10px 0 5px'}},t);
+  const meta=parts=>el('div',{style:{fontFamily:'var(--mono)',fontSize:9,
+    color:'var(--muted)',marginTop:1,lineHeight:1.4,overflow:'hidden',
+    textOverflow:'ellipsis',whiteSpace:'nowrap'}},parts.filter(Boolean).join(' · '));
+  const item=(name,sub,i,dot)=>el('div',{key:i,style:{padding:'4px 0',
+    borderTop:i?'1px solid var(--border-soft)':'none'}},
+    el('div',{style:{display:'flex',alignItems:'baseline',gap:6}},
+      dot&&el('span',{style:{width:5,height:5,borderRadius:'50%',background:dot,flexShrink:0}}),
+      el('span',{style:{flex:1,minWidth:0,fontSize:11,lineHeight:1.35,color:'var(--fg)',
+        overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},name)),
+    sub);
+  return el('div',{style:st},
+    el('div',{style:{display:'flex',alignItems:'baseline',gap:8}},
+      el('span',{style:{fontFamily:'var(--font-display)',fontSize:14}},brand),
+      el('span',{style:{fontFamily:'var(--mono)',fontSize:9,fontWeight:700,
+        letterSpacing:'.08em',textTransform:'uppercase',
+        color:PLAN_CAT_COL[cat]||'var(--muted)'}},cat)),
+    el('div',{style:{fontFamily:'var(--mono)',fontSize:9,color:'var(--muted)',marginTop:3}},
+      live.length?(live.length+' live SKU'+(live.length>1?'s':'')+' · '+cs.toLocaleString()+' cs available')
+                 :'No live SKU in this cell'),
+    live.length>0&&el('div',null,
+      head('Active SKUs','var(--ok)'),
+      [...live].sort((a,z)=>(z.cases||0)-(a.cases||0)).slice(0,MAX).map((x,i)=>
+        item(x.name,meta(['SKU '+x.sku,x.fmt,x.thc,x.stock,(x.cases||0)+' cs']),i,'var(--ok)')),
+      live.length>MAX&&el('div',{style:{fontFamily:'var(--mono)',fontSize:9,
+        color:'var(--muted)',paddingTop:5}},'+ '+(live.length-MAX)+' more')),
+    el('div',{style:{fontFamily:'var(--mono)',fontSize:8,color:'var(--text4)',
+      letterSpacing:'.08em',textTransform:'uppercase',marginTop:10,
+      borderTop:'1px solid var(--border-soft)',paddingTop:7}},
+      live.length?'Click to add a 2027 launch here':'Gap — click to start planning')
+  );
+}
+
+/* ── Inline "type a product into this slot" composer ── */
+function PlanCompose({cat,onCommit,onCancel}){
+  const [nm,setNm]=React.useState('');
+  const [cc,setCc]=React.useState(cat||PLAN_CATS[1]);
+  const commit=()=>{const t=nm.trim();if(t)onCommit(cat||cc,t);else onCancel();};
+  return el('div',{
+    onBlur:e=>{if(!e.currentTarget.contains(e.relatedTarget))onCancel();},
+    style:{display:'flex',flexDirection:'column',gap:4,background:'var(--surface)',
+      border:'1px solid var(--accent)',borderRadius:8,padding:5}},
+    !cat&&el('select',{className:'ei',value:cc,onChange:e=>setCc(e.target.value),
+      style:{fontSize:10,padding:'3px 5px'}},
+      PLAN_CATS.map(c=>el('option',{key:c,value:c},c))),
+    el('input',{autoFocus:true,className:'ei',placeholder:'Product name…',value:nm,
+      style:{fontSize:11,padding:'4px 6px'},
+      onChange:e=>setNm(e.target.value),
+      onKeyDown:e=>{
+        if(e.key==='Enter'){e.preventDefault();commit();}
+        if(e.key==='Escape'){e.preventDefault();onCancel();}
+      }}),
+    el('div',{style:{fontFamily:'var(--mono)',fontSize:8,color:'var(--muted)',
+      letterSpacing:'.06em'}},'ENTER TO ADD · ESC')
+  );
+}
+
+/* ══════════════════════════════════════════
+   MAIN
+   ══════════════════════════════════════════ */
+function Plan2027View({data,setData}){
+  const cfg=data.plan2027||{};
+  const brands=(cfg.brands&&cfg.brands.length)?cfg.brands:PLAN_BRANDS_SEED;
+  const fixCat=c=>PLAN_CAT_MERGED[c]||c;
+  const blocks=(cfg.blocks||[]).map(b=>fixCat(b.cat)===b.cat?b:{...b,cat:fixCat(b.cat)});
+  const rowsCfg=Object.keys(cfg.rows||{}).reduce((a,k)=>{
+    a[k]=Array.from(new Set((cfg.rows[k]||[]).map(fixCat)));return a;},{});
+
+  const [dragId,setDragId]=React.useState(null);
+  const [overKey,setOverKey]=React.useState('');
+  const [compose,setCompose]=React.useState(null);      // {brand,cat|null,month|null}
+  const [editId,setEditId]=React.useState(null);
+  const [showBrands,setShowBrands]=React.useState(false);
+  const [metric,setMetric]=React.useState('sku');
+  const [coverHover,setCoverHover]=React.useState(null);
+  const [openCov,toggleCov]=usePlanFold('coverage');
+  const [newBrand,setNewBrand]=React.useState('');
+  const gridRef=React.useRef(null);
+
+  const savePlan=fn=>setData(d=>{
+    const cur=d.plan2027||{};
+    const base={
+      brands:(cur.brands&&cur.brands.length)?cur.brands:PLAN_BRANDS_SEED,
+      rows:cur.rows||{},
+      blocks:cur.blocks||[]
+    };
+    return {...d,plan2027:fn(base)};
+  });
+
+  const addBlock=(brand,cat,month,name)=>{
+    const nm=String(name||'').trim(); if(!nm||!cat) return;
+    const id='pb'+Math.random().toString(36).slice(2,9);
+    savePlan(p=>({...p,
+      rows:{...p.rows,[brand]:Array.from(new Set([...(p.rows[brand]||[]),cat]))},
+      blocks:[...p.blocks,{id,brand,cat,month:month||null,name:nm,format:'',status:'Idea',notes:''}]
+    }));
+    return id;
+  };
+  const updBlock=(id,patch)=>savePlan(p=>({...p,blocks:p.blocks.map(b=>b.id===id?{...b,...patch}:b)}));
+  const delBlock=id=>savePlan(p=>({...p,blocks:p.blocks.filter(b=>b.id!==id)}));
+  const moveBlock=(id,brand,cat,month)=>savePlan(p=>({...p,
+    rows:cat?{...p.rows,[brand]:Array.from(new Set([...(p.rows[brand]||[]),cat]))}:p.rows,
+    blocks:p.blocks.map(b=>b.id===id?{...b,brand,cat:cat||b.cat,month:month||null}:b)
+  }));
+  const addRow=(brand,cat)=>savePlan(p=>({...p,
+    rows:{...p.rows,[brand]:Array.from(new Set([...(p.rows[brand]||[]),cat]))}}));
+  const delRow=(brand,cat)=>savePlan(p=>({...p,
+    rows:{...p.rows,[brand]:(p.rows[brand]||[]).filter(c=>c!==cat)},
+    blocks:p.blocks.filter(b=>!(b.brand===brand&&b.cat===cat))}));
+  const addBrandRow=n=>{const t=String(n||'').trim();
+    if(!t||brands.indexOf(t)>-1)return;
+    savePlan(p=>({...p,brands:[...p.brands,t]}));setNewBrand('');};
+  const delBrandRow=n=>{
+    if(!confirm('Remove the "'+n+'" row group and any blocks in it?'))return;
+    savePlan(p=>{const rows={...p.rows};delete rows[n];
+      return {...p,brands:p.brands.filter(b=>b!==n),rows,blocks:p.blocks.filter(b=>b.brand!==n)};});};
+  const moveBrandRow=(n,dir)=>savePlan(p=>{
+    const a=[...p.brands],i=a.indexOf(n),j=i+dir;
+    if(i<0||j<0||j>=a.length)return p;
+    const t=a[i];a[i]=a[j];a[j]=t;return {...p,brands:a};});
+
+  /* ── Portfolio scan ── */
+  const scan=React.useMemo(()=>planScanPortfolio(data,brands),[data,brands.join('|')]);
+  const {live,flight,rd}=scan;
+  const cnt=(arr,b,c)=>arr.filter(x=>x.brand===b&&x.cat===c).length;
+  const planned=(b,c)=>blocks.filter(x=>x.brand===b&&x.cat===c&&x.month).length;
+
+  /* ── Gaps: brand × category with no live SKU and nothing planned in 2027 ── */
+  const gaps=React.useMemo(()=>{
+    const out=[];
+    brands.forEach(b=>PLAN_CATS.forEach(c=>{
+      const l=cnt(live,b,c), p=planned(b,c);
+      if(l===0&&p===0){
+        out.push({brand:b,cat:c,
+          dev:cnt(flight,b,c)+cnt(rd,b,c),
+          brandLiveCats:PLAN_CATS.filter(x=>cnt(live,b,x)>0).length,
+          catLiveSkus:live.filter(x=>x.cat===c).length,
+          catLiveCases:live.filter(x=>x.cat===c).reduce((a,x)=>a+(x.cases||0),0)});
+      }
+    }));
+    return out.sort((a,z)=>
+      (z.dev-a.dev)||(z.brandLiveCats-a.brandLiveCats)||(z.catLiveSkus-a.catLiveSkus)||
+      a.brand.localeCompare(z.brand));
+  },[data,brands.join('|'),blocks.length,JSON.stringify(blocks.map(b=>b.brand+b.cat+b.month))]);
+
+  const cases=(b,c)=>live.filter(x=>x.brand===b&&(c==null||x.cat===c))
+    .reduce((a,x)=>a+(x.cases||0),0);
+
+  const monthCount=m=>blocks.filter(b=>b.month===m).length;
+  const maxMonth=Math.max(1,...PLAN_MONTHS.map(m=>monthCount(m.k)));
+  const emptyMonths=PLAN_MONTHS.filter(m=>monthCount(m.k)===0).length;
+  const scheduled=blocks.filter(b=>b.month).length;
+  const backlog=blocks.filter(b=>!b.month);
+
+  const rowsFor=b=>{
+    const set=new Set([...(rowsCfg[b]||[]),...blocks.filter(x=>x.brand===b).map(x=>x.cat)]);
+    const known=PLAN_CATS.filter(c=>set.has(c));
+    const extra=Array.from(set).filter(c=>c&&PLAN_CATS.indexOf(c)<0);
+    return [...known,...extra];
+  };
+
+  const leastLoadedMonth=()=>PLAN_MONTHS.reduce((a,m)=>monthCount(m.k)<monthCount(a.k)?m:a,PLAN_MONTHS[0]).k;
+
+  const planIt=(b,c)=>{
+    addRow(b,c);
+    setCompose({brand:b,cat:c,month:leastLoadedMonth()});
+    setTimeout(()=>{
+      const n=gridRef.current;
+      if(n)window.scrollTo({top:n.getBoundingClientRect().top+window.scrollY-64,behavior:'smooth'});
+    },60);
+  };
+
+  const exportCSV=()=>{
+    const esc=v=>'"'+String(v==null?'':v).replace(/"/g,'""')+'"';
+    const head=['Brand','Category','Month','Product','Format','Status','Notes'];
+    const rows=[...blocks].sort((a,z)=>
+      (a.brand+'|'+a.cat+'|'+(a.month||'zz')).localeCompare(z.brand+'|'+z.cat+'|'+(z.month||'zz')))
+      .map(b=>[b.brand,b.cat,b.month||'Unscheduled',b.name,b.format||'',b.status||'',b.notes||'']);
+    const csv=[head,...rows].map(r=>r.map(esc).join(',')).join('\r\n');
+    const url=URL.createObjectURL(new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'}));
+    const a=document.createElement('a');a.href=url;a.download='2027-launch-plan.csv';
+    document.body.appendChild(a);a.click();a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),1500);
+  };
+
+  /* ── Block card ── */
+  const Block=b=>{
+    const col=PLAN_STATUS_COL[b.status]||'var(--text3)';
+    const cc=PLAN_CAT_COL[b.cat]||'var(--accent)';
+    return el('div',{key:b.id,className:'plan-block'+(dragId===b.id?' dragging':''),
+      draggable:true,
+      onDragStart:e=>{e.dataTransfer.setData('text/plain',b.id);e.dataTransfer.effectAllowed='move';setDragId(b.id);},
+      onDragEnd:()=>{setDragId(null);setOverKey('');},
+      onClick:()=>setEditId(b.id),
+      title:b.name+(b.notes?' — '+b.notes:''),
+      style:{background:'var(--surface)',border:'1px solid var(--border)',
+        borderLeft:'3px solid '+cc,borderRadius:8,padding:'6px 8px'}},
+      el('div',{style:{fontSize:11,fontWeight:600,lineHeight:1.3,color:'var(--fg)',
+        overflow:'hidden',display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical'}},b.name),
+      el('div',{style:{display:'flex',alignItems:'center',gap:6,marginTop:5}},
+        b.format&&el('span',{style:{fontFamily:'var(--mono)',fontSize:9,color:'var(--muted)',
+          overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},b.format),
+        el('span',{style:{marginLeft:'auto',display:'inline-flex',alignItems:'center',gap:4}},
+          el('span',{style:{width:6,height:6,borderRadius:'50%',background:col,flexShrink:0}}),
+          el('span',{style:{fontFamily:'var(--mono)',fontSize:8,fontWeight:700,color:col,
+            textTransform:'uppercase',letterSpacing:'.07em'}},b.status||'Idea')
+        )
+      )
+    );
+  };
+
+  const cellKey=(b,c,m)=>b+'␟'+(c||'')+'␟'+(m||'backlog');
+  const dropProps=(b,c,m)=>({
+    onDragOver:e=>{e.preventDefault();e.dataTransfer.dropEffect='move';
+      if(overKey!==cellKey(b,c,m))setOverKey(cellKey(b,c,m));},
+    onDragLeave:()=>setOverKey(k=>k===cellKey(b,c,m)?'':k),
+    onDrop:e=>{e.preventDefault();
+      const id=e.dataTransfer.getData('text/plain')||dragId;
+      if(id)moveBlock(id,b,c,m);
+      setDragId(null);setOverKey('');}
+  });
+
+  /* ── Grid assembly ── */
+  const gridKids=[];
+  gridKids.push(el('div',{key:'c0',style:{position:'sticky',left:0,top:0,zIndex:7,height:28,
+    background:'var(--surface-warm)',borderRight:'1px solid var(--border)',
+    borderBottom:'1px solid var(--border-soft)'}}));
+  PLAN_QUARTERS.forEach(q=>gridKids.push(el('div',{key:'q'+q.q,
+    style:{gridColumn:'span '+q.n,position:'sticky',top:0,zIndex:4,height:28,
+      background:'var(--surface-warm)',borderLeft:'1px solid var(--border)',
+      borderBottom:'1px solid var(--border-soft)',display:'flex',alignItems:'center',
+      justifyContent:'center',fontFamily:'var(--mono)',fontSize:9,fontWeight:700,
+      letterSpacing:'.14em',color:'var(--muted)'}},q.q+' 2027')));
+
+  gridKids.push(el('div',{key:'c1',style:{position:'sticky',left:0,top:28,zIndex:7,height:46,
+    background:'var(--surface-warm)',borderRight:'1px solid var(--border)',
+    borderBottom:'2px solid var(--accent)',padding:'0 12px',display:'flex',alignItems:'center',
+    fontFamily:'var(--mono)',fontSize:9,fontWeight:700,letterSpacing:'.1em',
+    textTransform:'uppercase',color:'var(--muted)'}},'Brand ▸ Category'));
+  PLAN_MONTHS.forEach(m=>{
+    const n=monthCount(m.k);
+    gridKids.push(el('div',{key:'m'+m.k,
+      style:{position:'sticky',top:28,zIndex:4,height:46,background:'var(--surface-warm)',
+        borderLeft:'1px solid var(--border)',borderBottom:'2px solid var(--accent)',
+        padding:'6px 8px',display:'flex',flexDirection:'column',justifyContent:'center',gap:4}},
+      el('div',{style:{display:'flex',alignItems:'baseline',gap:6}},
+        el('span',{style:{fontSize:12,fontWeight:600,color:'var(--fg)'}},m.s),
+        el('span',{style:{fontFamily:'var(--mono)',fontSize:9,color:n?'var(--accent)':'var(--text4)',
+          marginLeft:'auto',fontWeight:700}},n||'—')
+      ),
+      el('div',{style:{height:3,background:'var(--border)',borderRadius:2,overflow:'hidden'}},
+        el('div',{style:{height:'100%',width:(n/maxMonth*100)+'%',background:'var(--accent)'}}))
+    ));
+  });
+
+  brands.forEach(b=>{
+    const rws=rowsFor(b);
+    const bBlocks=blocks.filter(x=>x.brand===b);
+    const bLive=live.filter(x=>x.brand===b).length;
+    const bDev=flight.filter(x=>x.brand===b).length+rd.filter(x=>x.brand===b).length;
+    /* brand band */
+    gridKids.push(el('div',{key:'band'+b,style:{gridColumn:'1 / -1',
+      background:'var(--x-inset)',borderTop:'1px solid var(--border)',
+      borderBottom:'1px solid var(--border)'}},
+      el('div',{style:{position:'sticky',left:0,display:'inline-flex',alignItems:'center',
+        gap:10,padding:'8px 12px',maxWidth:PLAN_LABEL_W+12*PLAN_COL_W}},
+        el('span',{style:{fontFamily:'var(--font-display)',fontSize:14,letterSpacing:'.01em'}},b),
+        el('span',{className:'plan-chip',style:{color:'var(--muted)'}},
+          bBlocks.filter(x=>x.month).length+' planned'),
+        el('span',{className:'plan-chip',style:{color:bLive?'var(--ok)':'var(--text4)'}},
+          bLive+' live'+(bLive?' · '+cases(b,null).toLocaleString()+' cs':'')),
+        bDev>0&&el('span',{className:'plan-chip',style:{color:'var(--info)'}},bDev+' in dev')
+      )
+    ));
+    /* category rows */
+    rws.forEach(c=>{
+      const l=cnt(live,b,c), d=cnt(flight,b,c)+cnt(rd,b,c), n=bBlocks.filter(x=>x.cat===c).length;
+      gridKids.push(el('div',{key:'lbl'+b+c,
+        style:{position:'sticky',left:0,zIndex:2,background:'var(--bg)',
+          borderRight:'1px solid var(--border)',borderBottom:'1px solid var(--border-soft)',
+          padding:'8px 12px',display:'flex',alignItems:'center',gap:8}},
+        el('span',{style:{width:3,alignSelf:'stretch',minHeight:26,borderRadius:2,
+          background:PLAN_CAT_COL[c]||'var(--muted)'}}),
+        el('div',{style:{flex:1,minWidth:0}},
+          el('div',{style:{fontSize:12,fontWeight:600,overflow:'hidden',
+            textOverflow:'ellipsis',whiteSpace:'nowrap'}},c),
+          el('div',{style:{fontFamily:'var(--mono)',fontSize:9,marginTop:2,
+            color:l?'var(--ok)':(d?'var(--info)':'var(--err)')}},
+            l?(l+' live SKU'+(l>1?'s':'')+' · '+cases(b,c).toLocaleString()+' cs')
+             :(d?(d+' in dev · no live SKU'):'no live SKU'))
+        ),
+        n===0&&el('button',{className:'icon-btn',title:'Remove this empty row',
+          onClick:()=>delRow(b,c)},el('i',{className:'ti ti-x',style:{fontSize:12}}))
+      ));
+      PLAN_MONTHS.forEach((m,mi)=>{
+        const k=cellKey(b,c,m.k);
+        const cb=bBlocks.filter(x=>x.cat===c&&x.month===m.k);
+        const composing=compose&&compose.brand===b&&compose.cat===c&&compose.month===m.k;
+        gridKids.push(el('div',Object.assign({key:'cell'+k,
+          className:'plan-cell'+(overKey===k?' over':''),
+          style:{minHeight:56,padding:5,display:'flex',flexDirection:'column',gap:5,
+            borderLeft:'1px solid var(--border-soft)',
+            borderBottom:'1px solid var(--border-soft)',
+            background:mi%6<3?'transparent':'var(--surface-warm)'}},dropProps(b,c,m.k)),
+          cb.map(Block),
+          composing?el(PlanCompose,{brand:b,cat:c,month:m.k,onCommit:(cc,nm)=>{addBlock(b,cc,m.k,nm);setCompose(null);},onCancel:()=>setCompose(null)}):
+          el('button',{className:'plan-add',title:'Add a product here',
+            onClick:()=>setCompose({brand:b,cat:c,month:m.k}),
+            style:{background:'transparent',border:'1px dashed var(--bdr2)',borderRadius:7,
+              color:'var(--muted)',cursor:'pointer',fontSize:11,padding:'3px 0',
+              fontFamily:'var(--mono)'}},'+')
+        ));
+      });
+    });
+    /* new-product row — how a category row first appears */
+    gridKids.push(el('div',{key:'nlbl'+b,
+      style:{position:'sticky',left:0,zIndex:2,background:'var(--bg)',
+        borderRight:'1px solid var(--border)',borderBottom:'1px solid var(--border)',
+        padding:'7px 12px',display:'flex',alignItems:'center',gap:8}},
+      el('i',{className:'ti ti-plus',style:{fontSize:12,color:'var(--muted)'}}),
+      el('span',{style:{fontFamily:'var(--mono)',fontSize:10,color:'var(--muted)',
+        letterSpacing:'.05em'}},'New product'),
+      el('select',{className:'ei',value:'',title:'Pre-open an empty category row',
+        onChange:e=>{if(e.target.value)addRow(b,e.target.value);},
+        style:{width:'auto',marginLeft:'auto',fontSize:10,padding:'2px 4px'}},
+        el('option',{value:''},'row…'),
+        PLAN_CATS.filter(c=>rws.indexOf(c)<0).map(c=>el('option',{key:c,value:c},c)))
+    ));
+    PLAN_MONTHS.forEach((m,mi)=>{
+      const k=cellKey(b,null,m.k);
+      const composing=compose&&compose.brand===b&&!compose.cat&&compose.month===m.k;
+      gridKids.push(el('div',{key:'ncell'+k,className:'plan-cell',
+        style:{minHeight:40,padding:5,display:'flex',flexDirection:'column',
+          borderLeft:'1px solid var(--border-soft)',
+          borderBottom:'1px solid var(--border)',
+          background:mi%6<3?'transparent':'var(--surface-warm)'}},
+        composing?el(PlanCompose,{brand:b,cat:null,month:m.k,onCommit:(cc,nm)=>{addBlock(b,cc,m.k,nm);setCompose(null);},onCancel:()=>setCompose(null)}):
+        el('button',{className:'plan-add always',title:'Type a new product into '+m.s+' 2027',
+          onClick:()=>setCompose({brand:b,cat:null,month:m.k}),
+          style:{background:'transparent',border:'1px dashed var(--bdr2)',borderRadius:7,
+            color:'var(--muted)',cursor:'pointer',fontSize:11,padding:'3px 0',
+            fontFamily:'var(--mono)',flex:1}},'+')
+      ));
+    });
+  });
+
+  /* monthly totals footer */
+  gridKids.push(el('div',{key:'flbl',style:{position:'sticky',left:0,zIndex:2,
+    background:'var(--surface-warm)',borderRight:'1px solid var(--border)',
+    borderTop:'2px solid var(--accent)',padding:'9px 12px',
+    fontFamily:'var(--mono)',fontSize:9,fontWeight:700,letterSpacing:'.1em',
+    textTransform:'uppercase',color:'var(--muted)'}},'Launches / month'));
+  PLAN_MONTHS.forEach(m=>{
+    const n=monthCount(m.k);
+    gridKids.push(el('div',{key:'ftr'+m.k,
+      style:{background:'var(--surface-warm)',borderLeft:'1px solid var(--border)',
+        borderTop:'2px solid var(--accent)',padding:'9px 8px',textAlign:'center',
+        fontFamily:'var(--mono)',fontSize:13,fontWeight:700,
+        color:n?'var(--fg)':'var(--text4)'}},n||'—'));
+  });
+
+  const editing=blocks.find(b=>b.id===editId);
+
+  return el('div',{className:'plan-wrap'},
+    /* ── Toolbar ── */
+    el('div',{style:{display:'flex',alignItems:'center',gap:12,padding:'15px 20px',
+      borderBottom:'1px solid var(--border)',background:'var(--surface)',flexWrap:'wrap'}},
+      el('div',null,
+        el('div',{style:{fontFamily:'var(--font-display)',fontSize:20,letterSpacing:'-0.01em'}},'2027 Launch Plan'),
+        el('div',{style:{fontFamily:'var(--mono)',fontSize:10,color:'var(--muted)',
+          letterSpacing:'.08em',textTransform:'uppercase',marginTop:3}},
+          'Portfolio coverage · gap analysis · brand ▸ category × month')
+      ),
+      el('div',{style:{marginLeft:'auto',display:'flex',gap:8,flexWrap:'wrap'}},
+        el('button',{className:'btn',onClick:()=>setShowBrands(v=>!v)},
+          el('i',{className:'ti ti-tags'}),'Brand rows'),
+        el('button',{className:'btn',onClick:exportCSV,disabled:!blocks.length},
+          el('i',{className:'ti ti-download'}),'Export CSV')
+      )
+    ),
+    /* brand row editor */
+    showBrands&&el('div',{style:{padding:'12px 20px',background:'var(--surface-warm)',
+      borderBottom:'1px solid var(--border)',display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}},
+      brands.map((b,i)=>el('span',{key:b,style:{display:'inline-flex',alignItems:'center',gap:2,
+        background:'var(--surface)',border:'1px solid var(--border)',borderRadius:'var(--pill)',
+        padding:'3px 4px 3px 11px',fontSize:12}},
+        b,
+        el('button',{className:'icon-btn',title:'Move up',disabled:i===0,
+          onClick:()=>moveBrandRow(b,-1)},el('i',{className:'ti ti-chevron-up',style:{fontSize:12}})),
+        el('button',{className:'icon-btn',title:'Move down',disabled:i===brands.length-1,
+          onClick:()=>moveBrandRow(b,1)},el('i',{className:'ti ti-chevron-down',style:{fontSize:12}})),
+        el('button',{className:'icon-btn',title:'Remove row group',
+          onClick:()=>delBrandRow(b)},el('i',{className:'ti ti-x',style:{fontSize:12}}))
+      )),
+      el('input',{className:'ei',placeholder:'Add a brand row…',value:newBrand,
+        style:{width:180,fontSize:12},
+        onChange:e=>setNewBrand(e.target.value),
+        onKeyDown:e=>{if(e.key==='Enter')addBrandRow(newBrand);}}),
+      el('button',{className:'btn',onClick:()=>addBrandRow(newBrand)},'Add')
+    ),
+
+    /* ── KPI strip ── */
+    el('div',{style:{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(150px,1fr))',
+      gap:1,background:'var(--border)',borderBottom:'1px solid var(--border)'}},
+      el(PlanKpi,{k:'Live SKUs',v:live.length,s:LIVE_PORTFOLIO_SRC}),
+      el(PlanKpi,{k:'In development',v:flight.length+rd.length,s:'PC calls + R&D'}),
+      el(PlanKpi,{k:'Planned 2027',v:scheduled,s:backlog.length?(backlog.length+' unscheduled'):'blocks in the grid',
+        col:'var(--accent)'}),
+      el(PlanKpi,{k:'Coverage gaps',v:gaps.length,s:'of '+(brands.length*PLAN_CATS.length)+' brand × category',
+        col:gaps.length?'var(--err)':'var(--ok)'}),
+      el(PlanKpi,{k:'Empty months',v:emptyMonths,s:'no launch in 2027',
+        col:emptyMonths?'var(--warn)':'var(--ok)'})
+    ),
+
+    /* ── Coverage matrix ── */
+    el('div',{style:{padding:'18px 20px',borderBottom:'1px solid var(--border)'}},
+      el(PlanSectionHead,{title:'Portfolio coverage',open:openCov,onToggle:toggleCov,
+        sub:'live from the '+LIVE_PORTFOLIO_SRC+' · in-development from the PC tabs and R&D',
+        right:openCov&&el('div',{style:{display:'flex',gap:14,alignItems:'center'}},
+          el('div',{style:{display:'flex',border:'1px solid var(--border)',
+            borderRadius:'var(--pill)',overflow:'hidden'}},
+            ['sku','cases'].map(k=>el('button',{key:k,onClick:()=>setMetric(k),
+              style:{border:'none',cursor:'pointer',padding:'4px 11px',
+                fontFamily:'var(--mono)',fontSize:9,fontWeight:700,letterSpacing:'.08em',
+                textTransform:'uppercase',
+                background:metric===k?'var(--accent)':'transparent',
+                color:metric===k?'var(--accent-on)':'var(--muted)'}},
+              k==='sku'?'SKUs':'Cases'))),
+          el('div',{style:{display:'flex',gap:12,fontFamily:'var(--mono)',fontSize:9,
+            letterSpacing:'.07em',textTransform:'uppercase'}},
+            el('span',{style:{color:'var(--ok)'}},metric==='sku'?'● live':'● cases avail'),
+            el('span',{style:{color:'var(--info)'}},'● in dev'),
+            el('span',{style:{color:'var(--accent)'}},'● 2027 planned')))}),
+      openCov&&el('div',{style:{overflowX:'auto'}},
+        el('div',{style:{display:'grid',
+          gridTemplateColumns:'150px repeat('+PLAN_CATS.length+',minmax(94px,1fr))',
+          gap:4,minWidth:150+PLAN_CATS.length*94}},
+          el('div',{key:'mx0'}),
+          PLAN_CATS.map(c=>el('div',{key:'mh'+c,style:{fontFamily:'var(--mono)',fontSize:9,
+            fontWeight:700,letterSpacing:'.06em',textTransform:'uppercase',
+            color:PLAN_CAT_COL[c],textAlign:'center',padding:'0 2px 4px',lineHeight:1.3}},c)),
+          brands.map(b=>[
+            el('div',{key:'mr'+b,style:{fontSize:12,fontWeight:600,display:'flex',
+              alignItems:'center',paddingRight:8}},b),
+            ...PLAN_CATS.map(c=>{
+              const l=cnt(live,b,c), d=cnt(flight,b,c)+cnt(rd,b,c), p=planned(b,c);
+              const cv=cases(b,c), gap=l===0&&p===0;
+              return el('button',{key:'mc'+b+c,className:'plan-mx-cell',
+                onClick:()=>planIt(b,c),
+                onMouseEnter:e=>setCoverHover({brand:b,cat:c,
+                  rect:e.currentTarget.getBoundingClientRect()}),
+                onMouseLeave:()=>setCoverHover(h=>(h&&h.brand===b&&h.cat===c)?null:h),
+                onFocus:e=>setCoverHover({brand:b,cat:c,
+                  rect:e.currentTarget.getBoundingClientRect()}),
+                onBlur:()=>setCoverHover(null),
+                style:{border:gap?'1px dashed var(--err-dim)':'1px solid var(--border)',
+                  background:gap?'var(--err-bg)':(l>0?'var(--ok-bg)':'var(--surface)'),
+                  borderRadius:9,padding:'7px 4px',cursor:'pointer',minHeight:54,
+                  display:'flex',flexDirection:'column',alignItems:'center',
+                  justifyContent:'center',gap:4,fontFamily:'inherit'}},
+                metric==='cases'
+                ? el('div',{style:{display:'flex',gap:6,alignItems:'baseline',
+                    fontFamily:'var(--mono)',fontWeight:700}},
+                    el('span',{style:{fontSize:15,color:cv?'var(--ok)':'var(--text4)'}},
+                      cv?cv.toLocaleString():'·'),
+                    el('span',{style:{fontSize:11,color:p?'var(--accent)':'var(--text4)'}},
+                      p?'+'+p:''))
+                : el('div',{style:{display:'flex',gap:5,alignItems:'baseline',
+                    fontFamily:'var(--mono)',fontWeight:700}},
+                    el('span',{style:{fontSize:15,color:l?'var(--ok)':'var(--text4)'}},l||'·'),
+                    el('span',{style:{fontSize:11,color:d?'var(--info)':'var(--text4)'}},d||'·'),
+                    el('span',{style:{fontSize:13,color:p?'var(--accent)':'var(--text4)'}},p||'·')),
+                el('span',{className:'plan-chip',style:{fontSize:8,
+                  color:gap?'var(--err)':'var(--muted)'}},
+                  gap?'GAP':(metric==='cases'?'CS AVAIL':(l>0?'COVERED':'PLANNED')))
+              );
+            })
+          ])
+        )
+      )
+    ),
+
+
+    /* ── Backlog tray ── */
+    el('div',Object.assign({
+      className:'plan-cell'+(overKey===cellKey('','',null)?' over':''),
+      style:{padding:'12px 20px',borderBottom:'1px solid var(--border)',
+        background:'var(--surface-warm)',display:'flex',alignItems:'flex-start',gap:12}},
+      {onDragOver:e=>{e.preventDefault();e.dataTransfer.dropEffect='move';setOverKey(cellKey('','',null));},
+       onDragLeave:()=>setOverKey(''),
+       onDrop:e=>{e.preventDefault();
+         const id=e.dataTransfer.getData('text/plain')||dragId;
+         const blk=blocks.find(x=>x.id===id);
+         if(blk)moveBlock(id,blk.brand,blk.cat,null);
+         setDragId(null);setOverKey('');}}),
+      el('div',{style:{width:150,flexShrink:0}},
+        el('div',{style:{fontFamily:'var(--mono)',fontSize:9,fontWeight:700,letterSpacing:'.1em',
+          textTransform:'uppercase',color:'var(--muted)'}},'Unscheduled'),
+        el('div',{style:{fontFamily:'var(--mono)',fontSize:9,color:'var(--text4)',marginTop:4}},
+          'drag here to park')
+      ),
+      el('div',{style:{flex:1,display:'flex',gap:8,flexWrap:'wrap',minHeight:34}},
+        backlog.length
+          ? backlog.map(b=>el('div',{key:b.id,style:{width:170}},Block(b)))
+          : el('div',{style:{fontFamily:'var(--mono)',fontSize:11,color:'var(--text4)',
+              alignSelf:'center'}},'Nothing parked.')
+      )
+    ),
+
+    /* ── The grid ── */
+    el('div',{ref:gridRef,className:'plan-scroll',
+      style:{overflow:'auto',maxHeight:'74vh',background:'var(--bg)'}},
+      el('div',{style:{display:'grid',
+        gridTemplateColumns:PLAN_LABEL_W+'px repeat(12,minmax('+PLAN_COL_W+'px,1fr))',
+        minWidth:PLAN_LABEL_W+12*PLAN_COL_W}},gridKids)
+    ),
+    el('div',{style:{padding:'10px 20px',fontFamily:'var(--mono)',fontSize:10,
+      color:'var(--muted)',letterSpacing:'.04em',borderTop:'1px solid var(--border)'}},
+      'Click + in any month to type a product straight into the plan · drag a block to any other brand, category or month · click a block to edit it'),
+
+    /* ── Coverage hover card ── */
+    coverHover&&el(PlanCoverCard,{info:{
+      ...coverHover,
+      live:live.filter(x=>x.brand===coverHover.brand&&x.cat===coverHover.cat)
+    }}),
+
+    /* ── Editor ── */
+    editing&&el(PlanBlockEditor,{
+      block:editing,brands,
+      onChange:patch=>updBlock(editing.id,patch),
+      onDelete:()=>{delBlock(editing.id);setEditId(null);},
+      onClose:()=>setEditId(null)
+    })
+  );
+}
+
+/* ── Block editor modal ── */
+function PlanBlockEditor({block,brands,onChange,onDelete,onClose}){
+  const b=block;
+  const field=(label,node)=>el('div',{style:{marginBottom:13}},
+    el('div',{style:{fontFamily:'var(--mono)',fontSize:9,fontWeight:700,letterSpacing:'.1em',
+      textTransform:'uppercase',color:'var(--muted)',marginBottom:5}},label),node);
+  return el('div',{
+    onMouseDown:e=>{if(e.target===e.currentTarget)onClose();},
+    style:{position:'fixed',inset:0,zIndex:900,background:'rgba(15,18,26,.52)',
+      display:'flex',alignItems:'center',justifyContent:'center',padding:20}},
+    el('div',{style:{background:'var(--surface)',border:'1px solid var(--border)',
+      borderRadius:'var(--radius-lg)',boxShadow:'0 24px 64px rgba(0,0,0,.34)',
+      width:'100%',maxWidth:440,maxHeight:'86vh',overflow:'auto',padding:'20px 22px'}},
+      el('div',{style:{display:'flex',alignItems:'center',gap:10,marginBottom:16}},
+        el('div',{style:{fontFamily:'var(--font-display)',fontSize:17}},'Edit plan block'),
+        el('button',{className:'icon-btn',style:{marginLeft:'auto'},onClick:onClose},
+          el('i',{className:'ti ti-x',style:{fontSize:16}}))
+      ),
+      field('Product',el('input',{className:'ei',value:b.name||'',
+        onChange:e=>onChange({name:e.target.value})})),
+      el('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}},
+        field('Format / size',el('input',{className:'ei',value:b.format||'',
+          placeholder:'e.g. 3×0.5g',onChange:e=>onChange({format:e.target.value})})),
+        field('Confidence',el('select',{className:'ei',value:b.status||'Idea',
+          onChange:e=>onChange({status:e.target.value})},
+          PLAN_STATUSES.map(s=>el('option',{key:s,value:s},s))))
+      ),
+      el('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}},
+        field('Brand',el('select',{className:'ei',value:b.brand,
+          onChange:e=>onChange({brand:e.target.value})},
+          brands.map(x=>el('option',{key:x,value:x},x)))),
+        field('Category',el('select',{className:'ei',value:b.cat,
+          onChange:e=>onChange({cat:e.target.value})},
+          (PLAN_CATS.indexOf(b.cat)<0?[b.cat,...PLAN_CATS]:PLAN_CATS)
+            .map(x=>el('option',{key:x,value:x},x))))
+      ),
+      field('Launch month',el('select',{className:'ei',value:b.month||'',
+        onChange:e=>onChange({month:e.target.value||null})},
+        el('option',{value:''},'Unscheduled (backlog)'),
+        PLAN_MONTHS.map(m=>el('option',{key:m.k,value:m.k},m.s+' 2027')))),
+      field('Notes',el('textarea',{className:'ei',value:b.notes||'',
+        placeholder:'Rationale, input needed, dependency…',
+        onChange:e=>onChange({notes:e.target.value})})),
+      el('div',{style:{display:'flex',gap:8,marginTop:6}},
+        el('button',{className:'btn',style:{color:'var(--err)',borderColor:'var(--err-dim)'},
+          onClick:onDelete},el('i',{className:'ti ti-trash'}),'Delete'),
+        el('button',{className:'btn btn-primary',style:{marginLeft:'auto'},onClick:onClose},'Done')
+      )
+    )
+  );
+}
+
+
 function App(){
   const [authed,setAuthed_]=useState(isAuthed);
   const init=(()=>{
@@ -9615,6 +10448,8 @@ function App(){
   const [view,setView]=useState(()=>localStorage.getItem('au_last_view')||'home');
   const [sels,setSels]=useState({pc1:'bb',pc2:'bcp',pc3:'pp'});
   const [prodView,setProdView]=useState('summary'); // 'summary' | 'detail'
+  const [devTab,setDevTab]=useState(()=>{try{return localStorage.getItem('au_dev_tab')||'plan';}catch{return 'plan';}});
+  useEffect(()=>{try{localStorage.setItem('au_dev_tab',devTab);}catch{}},[devTab]);
   const [isFullscreen,setIsFullscreen]=useState(false);
   const [showImport,setShowImport]=useState(false);
   const [theme,setTheme]=useState(()=>{
@@ -10167,6 +11002,12 @@ function App(){
         view==='macro'      ? MacroTimeline :
         view==='workload'   ? el(WorkloadViewComp,{data,setView,setSels,setProdView}) :
         el('div',null,
+          view==='in_dev'&&el(DevSubTabs,{devTab,setDevTab,
+            rdCount:(data.in_dev||[]).length,
+            planCount:((data.plan2027||{}).blocks||[]).length}),
+          (view==='in_dev'&&devTab==='plan')
+          ? el(Plan2027View,{data,setData})
+          : el('div',null,
           el(ProductPanels,{prods,selId:prod?.id||'',setSelId,onAdd:addProd,onRemove:removeProd,allProds:{...data.postLaunch,...prods.reduce((a,p)=>({...a,[p.id]:p}),{})},isDevTab:view==='in_dev'}),
           prodView==='overview'
             ? el(PCOverview,{
@@ -10210,6 +11051,7 @@ function App(){
                   'No products yet.',el('br'),
                   el('button',{className:'btn btn-primary',style:{marginTop:16},onClick:addProd},el('i',{className:'ti ti-plus'}),' Add First Product')
                 )
+          )
         )
       )
     )
