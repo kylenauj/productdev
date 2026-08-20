@@ -631,8 +631,17 @@ div:hover > .rm-btn{display:flex!important;}
 .plan-block:active{cursor:grabbing;}
 .plan-block:hover{box-shadow:var(--elev-raised);transform:translateY(-1px);}
 .plan-block.dragging{opacity:.32;}
-.plan-mx-cell{transition:box-shadow 120ms,transform 120ms;}
+.plan-mx-cell{transition:box-shadow 120ms,transform 120ms,opacity 120ms;}
 .plan-mx-cell:hover{transform:translateY(-1px);box-shadow:var(--elev-raised);}
+.plan-mx-cell:focus-visible{outline:none;box-shadow:var(--focus-ring);}
+.plan-mx-cell.na{opacity:.5;}
+.plan-mx-cell.na:hover{opacity:.85;}
+.plan-na-btn{position:absolute;top:2px;right:2px;background:transparent;border:none;
+  cursor:pointer;color:var(--muted);padding:2px 3px;line-height:1;border-radius:5px;
+  opacity:0;transition:opacity 120ms,color 120ms,background 120ms;}
+.plan-mx-cell:hover .plan-na-btn{opacity:1;}
+.plan-mx-cell.na .plan-na-btn{opacity:.7;}
+.plan-na-btn:hover{color:var(--accent);background:var(--surface-warm);opacity:1;}
 .plan-chip{font-family:var(--mono);font-size:9px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;}
 .plan-scroll::-webkit-scrollbar{height:11px;width:11px;}
 .plan-scroll::-webkit-scrollbar-thumb{background:var(--bdr2);border-radius:6px;}
@@ -9764,7 +9773,8 @@ function planScanPortfolio(data,brands){
   (data.pcTabs||[]).forEach(t=>{
     (data[t.id]||[]).forEach(p=>{
       if((p.tags||[]).indexOf('Rejected')>-1)return;
-      flight.push({name:p.shortName||p.name,brand:planBrandOf(p.brand,brands),
+      flight.push({name:p.name,short:p.shortName||p.name,
+        brand:planBrandOf(p.brand,brands),
         cat:planCatOf((p.specs||{})['Category'],p.name),pc:t.label,launchDate:p.launchDate||''});
     });
   });
@@ -9827,10 +9837,41 @@ function usePlanFold(key){
   })];
 }
 
+/* ── Same-product matching ─────────────────────────────────────
+   A product call and a live listing are usually the same product under
+   slightly different names ("Berry Blaze Liquid Diamonds All-in-One" vs
+   "…AIO"). Tokenise, expand the in-house shorthands, drop pack sizes,
+   then call it a match at 80% token containment. `blunt` is a hard
+   discriminator — GDP Blunt is NOT the GDP 3×0.5g that's already live.
+   ──────────────────────────────────────────────────────────────── */
+const PLAN_NAME_ALIAS=[
+  [/\bnl\b/g,'northern lights'],
+  [/all[- ]?in[- ]?one/g,'aio'],
+  [/pre[- ]?rolls?\b/g,'preroll'],
+  [/cartridges?\b/g,'cart'],
+  [/(\d)\+/g,'$1']
+];
+const PLAN_NAME_DISCRIM=['blunt'];
+function planNameTokens(v){
+  let t=String(v||'').toLowerCase().replace(/×/g,'x');
+  PLAN_NAME_ALIAS.forEach(a=>{t=t.replace(a[0],a[1]);});
+  t=t.replace(/\b\d+(?:\.\d+)?\s*x\s*\d+(?:\.\d+)?\s*g\b/g,' ')
+     .replace(/\b\d+(?:\.\d+)?\s*g\b/g,' ')
+     .replace(/[^a-z0-9]+/g,' ');
+  return new Set(t.split(' ').filter(w=>w.length>1));
+}
+function planSameProduct(a,b){
+  const A=planNameTokens(a),B=planNameTokens(b);
+  if(!A.size||!B.size)return false;
+  for(const d of PLAN_NAME_DISCRIM){if(A.has(d)!==B.has(d))return false;}
+  let shared=0;A.forEach(w=>{if(B.has(w))shared++;});
+  return shared/Math.min(A.size,B.size)>=0.8;
+}
+
 /* ── Coverage-matrix hover card — the SKUs behind a cell ── */
 function PlanCoverCard({info}){
   if(!info) return null;
-  const {rect,brand,cat,live}=info;
+  const {rect,brand,cat,live,calls,na}=info;
   const W=360,G=10,MAX=12;
   const below=(window.innerHeight-rect.bottom)>320||rect.top<340;
   const st={position:'fixed',width:W,zIndex:860,pointerEvents:'none',
@@ -9861,18 +9902,26 @@ function PlanCoverCard({info}){
         letterSpacing:'.08em',textTransform:'uppercase',
         color:PLAN_CAT_COL[cat]||'var(--muted)'}},cat)),
     el('div',{style:{fontFamily:'var(--mono)',fontSize:9,color:'var(--muted)',marginTop:3}},
-      live.length?(live.length+' live SKU'+(live.length>1?'s':'')+' · '+cs.toLocaleString()+' cs available')
-                 :'No live SKU in this cell'),
+      na?"Marked N/A — this brand doesn't play in this category"
+        :live.length?(live.length+' live SKU'+(live.length>1?'s':'')+' · '+cs.toLocaleString()+' cs available')
+        :'No live SKU in this cell'),
     live.length>0&&el('div',null,
       head('Active SKUs','var(--ok)'),
       [...live].sort((a,z)=>(z.cases||0)-(a.cases||0)).slice(0,MAX).map((x,i)=>
         item(x.name,meta(['SKU '+x.sku,x.fmt,x.thc,x.stock,(x.cases||0)+' cs']),i,'var(--ok)')),
       live.length>MAX&&el('div',{style:{fontFamily:'var(--mono)',fontSize:9,
         color:'var(--muted)',paddingTop:5}},'+ '+(live.length-MAX)+' more')),
+    calls.length>0&&el('div',null,
+      head('In a product call','var(--info)'),
+      calls.slice(0,6).map((x,i)=>item(x.short||x.name,
+        meta([x.pc,x.launchDate]),i,'var(--info)')),
+      calls.length>6&&el('div',{style:{fontFamily:'var(--mono)',fontSize:9,
+        color:'var(--muted)',paddingTop:5}},'+ '+(calls.length-6)+' more')),
     el('div',{style:{fontFamily:'var(--mono)',fontSize:8,color:'var(--text4)',
       letterSpacing:'.08em',textTransform:'uppercase',marginTop:10,
       borderTop:'1px solid var(--border-soft)',paddingTop:7}},
-      live.length?'Click to add a 2027 launch here':'Gap — click to start planning')
+      na?'Not applicable — click to count it as a gap again'
+        :(live.length?'Click to add a 2027 launch here':'Gap — click to start planning'))
   );
 }
 
@@ -9910,6 +9959,13 @@ function Plan2027View({data,setData}){
   const blocks=(cfg.blocks||[]).map(b=>fixCat(b.cat)===b.cat?b:{...b,cat:fixCat(b.cat)});
   const rowsCfg=Object.keys(cfg.rows||{}).reduce((a,k)=>{
     a[k]=Array.from(new Set((cfg.rows[k]||[]).map(fixCat)));return a;},{});
+  /* Brand × category the business deliberately doesn't play in — greyed out
+     in the matrix and excluded from the gap count. */
+  const naMap=Object.keys(cfg.na||{}).reduce((a,k)=>{
+    const i=k.indexOf('\u241f');
+    a[i<0?k:(k.slice(0,i)+'\u241f'+fixCat(k.slice(i+1)))]=1;return a;},{});
+  const naKey=(b,c)=>b+'\u241f'+c;
+  const isNA=(b,c)=>!!naMap[naKey(b,c)];
 
   const [dragId,setDragId]=React.useState(null);
   const [overKey,setOverKey]=React.useState('');
@@ -9927,7 +9983,8 @@ function Plan2027View({data,setData}){
     const base={
       brands:(cur.brands&&cur.brands.length)?cur.brands:PLAN_BRANDS_SEED,
       rows:cur.rows||{},
-      blocks:cur.blocks||[]
+      blocks:cur.blocks||[],
+      na:cur.na||{}
     };
     return {...d,plan2027:fn(base)};
   });
@@ -9947,6 +10004,11 @@ function Plan2027View({data,setData}){
     rows:cat?{...p.rows,[brand]:Array.from(new Set([...(p.rows[brand]||[]),cat]))}:p.rows,
     blocks:p.blocks.map(b=>b.id===id?{...b,brand,cat:cat||b.cat,month:month||null}:b)
   }));
+  const setNA=(b,c,v)=>savePlan(p=>{
+    const na={...(p.na||{})},k=b+'\u241f'+c;
+    if(v)na[k]=1; else delete na[k];
+    return {...p,na};
+  });
   const addRow=(brand,cat)=>savePlan(p=>({...p,
     rows:{...p.rows,[brand]:Array.from(new Set([...(p.rows[brand]||[]),cat]))}}));
   const delRow=(brand,cat)=>savePlan(p=>({...p,
@@ -9975,7 +10037,7 @@ function Plan2027View({data,setData}){
     const out=[];
     brands.forEach(b=>PLAN_CATS.forEach(c=>{
       const l=cnt(live,b,c), p=planned(b,c);
-      if(l===0&&p===0){
+      if(l===0&&p===0&&!isNA(b,c)){
         out.push({brand:b,cat:c,
           dev:cnt(flight,b,c)+cnt(rd,b,c),
           brandLiveCats:PLAN_CATS.filter(x=>cnt(live,b,x)>0).length,
@@ -9986,7 +10048,9 @@ function Plan2027View({data,setData}){
     return out.sort((a,z)=>
       (z.dev-a.dev)||(z.brandLiveCats-a.brandLiveCats)||(z.catLiveSkus-a.catLiveSkus)||
       a.brand.localeCompare(z.brand));
-  },[data,brands.join('|'),blocks.length,JSON.stringify(blocks.map(b=>b.brand+b.cat+b.month))]);
+  },[data,brands.join('|'),blocks.length,JSON.stringify(blocks.map(b=>b.brand+b.cat+b.month)),
+     Object.keys(naMap).sort().join('|')]);
+  const naCount=brands.reduce((a,b)=>a+PLAN_CATS.filter(c=>isNA(b,c)).length,0);
 
   const cases=(b,c)=>live.filter(x=>x.brand===b&&(c==null||x.cat===c))
     .reduce((a,x)=>a+(x.cases||0),0);
@@ -10251,7 +10315,9 @@ function Plan2027View({data,setData}){
       el(PlanKpi,{k:'In development',v:flight.length+rd.length,s:'PC calls + R&D'}),
       el(PlanKpi,{k:'Planned 2027',v:scheduled,s:backlog.length?(backlog.length+' unscheduled'):'blocks in the grid',
         col:'var(--accent)'}),
-      el(PlanKpi,{k:'Coverage gaps',v:gaps.length,s:'of '+(brands.length*PLAN_CATS.length)+' brand × category',
+      el(PlanKpi,{k:'Coverage gaps',v:gaps.length,
+        s:'of '+(brands.length*PLAN_CATS.length)+' brand × category'
+          +(naCount?' · '+naCount+' N/A':''),
         col:gaps.length?'var(--err)':'var(--ok)'}),
       el(PlanKpi,{k:'Empty months',v:emptyMonths,s:'no launch in 2027',
         col:emptyMonths?'var(--warn)':'var(--ok)'})
@@ -10289,21 +10355,39 @@ function Plan2027View({data,setData}){
               alignItems:'center',paddingRight:8}},b),
             ...PLAN_CATS.map(c=>{
               const l=cnt(live,b,c), d=cnt(flight,b,c)+cnt(rd,b,c), p=planned(b,c);
-              const cv=cases(b,c), gap=l===0&&p===0;
-              return el('button',{key:'mc'+b+c,className:'plan-mx-cell',
-                onClick:()=>planIt(b,c),
-                onMouseEnter:e=>setCoverHover({brand:b,cat:c,
+              const cv=cases(b,c), rawGap=l===0&&p===0;
+              const na=rawGap&&isNA(b,c), gap=rawGap&&!na;
+              const act=()=>na?setNA(b,c,false):planIt(b,c);
+              return el('div',{key:'mc'+b+c,className:'plan-mx-cell'+(na?' na':''),
+                role:'button',tabIndex:0,
+                'aria-label':b+' '+c+(na?' — not applicable':''),
+                onClick:act,
+                onKeyDown:e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();act();}},
+                onMouseEnter:e=>setCoverHover({brand:b,cat:c,na,
                   rect:e.currentTarget.getBoundingClientRect()}),
                 onMouseLeave:()=>setCoverHover(h=>(h&&h.brand===b&&h.cat===c)?null:h),
-                onFocus:e=>setCoverHover({brand:b,cat:c,
+                onFocus:e=>setCoverHover({brand:b,cat:c,na,
                   rect:e.currentTarget.getBoundingClientRect()}),
                 onBlur:()=>setCoverHover(null),
-                style:{border:gap?'1px dashed var(--err-dim)':'1px solid var(--border)',
-                  background:gap?'var(--err-bg)':(l>0?'var(--ok-bg)':'var(--surface)'),
+                style:{position:'relative',
+                  border:na?'1px solid var(--border-soft)'
+                       :(gap?'1px dashed var(--err-dim)':'1px solid var(--border)'),
+                  background:na?'var(--surface-warm)'
+                            :(gap?'var(--err-bg)':(l>0?'var(--ok-bg)':'var(--surface)')),
                   borderRadius:9,padding:'7px 4px',cursor:'pointer',minHeight:54,
                   display:'flex',flexDirection:'column',alignItems:'center',
                   justifyContent:'center',gap:4,fontFamily:'inherit'}},
-                metric==='cases'
+                rawGap&&el('button',{className:'plan-na-btn',
+                  tabIndex:-1,
+                  title:na?'Restore — count this as a gap again'
+                          :"Not applicable — "+b+" doesn't play in "+c,
+                  onClick:e=>{e.stopPropagation();setNA(b,c,!na);}},
+                  el('i',{className:'ti '+(na?'ti-rotate-2':'ti-circle-off'),
+                    style:{fontSize:11,display:'block'}})),
+                na
+                ? el('div',{style:{fontFamily:'var(--mono)',fontSize:15,fontWeight:700,
+                    color:'var(--text4)'}},'—')
+                : metric==='cases'
                 ? el('div',{style:{display:'flex',gap:6,alignItems:'baseline',
                     fontFamily:'var(--mono)',fontWeight:700}},
                     el('span',{style:{fontSize:15,color:cv?'var(--ok)':'var(--text4)'}},
@@ -10316,8 +10400,8 @@ function Plan2027View({data,setData}){
                     el('span',{style:{fontSize:11,color:d?'var(--info)':'var(--text4)'}},d||'·'),
                     el('span',{style:{fontSize:13,color:p?'var(--accent)':'var(--text4)'}},p||'·')),
                 el('span',{className:'plan-chip',style:{fontSize:8,
-                  color:gap?'var(--err)':'var(--muted)'}},
-                  gap?'GAP':(metric==='cases'?'CS AVAIL':(l>0?'COVERED':'PLANNED')))
+                  color:na?'var(--text4)':(gap?'var(--err)':'var(--muted)')}},
+                  na?'N/A':(gap?'GAP':(metric==='cases'?'CS AVAIL':(l>0?'COVERED':'PLANNED'))))
               );
             })
           ])
@@ -10364,10 +10448,13 @@ function Plan2027View({data,setData}){
       'Click + in any month to type a product straight into the plan · drag a block to any other brand, category or month · click a block to edit it'),
 
     /* ── Coverage hover card ── */
-    coverHover&&el(PlanCoverCard,{info:{
-      ...coverHover,
-      live:live.filter(x=>x.brand===coverHover.brand&&x.cat===coverHover.cat)
-    }}),
+    coverHover&&(()=>{
+      const cl=live.filter(x=>x.brand===coverHover.brand&&x.cat===coverHover.cat);
+      return el(PlanCoverCard,{info:{...coverHover,live:cl,
+        /* product calls, minus anything already selling under another name */
+        calls:flight.filter(x=>x.brand===coverHover.brand&&x.cat===coverHover.cat
+          &&!cl.some(l=>planSameProduct(l.name,x.name)))}});
+    })(),
 
     /* ── Editor ── */
     editing&&el(PlanBlockEditor,{
