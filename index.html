@@ -168,16 +168,6 @@
      flip with the theme, so neither does their ink. */
   --on-grad:#ffffff;
 
-  /* 3D stage — a viewport surface, intentionally dark in both themes
-     (like a video player). Tokenised so it is a decision, not a stray hex. */
-  --stage:#1f1b2b;
-  --stage-fg:#e8eaf0;
-  --stage-fg2:#c4c8d4;
-  --stage-muted:#7b8393;
-  --stage-ink:#0d1117;      /* dark ink for chips on a bright stage fill */
-  --stage-ink-warm:#3a3220; /* …and on the amber sticky-note fills */
-  --stage-accent:#ffd54a;
-  --stage-info:#7ab4ff;
 }
 
 /* ── Dark theme (design system canonical) ── */
@@ -691,7 +681,6 @@ div:hover > .rm-btn{display:flex!important;}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 'use strict';
 /* ── Countryside brand assets ── */
@@ -6334,1653 +6323,302 @@ function MeetingMode({product,name,vel,clsKey,clsCol,lwUnits,wowDelta,wowPct,uni
    HOME VIEW — Meeting Hub
 ══════════════════════════════════════════ */
 const HOME_KEY='au_home_v1'; // kept for legacy migration
-const getHomeData=(data)=>data?.home||{actions:[],notes:''};
 
 /* ════════════════════════════════════════════════
    3D LOW-POLY HOME NAVIGATION v3 — "The Workshop"
    Isometric wood room · draggable shelf icons ·
    product hub panel with weekly action notes
    ════════════════════════════════════════════════ */
-function Home3DView({data, setData, setView, setSels, setProdView}){
-  const mountRef = React.useRef();
-  const stateRef = React.useRef({cam:{theta:-Math.PI/5, phi:0.58, radius:22, panX:0}});
-  const [selected, setSelected] = React.useState(null); // {tabId, prodId}
-  const [noteText, setNoteText] = React.useState('');
-  const [stickyEdit, setStickyEdit] = React.useState(null); // {id,text,color}
-  const [propEdit, setPropEdit] = React.useState(null);     // {id,kind,s,ry}
-  const [showProps, setShowProps] = React.useState(false);
-  const [showTools, setShowTools] = React.useState(false);
+/* ── Overview (home) ─────────────────────────────────────────────
+   Replaces the former low-poly 3D room. Same data, read as a
+   working command centre: what is late, what launches next, how
+   each product call is tracking, and the next OCS deadline.
+   Product notes captured in the old 3D hub (p.hubNotes) are kept
+   and surfaced here so nothing is stranded.
+   ─────────────────────────────────────────────────────────── */
+function HomeView({data,setData,setView,setSels,setProdView}){
+  const [newAction,setNewAction]=React.useState('');
+  const [noteFor,setNoteFor]=React.useState('');
+  const [noteText,setNoteText]=React.useState('');
 
-  /* ── Scene object helpers ── */
-  const addProp=(kind,defScale)=>{
-    const spot=stateRef.current.dropSpot?.(kind)||{x:0,y:.18,z:5};
-    const pr={id:uid(),kind,...spot,ry:Math.random()*6.283,s:defScale||2};
-    setData(d=>({...d,home3dProps:[...(d.home3dProps||[]),pr]}));
-    setShowProps(false);
-  };
-  const saveProp=(id,patch)=>setData(d=>({...d,home3dProps:(d.home3dProps||[]).map(q=>q.id===id?{...q,...patch}:q)}));
-  const removeProp=(id)=>{
-    setData(d=>({...d,home3dProps:(d.home3dProps||[]).filter(q=>q.id!==id)}));
-    setPropEdit(null);
-  };
+  /* ── Source data ─────────────────────────────────────────────── */
+  const allProds=(data.pcTabs||[]).flatMap(t=>(data[t.id]||[]).map(p=>({...p,pc:t.id,pcLabel:t.label})));
+  const devProds=[...allProds,...(data.in_dev||[]).map(p=>({...p,pc:'in_dev',pcLabel:'In Development'}))]
+    .filter(p=>!(p.tags||[]).includes('Rejected'));
+  const allTasks=allProds.flatMap(p=>(p.tasks||[]).map(t=>({...t,prod:p})));
+  const overdue=allTasks.filter(t=>isOverdue(t));
+  const actions=data.actionItems||[];
+  const openActions=actions.filter(a=>!a.done);
+  const planBlocks=((data.plan2027||{}).blocks)||[];
+  const planned=planBlocks.filter(b=>b.month).length;
 
-  /* ── Sticky note helpers ── */
-  const STICKY_COLORS=['#ffd54a','#ff9c6b','#8ee08e','#7fc7ff','#e79bd8'];
-  const addSticky=()=>{
-    const b=stateRef.current.bay||{x0:8,x1:18,y0:1.5,y1:7,z:-2.9};
-    const st={id:uid(),text:'New note',
-      x:b.x0+1.4+Math.random()*Math.max(1,(b.x1-b.x0-2.8)),
-      y:b.y0+1.4+Math.random()*Math.max(1,(b.y1-b.y0-2.8)),
-      z:b.z,
-      rot:(Math.random()-.5)*.14,s:1,color:STICKY_COLORS[Math.floor(Math.random()*STICKY_COLORS.length)]};
-    setData(d=>({...d,home3dStickies:[...(d.home3dStickies||[]),st]}));
-    setStickyEdit({...st});
-  };
-  const saveSticky=(id,patch)=>setData(d=>({...d,home3dStickies:(d.home3dStickies||[]).map(s=>s.id===id?{...s,...patch}:s)}));
-  const removeSticky=(id)=>setData(d=>({...d,home3dStickies:(d.home3dStickies||[]).filter(s=>s.id!==id)}));
+  /* ── Next OCS submission deadline ────────────────────────────── */
+  const nextCall=[...PLAN_PRIOR_CALLS,...PLAN_CALLS]
+    .filter(c=>c.dueISO&&planDaysTo(c.dueISO)>=0)
+    .sort((a,b)=>planDaysTo(a.dueISO)-planDaysTo(b.dueISO))[0]||null;
+  const nextDays=nextCall?planDaysTo(nextCall.dueISO):null;
 
-  /* ── Notes helpers (persist onto the product) ── */
-  const addNote = (tabId, prodId, text)=>{
-    if(!text.trim()) return;
-    setData(d=>({...d,[tabId]:(d[tabId]||[]).map(p=>p.id===prodId
-      ? {...p, hubNotes:[...(p.hubNotes||[]), {id:uid(), text:text.trim(), date:new Date().toISOString().slice(0,10), done:false}]}
+  /* ── Needs attention — one merged, ranked list ───────────────── */
+  const attention=[];
+  devProds.forEach(p=>{
+    const gates=getGateStatus(p.tasks||[]);
+    const rag=getRAG(gates);
+    const od=(p.tasks||[]).filter(isOverdue).length;
+    const tm=getTMinus(p.launchDate);
+    const blocker=(p.notes&&p.notes.blockers||'').trim();
+    if(blocker) attention.push({p,kind:'Blocker',detail:blocker,hue:HUE.err,rank:0});
+    if(od>0)    attention.push({p,kind:od+' overdue',detail:(p.tasks||[]).filter(isOverdue)
+                    .slice(0,2).map(t=>t.name).join(', '),hue:HUE.err,rank:1});
+    if(rag==='red'&&!blocker&&!od) attention.push({p,kind:'Gates at risk',
+                    detail:'RAG red on gate status',hue:HUE.err,rank:2});
+    if(tm!==null&&tm>=0&&tm<=14&&rag!=='green') attention.push({p,kind:fmtTMinus(tm),
+                    detail:'launch inside two weeks, gates not clear',hue:HUE.warn,rank:3});
+  });
+  attention.sort((a,b)=>a.rank-b.rank);
+
+  /* ── Launching soon ──────────────────────────────────────────── */
+  const launching=devProds
+    .filter(p=>{const d=getTMinus(p.launchDate);return d!==null&&d>=-14&&d<=90;})
+    .sort((a,b)=>getTMinus(a.launchDate)-getTMinus(b.launchDate));
+
+  /* ── Product call health ─────────────────────────────────────── */
+  const pcHealth=(data.pcTabs||[]).map(tab=>{
+    const prods=(data[tab.id]||[]).filter(p=>!(p.tags||[]).includes('Rejected'));
+    const tasks=prods.flatMap(p=>p.tasks||[]);
+    const done=tasks.filter(t=>t.status==='Done').length;
+    return {tab,n:prods.length,pct:tasks.length?Math.round(done/tasks.length*100):0,
+      overdue:tasks.filter(isOverdue).length};
+  });
+
+  /* ── Notes captured against products (kept from the old hub) ─── */
+  const notes=[];
+  [...(data.pcTabs||[]).map(t=>t.id),'in_dev'].forEach(tid=>{
+    (data[tid]||[]).forEach(p=>(p.hubNotes||[]).forEach(n=>notes.push({...n,tid,p})));
+  });
+  const openNotes=notes.filter(n=>!n.done);
+  const noteTargets=devProds.slice().sort((a,b)=>(a.shortName||'').localeCompare(b.shortName||''));
+
+  const addNote=()=>{
+    const txt=noteText.trim(); if(!txt||!noteFor)return;
+    const [tid,pid]=noteFor.split('|');
+    setData(d=>({...d,[tid]:(d[tid]||[]).map(p=>p.id===pid
+      ? {...p,hubNotes:[...(p.hubNotes||[]),{id:uid(),text:txt,
+          date:new Date().toISOString().slice(0,10),done:false}]}
       : p)}));
     setNoteText('');
   };
-  const toggleNote = (tabId, prodId, noteId)=>{
-    setData(d=>({...d,[tabId]:(d[tabId]||[]).map(p=>p.id===prodId
-      ? {...p, hubNotes:(p.hubNotes||[]).map(n=>n.id===noteId?{...n,done:!n.done}:n)}
-      : p)}));
-  };
-  const deleteNote = (tabId, prodId, noteId)=>{
-    setData(d=>({...d,[tabId]:(d[tabId]||[]).map(p=>p.id===prodId
-      ? {...p, hubNotes:(p.hubNotes||[]).filter(n=>n.id!==noteId)}
-      : p)}));
-  };
+  const toggleNote=(tid,pid,nid)=>setData(d=>({...d,[tid]:(d[tid]||[]).map(p=>p.id===pid
+    ? {...p,hubNotes:(p.hubNotes||[]).map(n=>n.id===nid?{...n,done:!n.done}:n)} : p)}));
+  const dropNote=(tid,pid,nid)=>setData(d=>({...d,[tid]:(d[tid]||[]).map(p=>p.id===pid
+    ? {...p,hubNotes:(p.hubNotes||[]).filter(n=>n.id!==nid)} : p)}));
 
-  React.useEffect(()=>{
-    const mount = mountRef.current;
-    if(!mount || !window.THREE) return;
-    const T = window.THREE;
-    const W = mount.clientWidth, H = mount.clientHeight;
-
-    const renderer = new T.WebGLRenderer({antialias:true});
-    renderer.setSize(W,H);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
-    renderer.setClearColor(0x1f1b2b);
-    renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = T.PCFSoftShadowMap;
-    renderer.outputEncoding = T.sRGBEncoding;
-    renderer.toneMapping = T.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.05;
-    mount.appendChild(renderer.domElement);
-
-    const scene = new T.Scene();
-    scene.fog = new T.FogExp2(0x1f1b2b, 0.007);
-
-    const cam = new T.PerspectiveCamera(45, W/H, 0.1, 200);
-
-    /* ── Materials palette (warm wood room) ── */
-    const woodA = new T.MeshStandardMaterial({color:0x9a6236, flatShading:true, roughness:.75});
-    const woodB = new T.MeshStandardMaterial({color:0x7d4e2a, flatShading:true, roughness:.8});
-    const woodDark = new T.MeshStandardMaterial({color:0x5c381e, flatShading:true, roughness:.85});
-    const wallNavy = new T.MeshStandardMaterial({color:0x232847, flatShading:true, roughness:.9, side:T.FrontSide});
-
-    /* ── Lighting — warm workshop ── */
-    scene.add(new T.HemisphereLight(0xa9bde8, 0x4a3524, 0.5));
-    const key = new T.DirectionalLight(0xfff2e2, 1.55);   // warm sun, only shadow caster
-    key.castShadow = true;
-    key.shadow.mapSize.width = 2048;
-    key.shadow.mapSize.height = 2048;
-    key.shadow.radius = 3;
-    key.shadow.bias = -0.0006;
-    key.shadow.normalBias = 0.02;
-    scene.add(key); scene.add(key.target);
-    const fill = new T.DirectionalLight(0x8fb0ff, 0.4);   // cool bounce from front-left
-    fill.position.set(-20, 10, 18);
-    scene.add(fill);
-    const rim = new T.DirectionalLight(0x9ecbff, 0.55);   // cool edge from behind
-    rim.position.set(-12, 15, -20);
-    scene.add(rim);
-
-    /* ── Tabs → shelves (every product call gets a shelf, even empty ones) ── */
-    const tabs=[
-      ...(data.pcTabs||[]).map(t=>({...t,prods:data[t.id]||[]})),
-      {id:'in_dev',label:'In Development',prods:data.in_dev||[]}
-    ];
-
-    /* Category-grouped layout per shelf */
-    const SLOT_W = 4.7, CAT_GAP = 2.2;
-    const ICON_SCALE = 2.75;
-    const CAT_ORDER_3D=['pre-roll','infused','vape','concentrate','flower','other'];
-    const catKey3d=s=>{
-      const c=((s||{}).Category||'').toLowerCase();
-      if(c.includes('infused')||c.includes('diamond')||c.includes('caviar'))return 'infused';
-      if(c.includes('vape')||c.includes('aio')||c.includes('510'))return 'vape';
-      if(c.includes('pre-roll')||c.includes('preroll'))return 'pre-roll';
-      if(c.includes('concentrate')||c.includes('extract')||c.includes('shatter')||c.includes('rosin')||c.includes('rso')||c.includes('hash')||c.includes('honey')||c.includes('oil'))return 'concentrate';
-      if(c.includes('flower'))return 'flower';
-      return 'other';
-    };
-    function tabLayout(prods){
-      const sorted=[...prods].sort((a,b)=>CAT_ORDER_3D.indexOf(catKey3d(a.specs))-CAT_ORDER_3D.indexOf(catKey3d(b.specs)));
-      const xs=[]; let cursor=0, prev=null;
-      sorted.forEach(p=>{
-        const ck=catKey3d(p.specs);
-        if(prev!==null&&ck!==prev) cursor+=CAT_GAP;
-        xs.push(cursor); cursor+=SLOT_W; prev=ck;
-      });
-      const width=xs.length?xs[xs.length-1]:0;
-      return {sorted, xs:xs.map(x=>x-width/2), width};
-    }
-    const layouts=tabs.map(t=>tabLayout(t.prods));
-    const maxRow=Math.max(...layouts.map(l=>l.width), 6);
-    const SHELF_W = Math.max(14, maxRow + 5.0);
-    const SHELF_GAP = 4.6;
-    const SHELF_D = 5.0;
-    const totalH = tabs.length*SHELF_GAP;
-    const EXT_W = 13;          // blank notes/action-item bay to the right
-    const ROOM_CX = EXT_W/2;   // room re-centres so the shelf stays put
-    const placeSurfaces=[];
-
-    /* ── Room: plinth, floor planks, 2 dollhouse walls ── */
-    const plinth = new T.Mesh(new T.BoxGeometry(SHELF_W+6+EXT_W, 1.2, SHELF_D+9), woodDark);
-    plinth.position.set(ROOM_CX, -0.6, 1.5);
-    plinth.receiveShadow = true;
-    placeSurfaces.push(plinth);
-    scene.add(plinth);
-    for(let i=0;i<7;i++){
-      const plank=new T.Mesh(new T.BoxGeometry(SHELF_W+5.4+EXT_W, .18, 1.15), i%2?woodA:woodB);
-      plank.position.set(ROOM_CX, .09, -1.6 + i*1.25);
-      plank.receiveShadow = true;
-      placeSurfaces.push(plank);
-      scene.add(plank);
-    }
-    /* ── Hanging pendant lights above the shelf (no walls) ── */
-    function pendant(px, pz){
-      pz = pz||0;
-      const HANG = totalH + 5.6;            // shade height — well clear of the shelf top
-      const cord=new T.Mesh(new T.CylinderGeometry(.04,.04,4.6,6),
-        new T.MeshStandardMaterial({color:0x2a2a30,roughness:.8}));
-      cord.position.set(px, HANG + 2.9, pz);
-      scene.add(cord);
-      const cap=new T.Mesh(new T.CylinderGeometry(.18,.22,.2,10),
-        new T.MeshStandardMaterial({color:0x3a3b44,roughness:.5,metalness:.5}));
-      cap.position.set(px, HANG + .62, pz); scene.add(cap);
-      const shade=new T.Mesh(new T.ConeGeometry(1.05,.95,14,1,true),
-        new T.MeshStandardMaterial({color:0x33343c,roughness:.45,metalness:.45,side:T.DoubleSide}));
-      shade.position.set(px, HANG, pz);
-      scene.add(shade);
-      const inner=new T.Mesh(new T.ConeGeometry(1.0,.9,14,1,true),
-        new T.MeshStandardMaterial({color:0xffe2b8,emissive:0xffb050,emissiveIntensity:.35,side:T.BackSide}));
-      inner.position.set(px, HANG, pz); scene.add(inner);
-      const bulb=new T.Mesh(new T.SphereGeometry(.26,14,10),
-        new T.MeshStandardMaterial({color:0xffd9a0,emissive:0xffb050,emissiveIntensity:1.9}));
-      bulb.position.set(px, HANG - .5, pz);
-      scene.add(bulb);
-      const sp=new T.SpotLight(0xffc489, 2.6, 46, Math.PI/4.6, .72, 1.1);
-      sp.position.set(px, HANG - .65, pz);
-      sp.target.position.set(px, 0, pz+.8);
-      scene.add(sp); scene.add(sp.target);
-      const halo=new T.PointLight(0xffb670, .32, 4.5);
-      halo.position.set(px, HANG - .3, pz);
-      scene.add(halo);
-    }
-    for(let i=0;i<3;i++) pendant((i-1)*(SHELF_W/3));
-
-    pendant(EXT_W/2 + SHELF_W/2);
-
-    /* ── Whiteboard behind the bookshelf (sticky note surface) ── */
-    const WB_Z = -SHELF_D/2 - 1.0;
-    const WB_W = SHELF_W + 3.0 + EXT_W, WB_H = totalH + 1.0;
-    const NOTE_X0 = SHELF_W/2 + 1.5, NOTE_X1 = EXT_W + (SHELF_W+3)/2 - 1.5;
-    const NOTE_CX = (NOTE_X0+NOTE_X1)/2;
-    const wbFrame = new T.Mesh(new T.BoxGeometry(WB_W+.5, WB_H+.5, .18),
-      new T.MeshStandardMaterial({color:0x8a5c30, flatShading:true, roughness:.7}));
-    wbFrame.position.set(ROOM_CX, totalH/2 + .6, WB_Z - .05);
-    wbFrame.receiveShadow = true;
-    scene.add(wbFrame);
-    const whiteboard = new T.Mesh(new T.BoxGeometry(WB_W, WB_H, .12),
-      new T.MeshStandardMaterial({color:0xeef1f6, roughness:.32, metalness:.02}));
-    whiteboard.position.set(ROOM_CX, totalH/2 + .6, WB_Z);
-    whiteboard.receiveShadow = true;
-    whiteboard.userData.isBoard = true;
-    scene.add(whiteboard);
-    placeSurfaces.push(whiteboard);
-    const wbTray = new T.Mesh(new T.BoxGeometry(EXT_W*.8, .12, .32),
-      new T.MeshStandardMaterial({color:0x6f7480, roughness:.5, metalness:.35}));
-    wbTray.position.set(NOTE_CX, totalH/2 + .6 - WB_H/2 - .1, WB_Z + .22);
-    scene.add(wbTray);
-    // Divider between the shelf half and the blank notes bay
-    const wbDiv = new T.Mesh(new T.BoxGeometry(.06, WB_H - .6, .04),
-      new T.MeshStandardMaterial({color:0xc3ccd8, roughness:.6}));
-    wbDiv.position.set(SHELF_W/2 + .7, totalH/2 + .6, WB_Z + .08);
-    scene.add(wbDiv);
-    const wbWash = new T.DirectionalLight(0xd2e2ff, .38);
-    wbWash.position.set(ROOM_CX, totalH + 7, WB_Z + 16);
-    scene.add(wbWash);
-
-    /* Frame the shadow camera tightly to the room — crisper, softer shadows */
-    (()=>{
-      const halfW=(SHELF_W+6+EXT_W)/2 + 2, halfD=(SHELF_D+9)/2 + 2, top=totalH + 4;
-      key.position.set(ROOM_CX + halfW*.75, top + 12, halfD*1.1);
-      key.target.position.set(ROOM_CX, totalH*.34, 1.5);
-      key.target.updateMatrixWorld();
-      const c=key.shadow.camera, R=Math.max(halfW, halfD) + top*.4;
-      c.left=-R; c.right=R; c.top=R; c.bottom=-R;
-      c.near=1; c.far=R*4.5;
-      c.updateProjectionMatrix();
-    })();
-
-    /* ── Deco: plants + books ── */
-    function plant(x,y,z,s=1){
-      const g=new T.Group();
-      const pot=new T.Mesh(new T.CylinderGeometry(.22,.17,.3,7), woodDark);
-      pot.position.y=.15; pot.castShadow=true; g.add(pot);
-      const soil=new T.Mesh(new T.CylinderGeometry(.2,.2,.04,7),
-        new T.MeshStandardMaterial({color:0x3a2a1c, roughness:1}));
-      soil.position.y=.3; g.add(soil);
-      for(let i=0;i<6;i++){
-        const leaf=new T.Mesh(new T.IcosahedronGeometry(.15+Math.random()*.06,0),
-          new T.MeshStandardMaterial({color:i%2?0x3f9d4e:0x4fb85c, flatShading:true, roughness:.7}));
-        leaf.position.set((Math.random()-.5)*.36, .38+i*.11, (Math.random()-.5)*.36);
-        leaf.castShadow=true; g.add(leaf);
-      }
-      g.position.set(x,y,z); g.scale.setScalar(s);
-      scene.add(g);
-      return g;
-    }
-    function bookStack(x,y,z,s=1){
-      const g=new T.Group();
-      const cols=[0xc0564a, 0x4a7ec0, 0x56a860, 0xd7a53c];
-      cols.forEach((c,i)=>{
-        const b=new T.Mesh(new T.BoxGeometry(.7-.07*i,.15,.5),
-          new T.MeshStandardMaterial({color:c, flatShading:true, roughness:.8}));
-        b.position.set((Math.random()-.5)*.06, .075+i*.155, 0);
-        b.rotation.y=(Math.random()-.5)*.3;
-        b.castShadow=true; g.add(b);
-      });
-      g.position.set(x,y,z); g.scale.setScalar(s);
-      scene.add(g);
-      return g;
-    }
-
-    /* ── Text plate builder (2D text + 3px depth) ── */
-    function textPlate(text, o={}){
-      const fs=o.fs||40, pad=o.pad||18;
-      const meas=document.createElement('canvas').getContext('2d');
-      meas.font=`700 ${fs}px 'DM Mono', monospace`;
-      const tw=Math.ceil(meas.measureText(text).width);
-      const cw=tw+pad*2, ch=fs+pad*1.5;
-      const c=document.createElement('canvas'); c.width=cw; c.height=ch;
-      const x=c.getContext('2d');
-      x.fillStyle=o.bg||'rgba(16,20,30,0.9)'; x.fillRect(0,0,cw,ch);
-      x.strokeStyle=o.border||'rgba(226,190,102,.6)'; x.lineWidth=3; x.strokeRect(1.5,1.5,cw-3,ch-3);
-      x.font=`700 ${fs}px 'DM Mono', monospace`;
-      x.fillStyle=o.fg||'#ffe6cf'; x.textAlign='center'; x.textBaseline='middle';
-      x.fillText(text, cw/2, ch/2+2);
-      const tex=new T.CanvasTexture(c); tex.minFilter=T.LinearFilter; tex.encoding=T.sRGBEncoding;
-      const sc=o.scale||0.01;
-      const geo=new T.BoxGeometry(cw*sc, ch*sc, 0.07);
-      const front=new T.MeshBasicMaterial({map:tex, transparent:true});
-      const side=new T.MeshBasicMaterial({color:0x14100c});
-      return new T.Mesh(geo,[side,side,side,side,front,side]);
-    }
-
-    function jitter(geo, amt){
-      const p=geo.attributes.position;
-      for(let i=0;i<p.count;i++){
-        p.setX(i,p.getX(i)+(Math.random()-.5)*amt);
-        p.setY(i,p.getY(i)+(Math.random()-.5)*amt);
-        p.setZ(i,p.getZ(i)+(Math.random()-.5)*amt);
-      }
-      geo.computeVertexNormals();
-      return geo;
-    }
-
-    /* ── Sticky note mesh ── */
-    function stickyMesh(st){
-      const size=440;
-      const c=document.createElement('canvas'); c.width=size; c.height=size;
-      const x=c.getContext('2d');
-      const txt=String(st.text||'');
-
-      // Wrap at a given font size
-      const wrapAt=f=>{
-        x.font='700 '+f+'px Syne, sans-serif';
-        const out=[]; let line='';
-        txt.split(/\s+/).filter(Boolean).forEach(w=>{
-          const t=line?line+' '+w:w;
-          if(x.measureText(t).width>size-52){ if(line) out.push(line); line=w; }
-          else line=t;
-        });
-        if(line) out.push(line);
-        return out;
-      };
-      // Largest font that fits the note; long notes step down gracefully
-      let fs=66, lines=wrapAt(fs);
-      while(fs>34 && lines.length*(fs*1.14) > size-104){ fs-=4; lines=wrapAt(fs); }
-      lines=lines.slice(0,12);
-
-      x.fillStyle=st.color||'#ffd54a'; x.fillRect(0,0,size,size);
-      x.fillStyle='rgba(0,0,0,.09)'; x.fillRect(0,0,size,40);
-      x.fillStyle='#3a3220';
-      x.font='700 '+fs+'px Syne, sans-serif';
-      x.textAlign='left'; x.textBaseline='top';
-      const lh=fs*1.14;
-      const startY=Math.max(58,(size-lines.length*lh)/2);
-      lines.forEach((ln,i)=>x.fillText(ln,26,startY+i*lh));
-
-      const tex=new T.CanvasTexture(c); tex.encoding=T.sRGBEncoding;
-      const front=new T.MeshStandardMaterial({map:tex,roughness:.85});
-      const side=new T.MeshStandardMaterial({color:0xcfae3d,roughness:.85});
-      const mesh=new T.Mesh(new T.BoxGeometry(2.5,2.5,.06),[side,side,side,side,front,side]);
-      mesh.position.set(st.x??0, st.y??5, st.z??-2.9);
-      mesh.rotation.z=st.rot??0;
-      // More text -> physically larger note, so type stays readable
-      const auto=Math.min(1.85, 1 + Math.max(0, lines.length-3)*0.115);
-      mesh.scale.setScalar((st.s??1)*auto);
-      mesh.userData={sticky:st,isSticky:true};
-      mesh.castShadow=true;
-      return mesh;
-    }
-
-    /* ── Category colours ── */
-    const CAT_COL={vape:0xf0b73d,'pre-roll':0x5b9bf0,infused:0x29c3d4,concentrate:0xffb347,flower:0xe879b9};
-    const STATUS_COL={accepted:0x3ddc8a,launched:0x3ddc8a,'on track':0x3ddc8a,rejected:0xff6b5c,'at risk':0xff6b5c,delayed:0xff6b5c,'in progress':0xf0b73d,pending:0xf0b73d,'high priority':0xf0b73d};
-    const catKey=s=>{
-      const c=(s?.Category||'').toLowerCase();
-      if(c.includes('infused')||c.includes('diamond')||c.includes('caviar'))return 'infused';
-      if(c.includes('vape')||c.includes('aio')||c.includes('510'))return 'vape';
-      if(c.includes('pre-roll')||c.includes('preroll'))return 'pre-roll';
-      if(c.includes('concentrate')||c.includes('extract')||c.includes('shatter')||c.includes('rosin')||c.includes('rso')||c.includes('hash')||c.includes('honey')||c.includes('oil'))return 'concentrate';
-      if(c.includes('flower'))return 'flower';
-      return 'other';
-    };
-    const statColor=t=>STATUS_COL[((t||[])[0]||'').toLowerCase()]||0x8a8f9e;
-
-    /* ── Brand palettes (accent / body / dark / trim) ── */
-    const BRAND_3D = [
-      // accent = primary brand colour · light = body shell · dark = panels/lids · trim = stripe
-      {k:'litti',       accent:0xe23e8c, light:0xf7f5f8, dark:0x252029, trim:0xf9a8d4}, // white + pink
-      {k:'greazy',      accent:0xd9a41e, light:0x141416, dark:0x08080a, trim:0xf0bf3a}, // deep yellow + black
-      {k:'shatterizer', accent:0x1c1c20, light:0xd9262c, dark:0x08080a, trim:0xf2f2f4}, // red body + black
-      {k:'buddy',       accent:0xf28023, light:0x1e2f57, dark:0x101a33, trim:0xffab5e}, // orange + navy
-      {k:'countryside', accent:0xe8722a, light:0xf0e4cf, dark:0x3a2415, trim:0xffa04a}, // orange
-      {k:'ellevia',     accent:0x8b5cf6, light:0xf3f1fb, dark:0x1d1830, trim:0xc4b5fd},
-    ];
-    const BRAND_DEF = {accent:0xE2BE66, light:0xe4e6ec, dark:0x1e1e24, trim:0xffb07a};
-    function brand3d(name){
-      const n=String(name||'').toLowerCase();
-      return BRAND_3D.find(b=>n.includes(b.k)) || BRAND_DEF;
-    }
-    const hex2css=h=>'#'+h.toString(16).padStart(6,'0');
-
-    /* ── Product icon builder ── */
-    const embers=[];
-    function productIcon(prod){
-      const specs=prod.specs, key=catKey(specs);
-      const colHex=CAT_COL[key]||0xE2BE66;
-      const statHex=statColor(prod.tags);
-      const done=prod.tasks?.length?prod.tasks.filter(t=>t.status==='Done').length/prod.tasks.length:0;
-      const g=new T.Group();
-      const model=new T.Group();
-      g.add(model);
-      g.userData.model=model;
-      const mat=(c,e,ei,r,m2,flat)=>new T.MeshStandardMaterial({color:c,emissive:new T.Color(e||0),emissiveIntensity:ei||0,flatShading:flat??true,metalness:m2??.15,roughness:r??.55});
-      const KRAFT=0xd6b183, HERB=0x8b9070;
-      const B=brand3d(prod.brand), PLASTIC=B.dark;
-
-      function joint(withSwirl){
-        const PAPER=0xd9c9a3, HERBTONE=0xb3ab8d;
-
-        /* ── The joint — slimmer, shorter than its packaging ── */
-        const jg=new T.Group();
-        const herb=new T.Mesh(new T.CylinderGeometry(.150,.118,.78,14), mat(HERBTONE,0,0,.62,.05,false));
-        herb.position.y=.82; jg.add(herb);
-        const filt=new T.Mesh(new T.CylinderGeometry(.118,.105,.42,14), mat(PAPER,0,0,.55,.05,false));
-        filt.position.y=.22; jg.add(filt);
-        const seam=new T.Mesh(new T.TorusGeometry(.119,.008,6,14), mat(0xc4b491,0,0,.6,.05,false));
-        seam.rotation.x=Math.PI/2; seam.position.y=.43; jg.add(seam);
-        const band=new T.Mesh(new T.CylinderGeometry(.1205,.114,.13,14), mat(B.accent,B.accent,.18,.5,.05,false));
-        band.position.y=.30; jg.add(band);
-        const twist=new T.Mesh(new T.ConeGeometry(.055,.17,8), mat(PAPER,0,0,.6,.05,false));
-        twist.position.y=1.29; twist.rotation.z=.22; jg.add(twist);
-        if(withSwirl){
-          const pts=[];
-          for(let i=0;i<=50;i++){
-            const a=i/50*Math.PI*5.2, yy=.52+i/50*.78;
-            const rr=.172-(yy-.52)*.042;
-            pts.push(new T.Vector3(Math.cos(a)*rr, yy, Math.sin(a)*rr));
-          }
-          const swirl=new T.Mesh(new T.TubeGeometry(new T.CatmullRomCurve3(pts),100,.024,8,false),
-            mat(0x4ade80,0x22c55e,.45,.25,.05,false));
-          jg.add(swirl);
-        }
-        jg.position.set(-.15,0,0);
-        jg.scale.setScalar(.78);
-        model.add(jg);
-
-        /* ── Doob tube packaging — fatter and taller than the joint ── */
-        const tg=new T.Group();
-        const doobTube=new T.Mesh(new T.CylinderGeometry(.13,.13,1.0,14), mat(B.accent,B.accent,.14,.35,.05,false));
-        doobTube.position.y=.5; tg.add(doobTube);
-        const tubeLbl=new T.Mesh(new T.CylinderGeometry(.134,.134,.3,14), mat(B.light,0,0,.6,.05,false));
-        tubeLbl.position.y=.42; tg.add(tubeLbl);
-        const cap=new T.Mesh(new T.CylinderGeometry(.15,.15,.16,14), mat(B.dark,0,0,.4,.15,false));
-        cap.position.y=1.06; tg.add(cap);
-        tg.position.set(.21,0,-.05);
-        tg.scale.set(1.3,1.16,1.3);
-        model.add(tg);
-      }
-
-      if(key==='pre-roll'){ joint(false); }
-      else if(key==='infused'){ joint(true); }
-      else if(key==='concentrate'){
-        /* Smooth glossy goop pile — high-segment spheres, smooth shading */
-        const goopMat=()=>new T.MeshStandardMaterial({color:0xf0a437,emissive:new T.Color(0xd97a10),emissiveIntensity:.32,flatShading:false,metalness:.08,roughness:.18});
-        const blobs=[[.38,.19,.55,0,0],[.26,.36,.55,.13,-.05],[.16,.5,.6,-.1,.07]];
-        blobs.forEach(([r,y,sy,ox,oz])=>{
-          const b=new T.Mesh(new T.SphereGeometry(r,20,14), goopMat());
-          b.position.set(ox-.26,y,oz); b.scale.y=sy;
-          model.add(b);
-        });
-        const drip=new T.Mesh(new T.SphereGeometry(.075,12,9), goopMat());
-        drip.position.set(.06,.08,.26); drip.scale.y=.55; model.add(drip);
-        /* Puck containers beside — black jar + yellow label band */
-        function puckJar(x,z,ry){
-          const body=new T.Mesh(new T.CylinderGeometry(.26,.26,.44,16), mat(PLASTIC,0,0,.35,.1,false));
-          body.position.set(x,.22,z); body.rotation.y=ry; model.add(body);
-          const label=new T.Mesh(new T.CylinderGeometry(.268,.268,.22,16), mat(B.accent,B.accent,.16,.5,.05,false));
-          label.position.set(x,.2,z); model.add(label);
-          const lblEdge=new T.Mesh(new T.CylinderGeometry(.271,.271,.045,16), mat(B.trim,0,0,.6,.05,false));
-          lblEdge.position.set(x,.30,z); model.add(lblEdge);
-          const lid=new T.Mesh(new T.CylinderGeometry(.28,.28,.1,16), mat(B.dark,0,0,.3,.15,false));
-          lid.position.set(x,.48,z); model.add(lid);
-        }
-        puckJar(.46,.10,.4);
-      }
-      else if(key==='vape'){
-        const is510=(specs?.Category||'').toLowerCase().includes('510');
-        const MAG=B.accent, WHITE=B.light, OIL=0xe0a63c, DARK=B.dark;
-        if(is510){
-          /* 510-thread cart — thread base, white band, amber tank, magenta mouthpiece */
-          const thread=new T.Mesh(new T.CylinderGeometry(.085,.095,.09,12), mat(0x8a8f98,0,0,.35,.8,false));
-          thread.position.y=.05; model.add(thread);
-          const base=new T.Mesh(new T.CylinderGeometry(.13,.13,.2,12), mat(WHITE,0,0,.5,.05,false));
-          base.position.y=.19; model.add(base);
-          const tank=new T.Mesh(new T.CylinderGeometry(.125,.125,.52,12), mat(OIL,0xc07d10,.35,.25,.05,false));
-          tank.position.y=.55; model.add(tank);
-          const label=new T.Mesh(new T.CylinderGeometry(.129,.129,.2,12), mat(WHITE,0,0,.5,.05,false));
-          label.position.y=.48; model.add(label);
-          const stripe=new T.Mesh(new T.CylinderGeometry(.132,.132,.06,12), mat(B.trim,B.trim,.2,.5,.05,false));
-          stripe.position.y=.42; model.add(stripe);
-          const mouth=new T.Mesh(new T.CylinderGeometry(.062,.115,.38,12), mat(MAG,0,0,.45,.08,false));
-          mouth.position.y=1.0; model.add(mouth);
-          const tip=new T.Mesh(new T.SphereGeometry(.062,12,8), mat(MAG,0,0,.45,.08,false));
-          tip.position.y=1.19; tip.scale.y=.6; model.add(tip);
-        } else {
-          /* All-in-one — box body, dark screen panel, oil window, pink duckbill cap */
-          const body=new T.Mesh(new T.BoxGeometry(.52,.82,.3), mat(WHITE,0,0,.5,.05,false));
-          body.position.y=.45; model.add(body);
-          const stripe=new T.Mesh(new T.BoxGeometry(.53,.1,.305), mat(B.trim,B.trim,.22,.5,.05,false));
-          stripe.position.set(-.005,.2,0); model.add(stripe);
-          const panel=new T.Mesh(new T.BoxGeometry(.2,.76,.286), mat(DARK,0,0,.35,.2,false));
-          panel.position.set(.145,.45,.009); model.add(panel);
-          const screen=new T.Mesh(new T.BoxGeometry(.13,.22,.02), mat(0x0a0a0e,0xbfe8ff,.7,.3,.1,false));
-          screen.position.set(.145,.62,.165); model.add(screen);
-          const win=new T.Mesh(new T.BoxGeometry(.1,.2,.02), mat(OIL,0xc07d10,.6,.25,.05,false));
-          win.position.set(-.1,.55,.165); model.add(win);
-          const cap=new T.Mesh(new T.BoxGeometry(.34,.2,.2), mat(MAG,0,0,.45,.08,false));
-          cap.position.y=.96; model.add(cap);
-          const capTop=new T.Mesh(new T.BoxGeometry(.22,.1,.14), mat(MAG,0,0,.45,.08,false));
-          capTop.position.y=1.1; model.add(capTop);
-        }
-      }
-      else if(key==='flower'){
-        const bud=new T.Mesh(jitter(new T.IcosahedronGeometry(.48,1),.1), mat(0x4f9d52,statHex,.12+done*.2,.7));
-        bud.position.y=.62; model.add(bud);
-        const wrap=new T.Mesh(new T.CylinderGeometry(.34,.34,.3,12), mat(B.accent,B.accent,.16,.5,.05,false));
-        wrap.position.y=.16; model.add(wrap);
-        const wrapLid=new T.Mesh(new T.CylinderGeometry(.355,.355,.07,12), mat(B.dark,0,0,.35,.15,false));
-        wrapLid.position.y=.33; model.add(wrapLid);
-      }
-      else {
-        const geo=jitter(new T.IcosahedronGeometry(.5,0),.15);
-        const p=geo.attributes.position;
-        for(let i=0;i<p.count;i++) p.setY(i,p.getY(i)*1.5);
-        geo.computeVertexNormals();
-        const cry=new T.Mesh(geo, mat(B.accent,B.accent,.22+done*.3,.4,.3));
-        cry.position.y=.75; model.add(cry);
-      }
-
-      /* Status LED base puck (stays with outer group — doesn't spin) */
-      const basePuck=new T.Mesh(new T.CylinderGeometry(.55,.6,.09,12), mat(0x2a2030,statHex,.45,.5));
-      basePuck.position.y=.02;
-      g.add(basePuck);
-      model.scale.setScalar(ICON_SCALE);
-      basePuck.scale.set(1.9,1,1.9);
-      return g;
-    }
-
-    /* ── Bookshelf frame ── */
-    const frameL=new T.Mesh(new T.BoxGeometry(.5, totalH+1.6, SHELF_D), woodB);
-    frameL.position.set(-SHELF_W/2-.3, (totalH)/2, 0);
-    scene.add(frameL);
-    const frameR=frameL.clone(); frameR.position.x = SHELF_W/2+.3;
-    scene.add(frameR);
-    const frameTop=new T.Mesh(new T.BoxGeometry(SHELF_W+1.4, .45, SHELF_D+.3), woodA);
-    frameTop.position.set(0, totalH+.6, 0);
-    scene.add(frameTop);
-    const SHELF_TOP = totalH + .825;
-    plant(-SHELF_W/2+1.5, SHELF_TOP, 0, 2.6);
-    plant(SHELF_W/2-1.8, SHELF_TOP, .5, 2.1);
-    plant(EXT_W/2+SHELF_W/2, SHELF_TOP - totalH - .6, 5.2, 2.9);
-    bookStack(SHELF_W/2-2.2, .18, 4.6, 2.1);
-    bookStack(-SHELF_W/2+1.8, .18, 5.0, 1.8);
-
-
-    /* ── Desk props: ashtray w/ burning joint, herb jars, rolling tray ── */
-    const FLOOR_Y = .18;
-    const smokes = [];
-    const GLASS = ()=>new T.MeshStandardMaterial({color:0x39404c, roughness:.18, metalness:.22, transparent:true, opacity:.72});
-
-    function ashtray(x,z,s=1,ry=0){
-      const g=new T.Group();
-      const dish=new T.Mesh(new T.CylinderGeometry(.62,.5,.17,16), GLASS());
-      dish.position.y=.085; dish.castShadow=true; g.add(dish);
-      const rim=new T.Mesh(new T.TorusGeometry(.6,.06,8,22), GLASS());
-      rim.rotation.x=Math.PI/2; rim.position.y=.17; g.add(rim);
-      const ash=new T.Mesh(new T.CylinderGeometry(.44,.44,.035,16),
-        new T.MeshStandardMaterial({color:0x6b6259, roughness:1}));
-      ash.position.y=.175; g.add(ash);
-      for(let i=0;i<4;i++){
-        const stub=new T.Mesh(new T.CylinderGeometry(.035,.035,.16,7),
-          new T.MeshStandardMaterial({color:0xcbbb98, roughness:.85}));
-        stub.rotation.set(Math.PI/2,0,Math.random()*3);
-        stub.position.set((Math.random()-.5)*.6,.21,(Math.random()-.5)*.6);
-        g.add(stub);
-      }
-      /* Burning joint resting on the rim */
-      const j=new T.Group();
-      const paper=new T.MeshStandardMaterial({color:0xd9c9a3, roughness:.6});
-      const body=new T.Mesh(new T.CylinderGeometry(.052,.042,.62,10), paper);
-      body.rotation.z=Math.PI/2; body.position.x=-.12; j.add(body);
-      const herbSeg=new T.Mesh(new T.CylinderGeometry(.052,.05,.34,10),
-        new T.MeshStandardMaterial({color:0xb3ab8d, roughness:.72}));
-      herbSeg.rotation.z=Math.PI/2; herbSeg.position.x=.34; j.add(herbSeg);
-      const ember=new T.Mesh(new T.SphereGeometry(.055,10,8),
-        new T.MeshStandardMaterial({color:0xff5a1f, emissive:0xff4400, emissiveIntensity:2.2, roughness:.3}));
-      ember.position.x=.53; j.add(ember);
-      const eLight=new T.PointLight(0xff5510,.85,3.2);
-      eLight.position.x=.53; j.add(eLight);
-      j.position.set(-.05,.29,.1); j.rotation.set(0,-.55,.16);
-      g.add(j);
-      /* Smoke */
-      const puffs=[];
-      for(let i=0;i<6;i++){
-        const pf=new T.Mesh(new T.IcosahedronGeometry(.085+i*.04,0),
-          new T.MeshStandardMaterial({color:0xd7d9de, transparent:true, opacity:.26-i*.035, roughness:1}));
-        pf.position.set(.4,.45+i*.42,.3);
-        pf.userData.baseX=.4; pf.userData.baseZ=.3; pf.userData.i=i;
-        g.add(pf); puffs.push(pf);
-      }
-      g.position.set(x,FLOOR_Y,z); g.rotation.y=ry; g.scale.setScalar(s);
-      scene.add(g);
-      smokes.push({puffs, ember, light:eLight, phase:Math.random()*6, s});
-      return g;
-    }
-
-    function herbJar(x,z,s=1,h=1,ry=0){
-      const g=new T.Group();
-      const jar=new T.Mesh(new T.CylinderGeometry(.33,.33,.66*h,16),
-        new T.MeshStandardMaterial({color:0xbfe0d0, roughness:.1, metalness:.04, transparent:true, opacity:.36}));
-      jar.position.y=.33*h; jar.castShadow=true; g.add(jar);
-      for(let i=0;i<8;i++){
-        const bud=new T.Mesh(new T.IcosahedronGeometry(.095+Math.random()*.055,0),
-          new T.MeshStandardMaterial({color:i%3?0x4f8f3f:0x3d7431, flatShading:true, roughness:.85}));
-        bud.position.set((Math.random()-.5)*.36,.11+Math.random()*.38*h,(Math.random()-.5)*.36);
-        g.add(bud);
-      }
-      const label=new T.Mesh(new T.CylinderGeometry(.335,.335,.21,16),
-        new T.MeshStandardMaterial({color:0xf2ead6, roughness:.85}));
-      label.position.y=.24*h; g.add(label);
-      const band=new T.Mesh(new T.CylinderGeometry(.337,.337,.05,16),
-        new T.MeshStandardMaterial({color:0xE2BE66, roughness:.7}));
-      band.position.y=.35*h; g.add(band);
-      const lid=new T.Mesh(new T.CylinderGeometry(.36,.36,.13,16),
-        new T.MeshStandardMaterial({color:0x8d6b3f, roughness:.5, metalness:.32}));
-      lid.position.y=.66*h+.065; lid.castShadow=true; g.add(lid);
-      const knob=new T.Mesh(new T.SphereGeometry(.075,10,8),
-        new T.MeshStandardMaterial({color:0x8d6b3f, roughness:.5, metalness:.32}));
-      knob.position.y=.66*h+.16; g.add(knob);
-      g.position.set(x,FLOOR_Y,z); g.rotation.y=ry; g.scale.setScalar(s);
-      scene.add(g);
-      return g;
-    }
-
-    function rollingTray(x,z,s=1,ry=0){
-      const g=new T.Group();
-      const metal=new T.MeshStandardMaterial({color:0x2f3a46, roughness:.35, metalness:.55});
-      const base=new T.Mesh(new T.BoxGeometry(1.5,.06,1.0), metal);
-      base.position.y=.03; base.receiveShadow=true; g.add(base);
-      [[0,.5],[0,-.5]].forEach(([bx,bz])=>{
-        const w=new T.Mesh(new T.BoxGeometry(1.5,.14,.06), metal);
-        w.position.set(bx,.1,bz); g.add(w);
-      });
-      [[.75,0],[-.75,0]].forEach(([bx,bz])=>{
-        const w=new T.Mesh(new T.BoxGeometry(.06,.14,1.0), metal);
-        w.position.set(bx,.1,bz); g.add(w);
-      });
-      const pile=new T.Mesh(new T.IcosahedronGeometry(.2,0),
-        new T.MeshStandardMaterial({color:0x5c8f42, flatShading:true, roughness:.9}));
-      pile.position.set(-.35,.14,.05); pile.scale.y=.55; g.add(pile);
-      const grinder=new T.Mesh(new T.CylinderGeometry(.24,.24,.2,14),
-        new T.MeshStandardMaterial({color:0x9aa2ad, roughness:.3, metalness:.7}));
-      grinder.position.set(.42,.16,-.12); grinder.castShadow=true; g.add(grinder);
-      for(let i=0;i<3;i++){
-        const holder=new T.Group();
-        holder.rotation.y=(i-1)*.11;
-        const pj=new T.Mesh(new T.CylinderGeometry(.042,.033,.58,9),
-          new T.MeshStandardMaterial({color:0xd9c9a3, roughness:.6}));
-        pj.rotation.z=Math.PI/2;
-        pj.castShadow=true;
-        holder.add(pj);
-        const ht=new T.Mesh(new T.CylinderGeometry(.042,.042,.18,9),
-          new T.MeshStandardMaterial({color:0xb3ab8d, roughness:.75}));
-        ht.rotation.z=Math.PI/2; ht.position.x=.2; holder.add(ht);
-        holder.position.set(-.1,.1,-.26+i*.17);
-        g.add(holder);
-      }
-      g.position.set(x,FLOOR_Y,z); g.rotation.y=ry; g.scale.setScalar(s);
-      scene.add(g);
-      return g;
-    }
-
-    /* ── Spawnable joints that fall and pile up on the desk ── */
-    const fallers = [];
-    const J_S = 1.9;                    // spawned joint scale
-    const J_R  = .052 * J_S;            // joint radius
-    const J_HALF = .40 * J_S;           // capsule half-length
-    const J_LAYER = J_R * 1.82;         // nested layer step
-    const SLIDE_STEP = J_R * 3.2;       // how far downhill we probe
-    const SLIDE_DROP = J_LAYER * 1.35;  // slope steeper than this -> roll off
-    const DROP_CX = 0, DROP_CZ = 4.3;   // clear patch of desk
-    const DESK_X0 = DROP_CX-5, DESK_X1 = DROP_CX+5, DESK_Z0 = 3.0, DESK_Z1 = 6.0;
-
-    function makeJoint(){
-      const g=new T.Group();
-      const paper=new T.MeshStandardMaterial({color:0xd9c9a3, roughness:.62});
-      const body=new T.Mesh(new T.CylinderGeometry(.052,.04,.6,10), paper);
-      body.rotation.z=Math.PI/2; body.castShadow=true; g.add(body);
-      const herb=new T.Mesh(new T.CylinderGeometry(.052,.05,.22,10),
-        new T.MeshStandardMaterial({color:0xb3ab8d, roughness:.74}));
-      herb.rotation.z=Math.PI/2; herb.position.x=.34; herb.castShadow=true; g.add(herb);
-      const tip=new T.Mesh(new T.ConeGeometry(.03,.11,8), paper);
-      tip.rotation.z=-Math.PI/2; tip.position.x=-.33; g.add(tip);
-      g.scale.setScalar(J_S);
-      return g;
-    }
-
-    /* Pile height at ONE point — follows the tilt of whatever is resting there */
-    function supportAt(px,pz,skip){
-      let h=FLOOR_Y+J_R;
-      for(const f of fallers){
-        if(f===skip||!f.rest) continue;
-        const fx=f.m.position.x, fz=f.m.position.z;
-        const fdx=Math.cos(f.yaw), fdz=-Math.sin(f.yaw);
-        const t=Math.max(-J_HALF, Math.min(J_HALF, (px-fx)*fdx + (pz-fz)*fdz));
-        const cx=fx+fdx*t, cz=fz+fdz*t;
-        if(Math.hypot(px-cx, pz-cz) < J_R*2.05){
-          const top=f.m.position.y + Math.sin(f.pitch||0)*t + J_LAYER;
-          if(top>h) h=top;
-        }
-      }
-      return h;
-    }
-    /* Highest contact anywhere along a joint — used for collision while falling */
-    function pileHeight(x,z,yaw,skip){
-      const dx=Math.cos(yaw), dz=-Math.sin(yaw);
-      let h=FLOOR_Y+J_R;
-      for(let k=-2;k<=2;k++){
-        const t=(k/2)*J_HALF;
-        const s=supportAt(x+dx*t, z+dz*t, skip);
-        if(s>h) h=s;
-      }
-      return h;
-    }
-
-    function spawnJoint(){
-      const m=makeJoint();
-      const yaw=Math.random()*Math.PI*2;      // decided up front so the
-      m.rotation.set(0, yaw, 0);              // footprint matches where it lands
-      m.position.set(
-        DROP_CX+(Math.random()-.5)*1.5,
-        FLOOR_Y+6.0+Math.random()*1.4,
-        DROP_CZ+(Math.random()-.5)*1.1
-      );
-      m.rotation.z=(Math.random()-.5)*2.2;    // tips over as it falls
-      scene.add(m);
-      fallers.push({
-        m, yaw,
-        vx:(Math.random()-.5)*.35, vy:-1-Math.random()*.6, vz:(Math.random()-.5)*.35,
-        az:(Math.random()<.5?-1:1)*(2.6+Math.random()*2.4),   // end-over-end tumble
-        slides:0, rest:false
-      });
-      while(fallers.length>70){ const o=fallers.shift(); scene.remove(o.m); }
-    }
-    function clearJoints(){
-      fallers.forEach(f=>scene.remove(f.m));
-      fallers.length=0;
-    }
-    stateRef.current.spawnJoint=spawnJoint;
-    stateRef.current.clearJoints=clearJoints;
-
-    /* Shelf divider — a vertical panel that splits a shelf into bays */
-    function divider(x,y,z,s=1,ry=0){
-      const g=new T.Group();
-      const wood=new T.MeshStandardMaterial({color:0x8a5c30, flatShading:true, roughness:.72});
-      const dark=new T.MeshStandardMaterial({color:0x5c381e, flatShading:true, roughness:.8});
-      const panel=new T.Mesh(new T.BoxGeometry(.1,1.0,1.15), wood);
-      panel.position.y=.5; panel.castShadow=true; panel.receiveShadow=true; g.add(panel);
-      const foot=new T.Mesh(new T.BoxGeometry(.34,.07,1.22), dark);
-      foot.position.y=.035; foot.castShadow=true; g.add(foot);
-      const top=new T.Mesh(new T.BoxGeometry(.15,.07,1.19), dark);
-      top.position.y=1.0; top.castShadow=true; g.add(top);
-      const lip=new T.Mesh(new T.BoxGeometry(.13,1.0,.05), dark);
-      lip.position.set(0,.5,.6); g.add(lip);
-      g.position.set(x,y,z); g.rotation.y=ry; g.scale.setScalar(s);
-      scene.add(g);
-      return g;
-    }
-
-    ashtray(-SHELF_W/2+4.6, 4.5, 2.1, .4);
-    herbJar(-SHELF_W/2+7.6, 4.7, 2.0, 1.0, .3);
-    herbJar(-SHELF_W/2+9.2, 4.2, 1.7, 1.3, -.5);
-    rollingTray(SHELF_W/2-4.6, 4.8, 1.9, -.25);
-    herbJar(SHELF_W/2+3.0, 4.6, 1.8, .9, .6);
-
-    /* ── User-placed scene objects ── */
-    const PROP_KINDS = {
-      divider: {label:'Shelf divider', s:3.4, make:()=>divider(0,0,0,1,0)},
-      plant:   {label:'Plant',        s:2.4, make:()=>plant(0,FLOOR_Y,0,1)},
-      jar:     {label:'Cannabis jar', s:1.9, make:()=>herbJar(0,0,1,1,0)},
-      books:   {label:'Book stack',   s:2.0, make:()=>bookStack(0,FLOOR_Y,0,1)},
-      ashtray: {label:'Ashtray',      s:2.0, make:()=>ashtray(0,0,1,0)},
-      tray:    {label:'Rolling tray', s:1.8, make:()=>rollingTray(0,0,1,0)},
-    };
-    const propPickables=[];
-    const propMap={};
-    (data.home3dProps||[]).forEach(pr=>{
-      const def=PROP_KINDS[pr.kind]; if(!def) return;
-      const g=def.make(); if(!g) return;
-      g.position.set(pr.x??0, pr.y??FLOOR_Y, pr.z??4);
-      g.rotation.y=pr.ry??0;
-      g.scale.setScalar(pr.s??def.s);
-      g.userData={prop:pr, isProp:true};
-      g.traverse(o=>{ if(o.isMesh){ o.castShadow=true; o.userData.propRoot=g; propPickables.push(o); } });
-      propMap[pr.id]=g;
-    });
-    // Live preview while sliders move — avoids a full rebuild per tick
-    stateRef.current.liveProp=(id,patch)=>{
-      const g=propMap[id]; if(!g) return;
-      if(patch.s!==undefined) g.scale.setScalar(patch.s);
-      if(patch.ry!==undefined) g.rotation.y=patch.ry;
-    };
-    stateRef.current.propKinds=Object.entries(PROP_KINDS).map(([k,v])=>({k,label:v.label,s:v.s}));
-    stateRef.current.dropSpot=(kind)=>kind==='divider'
-      ? {x:(Math.random()-.5)*SHELF_W*.5, y:.6, z:0}      // onto the bottom shelf
-      : {x:DROP_CX+(Math.random()-.5)*4, y:FLOOR_Y, z:DROP_CZ+1.3};
-
-    /* ── Build shelves + icons ── */
-    const pickables=[];
-    const icons=[];
-    const savedPos = data.home3dPos||{};
-
-    tabs.forEach((tab,ti)=>{
-      const shelfY = .6 + ti*SHELF_GAP;
-      // Shelf board
-      const board=new T.Mesh(new T.BoxGeometry(SHELF_W, .3, SHELF_D), ti%2?woodA:woodB);
-      board.position.set(0, shelfY-.15, 0);
-      board.receiveShadow = true;
-      board.castShadow = true;
-      placeSurfaces.push(board);
-      scene.add(board);
-      // Shelf edge label (fixed to shelf front like a real label)
-      const lbl=textPlate(tab.label,{fs:34,pad:14,scale:.0085,fg:'#ffe6cf',bg:'rgba(40,24,12,.95)',border:'rgba(226,190,102,.8)'});
-      lbl.position.set(-SHELF_W/2+lbl.geometry.parameters.width/2+.3, shelfY+.05, SHELF_D/2+.1);
-      scene.add(lbl);
-
-      const layout=layouts[ti];
-      layout.sorted.forEach((prod,pi)=>{
-        const defX=layout.xs[pi];
-        const sp=savedPos[prod.id]||{};
-        const px=sp.x??defX, pz=sp.z??0;
-
-        const icon=productIcon(prod);
-        icon.position.set(px, shelfY, pz);
-        icon.userData={...icon.userData, prod, tab, shelfY, isIcon:true, baseScale:1};
-        scene.add(icon);
-        icons.push(icon);
-        icon.traverse(o=>{ if(o.isMesh){ o.userData.iconRoot=icon; o.castShadow=true; pickables.push(o); } });
-
-        // Name plate on shelf edge below icon
-        const nm=(prod.shortName||prod.name).slice(0,16);
-        const np=textPlate(nm,{fs:24,pad:9,scale:.0068,fg:'#e8eaf0',bg:'rgba(13,17,23,.88)',border:hex2css(brand3d(prod.brand).accent)});
-        np.position.set(0, .26, SHELF_D/2-.5);
-        np.scale.setScalar(2.0);
-        icon.add(np);
-        icon.userData.namePlate=np;
-
-        // Note count badge
-        const nc=(prod.hubNotes||[]).filter(n=>!n.done).length;
-        if(nc>0){
-          const badge=textPlate(String(nc),{fs:26,pad:9,scale:.0075,fg:'#fff',bg:'rgba(200,60,30,.95)',border:'rgba(255,120,80,.9)'});
-          badge.position.set(1.75, 3.45, .5);
-          badge.scale.setScalar(1.7);
-          icon.add(badge);
-          icon.userData.badge=badge;
-        }
-      });
-    });
-
-    /* ── Notes bay header on the whiteboard ── */
-    const bayTitle = textPlate('ACTION ITEMS & NOTES',
-      {fs:44, pad:20, scale:.012, fg:'#2a3242', bg:'rgba(255,255,255,0)', border:'rgba(90,110,140,.55)'});
-    bayTitle.position.set(NOTE_CX, totalH + .55, WB_Z + .1);
-    scene.add(bayTitle);
-    // Tell addSticky where the blank bay is
-    stateRef.current.bay = {x0:NOTE_X0, x1:NOTE_X1, y0:1.4, y1:totalH + .1, z:WB_Z + .09};
-
-    /* ── Sticky notes in scene ── */
-    const stickyPickables=[];
-    const stickyMap={};
-    (data.home3dStickies||[]).forEach(st=>{
-      const sm=stickyMesh(st);
-      scene.add(sm);
-      stickyPickables.push(sm);
-      stickyMap[st.id]=sm;
-    });
-    stateRef.current.liveSticky=(id,patch)=>{
-      const m=stickyMap[id]; if(!m) return;
-      if(patch.s!==undefined) m.scale.setScalar(patch.s*(m.userData.autoScale||1));
-    };
-
-    /* ── Controls: orbit + drag icons + drag stickies ── */
-    const cs = stateRef.current.cam;
-    let isOrbiting=false, dragIcon=null, dragSticky=null, dragProp=null, dragMoved=0, lastX=0, lastY=0;
-    let hovered=null;
-    const mouse=new T.Vector2(), raycaster=new T.Raycaster();
-    const dragPlane=new T.Plane();
-    const dragPoint=new T.Vector3();
-
-    function setMouse(e){
-      const rect=mount.getBoundingClientRect();
-      mouse.x=((e.clientX-rect.left)/rect.width)*2-1;
-      mouse.y=-((e.clientY-rect.top)/rect.height)*2+1;
-      raycaster.setFromCamera(mouse,cam);
-    }
-    function pickAll(e){
-      setMouse(e);
-      const hits=raycaster.intersectObjects([...stickyPickables,...pickables,...propPickables]);
-      if(!hits.length) return null;
-      const o=hits[0].object;
-      if(o.userData.isSticky)  return {type:'sticky', obj:o};
-      if(o.userData.iconRoot)  return {type:'icon',   obj:o.userData.iconRoot};
-      if(o.userData.propRoot)  return {type:'prop',   obj:o.userData.propRoot};
-      return null;
-    }
-
-    const onMouseDown=e=>{
-      lastX=e.clientX; lastY=e.clientY; dragMoved=0;
-      const hit=pickAll(e);
-      if(hit&&hit.type==='sticky'){ dragSticky=hit.obj; }
-      else if(hit&&hit.type==='prop'){ dragProp=hit.obj; }
-      else if(hit&&hit.type==='icon'){
-        dragIcon=hit.obj;
-        dragPlane.setFromNormalAndCoplanarPoint(new T.Vector3(0,1,0), new T.Vector3(0,dragIcon.userData.shelfY,0));
-      }
-      else { isOrbiting=true; }
-    };
-    const onMouseUp=e=>{
-      if(dragSticky){
-        const st=dragSticky.userData.sticky;
-        if(dragMoved<6){ setStickyEdit({...st}); }
-        else { saveSticky(st.id,{x:dragSticky.position.x,y:dragSticky.position.y,z:dragSticky.position.z}); }
-        dragSticky=null; isOrbiting=false; return;
-      }
-      if(dragProp){
-        const pr=dragProp.userData.prop;
-        if(dragMoved<6){ setPropEdit({...pr, s:dragProp.scale.x, ry:dragProp.rotation.y}); }
-        else {
-          const np={x:dragProp.position.x, y:dragProp.position.y, z:dragProp.position.z};
-          setData(d=>({...d, home3dProps:(d.home3dProps||[]).map(q=>q.id===pr.id?{...q,...np}:q)}));
-        }
-        dragProp=null; isOrbiting=false; return;
-      }
-      if(dragIcon){
-        if(dragMoved<6){
-          const {tab,prod}=dragIcon.userData;
-          setSelected({tabId:tab.id, prodId:prod.id});
-        } else {
-          const {prod}=dragIcon.userData;
-          const np={x:dragIcon.position.x, z:dragIcon.position.z};
-          setData(d=>({...d, home3dPos:{...(d.home3dPos||{}), [prod.id]:np}}));
-        }
-      }
-      dragIcon=null; isOrbiting=false;
-    };
-    const onMouseMove=e=>{
-      const dx=e.clientX-lastX, dy=e.clientY-lastY;
-      if(dragSticky){
-        dragMoved+=Math.abs(dx)+Math.abs(dy);
-        setMouse(e);
-        const hits=raycaster.intersectObjects(placeSurfaces);
-        if(hits.length){
-          const p=hits[0].point, HALF=1.25*(dragSticky.scale.x||1);   // grabbed by its top edge
-          if(hits[0].object.userData.isBoard){
-            dragSticky.position.set(p.x, p.y-HALF, p.z+.09);
-          } else {
-            // hangs off the front lip of a shelf; never sinks through the floor
-            dragSticky.position.set(p.x, Math.max(FLOOR_Y+HALF+.05, p.y-HALF), p.z+.14);
-          }
-        }
-        lastX=e.clientX; lastY=e.clientY;
-        return;
-      }
-      if(dragProp){
-        dragMoved+=Math.abs(dx)+Math.abs(dy);
-        setMouse(e);
-        const hits=raycaster.intersectObjects(placeSurfaces);
-        if(hits.length && !hits[0].object.userData.isBoard){
-          dragProp.position.set(hits[0].point.x, hits[0].point.y+.02, hits[0].point.z);
-        }
-        lastX=e.clientX; lastY=e.clientY;
-        return;
-      }
-      if(dragIcon){
-        dragMoved+=Math.abs(dx)+Math.abs(dy);
-        setMouse(e);
-        if(raycaster.ray.intersectPlane(dragPlane,dragPoint)){
-          dragIcon.position.x=Math.max(-SHELF_W/2+2.4, Math.min(SHELF_W/2-2.4, dragPoint.x));
-          dragIcon.position.z=Math.max(-SHELF_D/2+1.0, Math.min(SHELF_D/2-1.4, dragPoint.z));
-        }
-        lastX=e.clientX; lastY=e.clientY;
-        return;
-      }
-      if(isOrbiting){
-        if(e.shiftKey){ cs.panX-=dx*.03; }
-        else {
-          cs.theta-=dx*.005;
-          cs.phi=Math.max(.12,Math.min(1.2,cs.phi-dy*.005));
-        }
-        lastX=e.clientX; lastY=e.clientY;
-      }
-      const hit=pickAll(e);
-      const hitIcon=hit&&hit.type==='icon'?hit.obj:null;
-      if(hitIcon!==hovered){
-        if(hovered) hovered.scale.setScalar(1);
-        hovered=hitIcon;
-        if(hovered){ hovered.scale.setScalar(1.18); }
-      }
-      mount.style.cursor=hit?'pointer':'grab';
-    };
-    const onWheel=e=>{e.preventDefault();cs.radius=Math.max(8,Math.min(60,cs.radius+e.deltaY*.02));};
-    const onResize=()=>{const w=mount.clientWidth,h=mount.clientHeight;cam.aspect=w/h;cam.updateProjectionMatrix();renderer.setSize(w,h);};
-
-    mount.addEventListener('mousedown',onMouseDown);
-    window.addEventListener('mouseup',onMouseUp);
-    mount.addEventListener('mousemove',onMouseMove);
-    mount.addEventListener('wheel',onWheel,{passive:false});
-    window.addEventListener('resize',onResize);
-    mount.style.cursor='grab';
-
-    /* ── Loop ── */
-    let frame,t=0;
-    const midY=totalH/2;
-    function loop(){
-      frame=requestAnimationFrame(loop);
-      t+=.016;
-      cam.position.x=cs.panX+Math.sin(cs.theta)*Math.cos(cs.phi)*cs.radius;
-      cam.position.y=midY+Math.sin(cs.phi)*cs.radius;
-      cam.position.z=Math.cos(cs.theta)*Math.cos(cs.phi)*cs.radius;
-      cam.lookAt(cs.panX, midY, 0);
-
-      // Falling joints — gravity, bounce, settle into a pile
-      for(const f of fallers){
-        if(f.rest) continue;
-        f.vy += -17*0.016;
-        f.m.position.x += f.vx*0.016;
-        f.m.position.y += f.vy*0.016;
-        f.m.position.z += f.vz*0.016;
-        f.m.rotation.z += f.az*0.016;
-        // Keep the pile on the desk
-        const cx=Math.max(DESK_X0, Math.min(DESK_X1, f.m.position.x));
-        const cz=Math.max(DESK_Z0, Math.min(DESK_Z1, f.m.position.z));
-        if(cx!==f.m.position.x){ f.m.position.x=cx; f.vx*=-.25; }
-        if(cz!==f.m.position.z){ f.m.position.z=cz; f.vz*=-.25; }
-
-        const rh = pileHeight(f.m.position.x, f.m.position.z, f.yaw, f);
-        if(f.m.position.y <= rh){
-          f.m.position.y = rh;
-
-          if(Math.abs(f.vy) >= 1.9){        // still bouncing
-            f.vy = -f.vy*.2;
-            f.vx *= .4; f.vz *= .4;
-            f.az *= .35;
-            continue;
-          }
-
-          // Look downhill in 8 directions — if we're perched on a peak, roll off
-          let bestH=rh, bestA=null;
-          const jit=Math.random()*.8;
-          for(let i=0;i<8;i++){
-            const a=(i/8)*Math.PI*2+jit;
-            const nx=Math.max(DESK_X0,Math.min(DESK_X1,f.m.position.x+Math.cos(a)*SLIDE_STEP));
-            const nz=Math.max(DESK_Z0,Math.min(DESK_Z1,f.m.position.z+Math.sin(a)*SLIDE_STEP));
-            const nh=pileHeight(nx,nz,f.yaw,f);
-            if(nh < bestH-1e-4){ bestH=nh; bestA=a; }
-          }
-          const drop = rh-bestH;
-          if(bestA!==null && drop > SLIDE_DROP && f.slides < 16){
-            f.slides++;
-            const push = 1.0 + drop*1.6;
-            f.vx = Math.cos(bestA)*push;
-            f.vz = Math.sin(bestA)*push;
-            f.vy = .45;                                   // small hop as it tips off
-            f.az = (Math.random()<.5?-1:1)*(1.8+Math.random()*2.2);
-            f.m.position.y = rh + .03;
-            continue;                                     // stays in flight
-          }
-
-          // Settle by draping: sample each end, lie along the slope between them
-          const dxs=Math.cos(f.yaw), dzs=-Math.sin(f.yaw);
-          const L=J_HALF*.85;
-          const hA=supportAt(f.m.position.x-dxs*L, f.m.position.z-dzs*L, f);
-          const hB=supportAt(f.m.position.x+dxs*L, f.m.position.z+dzs*L, f);
-          let pitch=Math.atan2(hB-hA, 2*L);
-
-          // Too steep to balance, or stacked too high — tip off toward the low end
-          const tooHigh = (hA+hB)/2 > FLOOR_Y + J_LAYER*6;
-          if((Math.abs(pitch) > .5 || tooHigh) && f.slides < 16){
-            f.slides++;
-            const a = (hB<hA) ? Math.atan2(dzs,dxs) : Math.atan2(-dzs,-dxs);
-            f.vx=Math.cos(a)*1.6; f.vz=Math.sin(a)*1.6; f.vy=.45;
-            f.az=(Math.random()<.5?-1:1)*(1.8+Math.random()*2.0);
-            f.m.position.y = rh + .03;
-            continue;
-          }
-
-          pitch = Math.max(-.45, Math.min(.45, pitch));
-          f.rest  = true;
-          f.pitch = pitch;
-          f.m.position.y = Math.max(FLOOR_Y+J_R, (hA+hB)/2);
-          f.m.rotation.set(0, f.yaw, pitch);
-        }
-      }
-
-      // Desk ashtray: ember flicker + rising smoke
-      smokes.forEach(sm=>{
-        const f=.85+Math.sin(t*6.5+sm.phase)*.3+Math.random()*.14;
-        sm.ember.material.emissiveIntensity=2.0*f;
-        sm.light.intensity=.85*f;
-        sm.puffs.forEach(pf=>{
-          const i=pf.userData.i;
-          let y=pf.position.y + .011 + i*.0016;
-          if(y>3.1){ y=.45; }
-          pf.position.y=y;
-          pf.position.x=pf.userData.baseX+Math.sin(t*.8+i*1.3+sm.phase)*(.06+y*.07);
-          pf.position.z=pf.userData.baseZ+Math.cos(t*.6+i*1.1+sm.phase)*(.05+y*.05);
-          pf.material.opacity=Math.max(0,(.26-i*.035)*(1-(y-.45)/2.8));
-          pf.rotation.y+=.006;
-        });
-      });
-      // Ember flicker
-      embers.forEach(em=>{
-        const f=.9+Math.sin(t*7+em.phase)*.35+Math.random()*.15;
-        em.mesh.material.emissiveIntensity=1.2*f;
-        if(em.light) em.light.intensity=1.0*f;
-      });
-      // Gentle icon idle spin (not while dragging)
-      // products hold their orientation — no idle spin
-
-      renderer.render(scene,cam);
-    }
-    loop();
-
-    stateRef.current.cleanup=()=>{
-      cancelAnimationFrame(frame);
-      mount.removeEventListener('mousedown',onMouseDown);
-      window.removeEventListener('mouseup',onMouseUp);
-      mount.removeEventListener('mousemove',onMouseMove);
-      mount.removeEventListener('wheel',onWheel);
-      window.removeEventListener('resize',onResize);
-      renderer.dispose();
-      if(mount.contains(renderer.domElement))mount.removeChild(renderer.domElement);
-    };
-    return ()=>stateRef.current.cleanup?.();
-  },[data]);
-
-  /* ── Hub panel (React overlay) ── */
-  let panel=null;
-  if(selected){
-    const prod=(data[selected.tabId]||[]).find(p=>p.id===selected.prodId);
-    if(prod){
-      const notes=prod.hubNotes||[];
-      const sp=prod.specs||{};
-      const done=prod.tasks?.length?Math.round(prod.tasks.filter(t=>t.status==='Done').length/prod.tasks.length*100):0;
-      const tag=(prod.tags||[])[0]||'—';
-      const tagCol=statusHue(tag);
-      const tabLabel=(data.pcTabs||[]).find(x=>x.id===selected.tabId)?.label||(selected.tabId==='in_dev'?'In Development':'');
-      panel=el('div',{style:{
-        position:'absolute',top:0,right:0,bottom:0,width:360,zIndex:20,
-        background:'rgba(16,19,28,.96)',backdropFilter:'blur(12px)',
-        borderLeft:'1px solid rgba(226,190,102,.3)',
-        display:'flex',flexDirection:'column',overflow:'hidden'
-      }},
-        /* Header */
-        el('div',{style:{padding:'16px 18px 14px',borderBottom:'1px solid rgba(255,255,255,.08)'}},
-          el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'flex-start',gap:10}},
-            el('div',{style:{minWidth:0}},
-              el('div',{style:{fontFamily:'var(--font-mono)',fontSize:9,color:'var(--accent)',textTransform:'uppercase',letterSpacing:'.1em',marginBottom:3}},
-                (prod.brand||'')+' · '+tabLabel),
-              el('div',{style:{fontSize:15,fontWeight:700,color:'var(--stage-fg)',lineHeight:1.3}},prod.shortName||prod.name)
-            ),
-            el('button',{onClick:()=>setSelected(null),style:{background:'none',border:'none',cursor:'pointer',color:HUE.grey,fontSize:17,flexShrink:0}},
-              el('i',{className:'ti ti-x'}))
-          ),
-          el('div',{style:{display:'flex',gap:6,marginTop:10,flexWrap:'wrap',alignItems:'center'}},
-            prod.skuCode&&el('span',{style:{fontFamily:'var(--font-mono)',fontSize:10,fontWeight:700,color:'var(--accent)',background:'rgba(226,190,102,.12)',border:'1px solid rgba(226,190,102,.35)',borderRadius:'var(--r-xs)',padding:'2px 9px'}},prod.skuCode),
-            el('span',{style:{fontFamily:'var(--font-mono)',fontSize:10,fontWeight:700,color:tagCol,background:tagCol+'1c',borderRadius:'var(--r-xs)',padding:'2px 9px'}},tag),
-            el('span',{style:{fontFamily:'var(--font-mono)',fontSize:10,color:HUE.grey}},done+'% done')
-          )
-        ),
-        /* Quick specs */
-        el('div',{style:{padding:'12px 18px',borderBottom:'1px solid rgba(255,255,255,.08)',display:'grid',gridTemplateColumns:'1fr 1fr',gap:'6px 12px'}},
-          [['Category',sp['Category']],['Size',sp['Product Size']],['Launch',prod.launchDate||sp['Launch Window']],['MSRP',sp['MSRP']]]
-            .filter(([,v])=>v).map(([k,v])=>el('div',{key:k},
-              el('div',{style:{fontFamily:'var(--font-mono)',fontSize:8.5,color:HUE.grey,textTransform:'uppercase',letterSpacing:'.08em'}},k),
-              el('div',{style:{fontSize:11.5,color:'var(--stage-fg2)',fontWeight:600}},String(v).slice(0,28))
-            ))
-        ),
-        /* Notes — weekly hub */
-        el('div',{style:{flex:1,overflowY:'auto',padding:'14px 18px'}},
-          el('div',{style:{fontFamily:'var(--font-mono)',fontSize:9,fontWeight:700,color:'var(--accent)',textTransform:'uppercase',letterSpacing:'.1em',marginBottom:10,display:'flex',alignItems:'center',gap:6}},
-            el('i',{className:'ti ti-notes'}),'Action Items & Notes',
-            el('span',{style:{color:HUE.grey,marginLeft:'auto'}},notes.filter(n=>!n.done).length+' open')
-          ),
-          notes.length===0&&el('div',{style:{fontSize:11,color:HUE.grey,fontStyle:'italic',padding:'8px 0'}},'No notes yet — add action items, comments, or issues below.'),
-          notes.map(n=>el('div',{key:n.id,style:{
-            display:'flex',alignItems:'flex-start',gap:9,padding:'8px 10px',marginBottom:6,
-            background:n.done?'rgba(255,255,255,.03)':'rgba(226,190,102,.07)',
-            border:'1px solid '+(n.done?'rgba(255,255,255,.06)':'rgba(226,190,102,.22)'),
-            borderRadius:'var(--rs)'
-          }},
-            el('button',{onClick:()=>toggleNote(selected.tabId,selected.prodId,n.id),style:{
-              width:16,height:16,borderRadius:'var(--r-xs)',flexShrink:0,marginTop:1,cursor:'pointer',
-              border:'1.5px solid '+(n.done?HUE.ok:HUE.grey),
-              background:n.done?HUE.ok:'transparent',
-              display:'flex',alignItems:'center',justifyContent:'center'
-            }},n.done&&el('i',{className:'ti ti-check',style:{fontSize:9,color:'var(--stage-ink)'}})),
-            el('div',{style:{flex:1,minWidth:0}},
-              el('div',{style:{fontSize:12,color:n.done?HUE.grey:'var(--stage-fg)',lineHeight:1.45,textDecoration:n.done?'line-through':'none'}},n.text),
-              el('div',{style:{fontFamily:'var(--font-mono)',fontSize:8.5,color:HUE.grey,marginTop:3}},n.date)
-            ),
-            el('button',{onClick:()=>deleteNote(selected.tabId,selected.prodId,n.id),style:{background:'none',border:'none',cursor:'pointer',color:HUE.grey,fontSize:12,padding:2,flexShrink:0}},
-              el('i',{className:'ti ti-trash'}))
-          ))
-        ),
-        /* Add note + open product */
-        el('div',{style:{padding:'12px 18px 16px',borderTop:'1px solid rgba(255,255,255,.08)'}},
-          el('div',{style:{display:'flex',gap:8,marginBottom:10}},
-            el('input',{
-              value:noteText,
-              onChange:e=>setNoteText(e.target.value),
-              onKeyDown:e=>e.key==='Enter'&&addNote(selected.tabId,selected.prodId,noteText),
-              placeholder:'Add action item, comment, or issue…',
-              style:{flex:1,background:'rgba(255,255,255,.06)',border:'1px solid rgba(255,255,255,.14)',
-                borderRadius:'var(--rs)',padding:'9px 12px',color:'var(--stage-fg)',fontSize:12,fontFamily:'inherit',outline:'none'}
-            }),
-            el('button',{onClick:()=>addNote(selected.tabId,selected.prodId,noteText),style:{
-              background:'var(--grad-accent)',border:'none',borderRadius:'var(--rs)',
-              padding:'9px 14px',color:'var(--accent-on)',cursor:'pointer',fontSize:13,fontWeight:700
-            }},el('i',{className:'ti ti-plus'}))
-          ),
-          el('button',{onClick:()=>{
-            setView(selected.tabId);
-            setSels(s=>({...s,[selected.tabId]:selected.prodId}));
-            setProdView('detail');
-          },style:{
-            width:'100%',background:'rgba(255,255,255,.07)',border:'1px solid rgba(226,190,102,.35)',
-            borderRadius:'var(--rs)',padding:'10px',color:'var(--accent)',cursor:'pointer',fontSize:12,fontWeight:700,
-            fontFamily:'inherit',display:'flex',alignItems:'center',justifyContent:'center',gap:7
-          }},el('i',{className:'ti ti-external-link'}),'Open Full Product')
-        )
-      );
-    }
-  }
-
-  return el('div',{style:{width:'100%',height:'calc(100vh - 46px)',position:'relative',overflow:'hidden',background:'var(--stage)'}},
-    el('div',{ref:mountRef,style:{position:'absolute',inset:0}}),
-    /* Hint bar */
-    el('div',{style:{
-      position:'absolute',bottom:14,left:'50%',transform:'translateX(-50%)',zIndex:10,
-      fontFamily:'var(--font-mono)',fontSize:10,color:'rgba(255,255,255,.45)',
-      background:'rgba(16,19,28,.8)',border:'1px solid rgba(255,255,255,.1)',
-      borderRadius:'var(--pill)',padding:'6px 16px',pointerEvents:'none',whiteSpace:'nowrap'
-    }},'Drag icons, stickies & objects to arrange · Click for details · Drag space to orbit · Shift+drag pan · Scroll zoom'),
-    /* Secret toggle — reveals the customisation tools */
-    el('button',{
-      onClick:()=>{ setShowTools(v=>!v); setShowProps(false); },
-      title:showTools?'Hide tools':'',
-      'aria-label':'Toggle scene tools',
-      style:{
-        position:'absolute',top:14,left:14,zIndex:14,
-        width:26,height:26,borderRadius:'50%',
-        display:'flex',alignItems:'center',justifyContent:'center',
-        background:showTools?'rgba(255,213,74,.9)':'rgba(255,255,255,.07)',
-        color:showTools?'var(--stage-ink-warm)':'rgba(255,255,255,.32)',
-        border:'1px solid rgba(255,255,255,'+(showTools?'.35':'.12')+')',
-        cursor:'pointer',padding:0,fontSize:13,
-        transition:'all 180ms'
-      },
-      onMouseEnter:e=>{ if(!showTools){ e.currentTarget.style.color='rgba(255,255,255,.85)'; e.currentTarget.style.background='rgba(255,255,255,.14)'; } },
-      onMouseLeave:e=>{ if(!showTools){ e.currentTarget.style.color='rgba(255,255,255,.32)'; e.currentTarget.style.background='rgba(255,255,255,.07)'; } }
-    }, el('i',{className:'ti ti-sparkles'})),
-    /* Add sticky note button */
-    showTools&&el('button',{onClick:addSticky,style:{
-      position:'absolute',top:50,left:14,zIndex:10,
-      display:'flex',alignItems:'center',gap:7,
-      fontFamily:'var(--font-mono)',fontSize:11,fontWeight:700,
-      background:'rgba(255,213,74,.92)',color:'var(--stage-ink-warm)',
-      border:'1px solid rgba(0,0,0,.2)',borderRadius:'var(--rs)',
-      padding:'8px 14px',cursor:'pointer',
-      boxShadow:'0 4px 14px rgba(0,0,0,.4)'
-    }},el('i',{className:'ti ti-note'}),'＋ Sticky Note'),
-    /* Add scene object */
-    showTools&&el('div',{style:{position:'absolute',top:134,left:14,zIndex:12}},
-      el('button',{
-        onClick:()=>setShowProps(v=>!v),
-        style:{
-          display:'flex',alignItems:'center',gap:7,
-          fontFamily:'var(--font-mono)',fontSize:11,fontWeight:700,
-          background:showProps?'rgba(120,180,255,.95)':'rgba(16,19,28,.88)',
-          color:showProps?'var(--stage-ink)':'var(--stage-fg2)',
-          border:'1px solid rgba(255,255,255,.18)',borderRadius:'var(--rs)',
-          padding:'8px 14px',cursor:'pointer',boxShadow:'0 4px 14px rgba(0,0,0,.4)'
-        }
-      },el('i',{className:'ti ti-box'}),'＋ Object'),
-      showProps&&el('div',{style:{
-        marginTop:6,background:'rgba(16,19,28,.97)',border:'1px solid rgba(255,255,255,.16)',
-        borderRadius:'var(--rs)',padding:6,minWidth:170,boxShadow:'0 8px 26px rgba(0,0,0,.55)'
-      }},
-        (stateRef.current.propKinds||[]).map(pk=>el('button',{
-          key:pk.k, onClick:()=>addProp(pk.k,pk.s),
-          style:{display:'block',width:'100%',textAlign:'left',background:'transparent',
-            border:'none',borderRadius:'var(--r-xs)',padding:'8px 10px',color:'var(--stage-fg)',
-            fontSize:12,fontFamily:'inherit',cursor:'pointer'},
-          onMouseEnter:e=>e.currentTarget.style.background='rgba(255,255,255,.08)',
-          onMouseLeave:e=>e.currentTarget.style.background='transparent'
-        },pk.label))
-      )
-    ),
-    /* Selected object editor */
-    propEdit&&el('div',{style:{
-      position:'absolute',bottom:60,left:300,zIndex:20,width:240,
-      background:'rgba(16,19,28,.96)',backdropFilter:'blur(10px)',
-      border:'1px solid rgba(120,180,255,.4)',borderRadius:'var(--r)',
-      padding:'14px',boxShadow:'0 8px 30px rgba(0,0,0,.5)'
-    }},
-      el('div',{style:{fontFamily:'var(--font-mono)',fontSize:9,fontWeight:700,color:'var(--stage-info)',
-        textTransform:'uppercase',letterSpacing:'.1em',marginBottom:10,display:'flex',alignItems:'center',gap:6}},
-        el('i',{className:'ti ti-box'}), propEdit.kind),
-      el('div',{style:{fontFamily:'var(--font-mono)',fontSize:9,color:'var(--stage-muted)',marginBottom:4}},'Size'),
-      el('input',{type:'range',min:.6,max:5,step:.05,value:propEdit.s??2,
-        onChange:e=>{const v=+e.target.value;setPropEdit(s=>({...s,s:v}));stateRef.current.liveProp?.(propEdit.id,{s:v});},
-        onMouseUp:e=>saveProp(propEdit.id,{s:+e.target.value}),
-        style:{width:'100%',marginBottom:10}}),
-      el('div',{style:{fontFamily:'var(--font-mono)',fontSize:9,color:'var(--stage-muted)',marginBottom:4}},'Rotation'),
-      el('input',{type:'range',min:0,max:6.283,step:.02,value:propEdit.ry??0,
-        onChange:e=>{const v=+e.target.value;setPropEdit(s=>({...s,ry:v}));stateRef.current.liveProp?.(propEdit.id,{ry:v});},
-        onMouseUp:e=>saveProp(propEdit.id,{ry:+e.target.value}),
-        style:{width:'100%',marginBottom:12}}),
-      el('div',{style:{display:'flex',gap:8}},
-        el('button',{onClick:()=>{saveProp(propEdit.id,{s:propEdit.s,ry:propEdit.ry});setPropEdit(null);},style:{
-          flex:1,background:'rgba(120,180,255,.9)',border:'none',borderRadius:'var(--rs)',
-          padding:'8px',color:'var(--stage-ink)',cursor:'pointer',fontSize:12,fontWeight:700,fontFamily:'inherit'
-        }},'Done'),
-        el('button',{onClick:()=>removeProp(propEdit.id),style:{
-          background:'rgba(255,107,92,.15)',border:'1px solid rgba(255,107,92,.4)',borderRadius:'var(--rs)',
-          padding:'8px 12px',color:HUE.err,cursor:'pointer',fontSize:12,fontFamily:'inherit'
-        }},el('i',{className:'ti ti-trash'}))
-      )
-    ),
-    /* Joint spawner */
-    showTools&&el('div',{style:{position:'absolute',top:92,left:14,zIndex:10,display:'flex',gap:6}},
-      el('button',{
-        onClick:()=>{ for(let i=0;i<3;i++) setTimeout(()=>stateRef.current.spawnJoint?.(), i*90); },
-        title:'Drop joints onto the desk',
-        style:{
-          display:'flex',alignItems:'center',gap:7,
-          fontFamily:'var(--font-mono)',fontSize:11,fontWeight:700,
-          background:'rgba(217,201,163,.95)',color:'var(--stage-ink-warm)',
-          border:'1px solid rgba(0,0,0,.2)',borderRadius:'var(--rs)',
-          padding:'8px 14px',cursor:'pointer',boxShadow:'0 4px 14px rgba(0,0,0,.4)'
-        }
-      },el('i',{className:'ti ti-flame'}),'Drop Joints'),
-      el('button',{
-        onClick:()=>stateRef.current.clearJoints?.(),
-        title:'Clear the pile',
-        style:{
-          fontFamily:'var(--font-mono)',fontSize:11,fontWeight:700,
-          background:'rgba(16,19,28,.85)',color:'var(--stage-fg2)',
-          border:'1px solid rgba(255,255,255,.16)',borderRadius:'var(--rs)',
-          padding:'8px 11px',cursor:'pointer',boxShadow:'0 4px 14px rgba(0,0,0,.4)'
-        }
-      },el('i',{className:'ti ti-trash'}))
-    ),
-    /* Sticky editor */
-    stickyEdit&&el('div',{style:{
-      position:'absolute',bottom:60,left:14,zIndex:20,width:270,
-      background:'rgba(16,19,28,.96)',backdropFilter:'blur(10px)',
-      border:'1px solid rgba(255,213,74,.4)',borderRadius:'var(--r)',
-      padding:'14px',boxShadow:'0 8px 30px rgba(0,0,0,.5)'
-    }},
-      el('div',{style:{fontFamily:'var(--font-mono)',fontSize:9,fontWeight:700,color:'var(--stage-accent)',
-        textTransform:'uppercase',letterSpacing:'.1em',marginBottom:8,display:'flex',alignItems:'center',gap:6}},
-        el('i',{className:'ti ti-note'}),'Sticky Note'),
-      el('textarea',{
-        value:stickyEdit.text,
-        onChange:e=>setStickyEdit(s=>({...s,text:e.target.value})),
-        rows:3,autoFocus:true,
-        style:{width:'100%',background:'rgba(255,255,255,.07)',border:'1px solid rgba(255,255,255,.15)',
-          borderRadius:'var(--rs)',padding:'9px 11px',color:'var(--stage-fg)',fontSize:12,fontFamily:'inherit',
-          outline:'none',resize:'none',boxSizing:'border-box'}
-      }),
-      el('div',{style:{display:'flex',gap:6,margin:'10px 0'}},
-        STICKY_COLORS.map(c=>el('button',{key:c,onClick:()=>setStickyEdit(s=>({...s,color:c})),style:{
-          width:22,height:22,borderRadius:'var(--r-xs)',background:c,cursor:'pointer',
-          border:stickyEdit.color===c?'2px solid var(--stage-fg)':'2px solid transparent'
-        }}))
-      ),
-      el('div',{style:{fontFamily:'var(--font-mono)',fontSize:9,color:'var(--stage-muted)',marginBottom:4}},'Size'),
-      el('input',{type:'range',min:.4,max:2.6,step:.05,value:stickyEdit.s??1,
-        onChange:e=>{const v=+e.target.value;setStickyEdit(s=>({...s,s:v}));stateRef.current.liveSticky?.(stickyEdit.id,{s:v});},
-        onMouseUp:e=>saveSticky(stickyEdit.id,{s:+e.target.value}),
-        style:{width:'100%',marginBottom:12}}),
-      el('div',{style:{display:'flex',gap:8}},
-        el('button',{onClick:()=>{saveSticky(stickyEdit.id,{text:stickyEdit.text,color:stickyEdit.color,s:stickyEdit.s??1});setStickyEdit(null);},style:{
-          flex:1,background:'linear-gradient(135deg,var(--stage-accent),#e8a622)',border:'none',borderRadius:'var(--rs)',
-          padding:'8px',color:'var(--stage-ink-warm)',cursor:'pointer',fontSize:12,fontWeight:700,fontFamily:'inherit'
-        }},'Save'),
-        el('button',{onClick:()=>{removeSticky(stickyEdit.id);setStickyEdit(null);},style:{
-          background:'rgba(255,107,92,.15)',border:'1px solid rgba(255,107,92,.4)',borderRadius:'var(--rs)',
-          padding:'8px 12px',color:HUE.err,cursor:'pointer',fontSize:12,fontWeight:700,fontFamily:'inherit'
-        }},el('i',{className:'ti ti-trash'})),
-        el('button',{onClick:()=>setStickyEdit(null),style:{
-          background:'rgba(255,255,255,.07)',border:'1px solid rgba(255,255,255,.15)',borderRadius:'var(--rs)',
-          padding:'8px 12px',color:HUE.grey,cursor:'pointer',fontSize:12,fontFamily:'inherit'
-        }},'✕')
-      )
-    ),
-    panel,
-    !window.THREE&&el('div',{style:{
-      position:'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'center',
-      flexDirection:'column',gap:12,color:'var(--muted)',fontFamily:'var(--font-mono)',fontSize:12
-    }},
-      el('i',{className:'ti ti-cube-off',style:{fontSize:36,opacity:.4}}),
-      'Three.js not loaded — check internet connection'
-    )
-  );
-}
-
-function HomeView({data,setData,setView,setSels,setProdView}){
-  const [home,setHome]=React.useState(()=>getHomeData(data));
-  const [newAction,setNewAction]=React.useState('');
-  const [newOwner,setNewOwner]=React.useState('');
-  const [newDue,setNewDue]=React.useState('');
-  const [editNotes,setEditNotes]=React.useState(false);
-  const inputRef=React.useRef();
-
-  const save=d=>{
-    setHome(d);
-    setData(prev=>({...prev,home:d}));
-  };
   const addAction=()=>{
-    if(!newAction.trim())return;
-    const item={id:Date.now(),text:newAction.trim(),owner:newOwner.trim(),due:newDue,done:false,createdAt:new Date().toISOString()};
-    save({...home,actions:[...home.actions,item]});
-    setNewAction('');setNewOwner('');setNewDue('');
-    inputRef.current?.focus();
+    const txt=newAction.trim(); if(!txt)return;
+    setData(d=>({...d,actionItems:[{id:uid(),text:txt,owner:'',due:'',done:false,
+      createdAt:new Date().toISOString()},...(d.actionItems||[])]}));
+    setNewAction('');
   };
-  const toggleDone=id=>save({...home,actions:home.actions.map(a=>a.id===id?{...a,done:!a.done}:a)});
-  const removeAction=id=>save({...home,actions:home.actions.filter(a=>a.id!==id)});
+  const toggleAction=id=>setData(d=>({...d,actionItems:(d.actionItems||[])
+    .map(a=>a.id===id?{...a,done:!a.done}:a)}));
 
-  const allProds=data.pcTabs.flatMap(t=>(data[t.id]||[]).map(p=>({...p,pc:t.id,pcLabel:t.label})));
-  const allTasks=allProds.flatMap(p=>p.tasks);
+  const jumpTo=(pcId,prodId)=>{setView(pcId);setSels(s=>({...s,[pcId]:prodId}));setProdView('detail');};
 
-  // Launching within 60 days
-  const launching=allProds
-    .filter(p=>{const d=getTMinus(p.launchDate);return d!==null&&d>=-7&&d<=60;})
-    .sort((a,b)=>getTMinus(a.launchDate)-getTMinus(b.launchDate));
+  /* ── Building blocks ─────────────────────────────────────────── */
+  const Card=(title,icon,body,action)=>el('div',{style:{background:'var(--surface)',
+    border:'1px solid var(--border)',borderRadius:'var(--r)',overflow:'hidden'}},
+    el('div',{style:{display:'flex',alignItems:'center',gap:8,padding:'10px 14px',
+      borderBottom:'1px solid var(--border)',background:'var(--surface-warm)'}},
+      el('i',{className:'ti '+icon,style:{fontSize:14,color:'var(--muted)'}}),
+      el('span',{style:{fontFamily:'var(--mono)',fontSize:9,fontWeight:700,letterSpacing:'.12em',
+        textTransform:'uppercase',color:'var(--muted)'}},title),
+      action&&el('span',{style:{marginLeft:'auto'}},action)),
+    body);
+  const Empty=t=>el('div',{style:{padding:'18px 14px',textAlign:'center',
+    fontFamily:'var(--mono)',fontSize:11,color:'var(--text4)'}},t);
+  const Kpi=(k,v,s,col,onClick)=>el(onClick?'button':'div',{
+    onClick:onClick||undefined,
+    style:{background:'var(--surface)',padding:'13px 16px',textAlign:'left',border:'none',
+      fontFamily:'inherit',cursor:onClick?'pointer':'default',width:'100%'}},
+    el('div',{style:{fontFamily:'var(--mono)',fontSize:9,color:'var(--muted)',
+      letterSpacing:'.1em',textTransform:'uppercase',marginBottom:7}},k),
+    el('div',{style:{fontFamily:'var(--mono)',fontSize:24,fontWeight:600,lineHeight:1,
+      letterSpacing:'-0.01em',color:col||'var(--fg)'}},v),
+    el('div',{style:{fontFamily:'var(--mono)',fontSize:10,marginTop:6,color:'var(--muted)'}},s));
 
-  // Overdue by owner
-  const overdueByOwner={};
-  allTasks.filter(t=>isOverdue(t)).forEach(t=>{
-    const o=t.owner||'Unassigned';
-    if(!overdueByOwner[o])overdueByOwner[o]=0;
-    overdueByOwner[o]++;
-  });
-
-  // Gate health per PC
-  const pcHealth=data.pcTabs.map(tab=>{
-    const prods=data[tab.id]||[];
-    const tasks=prods.flatMap(p=>p.tasks);
-    const done=tasks.filter(t=>t.status==='Done').length;
-    const overdue=tasks.filter(t=>isOverdue(t)).length;
-    const pct=tasks.length?Math.round(done/tasks.length*100):0;
-    return {tab,prods,tasks,done,overdue,pct,total:tasks.length};
-  });
-
-  const open=home.actions.filter(a=>!a.done);
-  const done_=home.actions.filter(a=>a.done);
-
-  const fmtDue=due=>{
-    if(!due)return null;
-    const d=new Date(due+'T00:00:00');
-    const diff=Math.round((d-TODAY_D)/86400000);
-    if(diff<0)return{label:'Overdue '+Math.abs(diff)+'d',col:'var(--err)'};
-    if(diff===0)return{label:'Due today',col:'var(--warn)'};
-    if(diff<=7)return{label:'In '+diff+'d',col:'var(--warn)'};
-    return{label:d.toLocaleDateString('en-CA',{month:'short',day:'numeric'}),col:'var(--text3)'};
-  };
-
-  const jumpTo=(pcId,prodId)=>{
-    setView(pcId);
-    setSels(s=>({...s,[pcId]:prodId}));
-    setProdView('detail');
-  };
-
-  return el('div',{style:{padding:'24px',maxWidth:1100}},
-    el('div',{style:{marginBottom:24}},
-      el('h1',{style:{fontSize:22,fontWeight:700,fontFamily:'var(--font-mono)',color:'var(--text)',letterSpacing:'-.3px',marginBottom:4}},'Meeting Hub'),
-      el('div',{style:{fontSize:13,color:'var(--text3)'}},new Date().toLocaleDateString('en-CA',{weekday:'long',year:'numeric',month:'long',day:'numeric'}))
-    ),
-
-    /* ── Launching Soon — full width ── */
-    el('div',{style:{marginBottom:16}},
-/* Launching Soon — with jump buttons */
-      el('div',{style:{background:'var(--bg)',border:'1px solid var(--bdr)',borderRadius:'var(--r)',overflow:'hidden'}},
-          el('div',{style:{padding:'11px 14px',borderBottom:'1px solid var(--bdr)',background:'var(--bg2)',fontSize:11,fontWeight:700,textTransform:'uppercase',letterSpacing:'.07em',color:'var(--text2)',display:'flex',alignItems:'center',gap:6}},
-            el('i',{className:'ti ti-rocket',style:{color:'var(--accent)'}}),' Launching Soon'
-          ),
-          launching.length===0
-            ?el('div',{style:{padding:'16px',fontSize:12,color:'var(--text3)',textAlign:'center'}},'No launches in next 60 days')
-            :launching.map(p=>{
-              const d=getTMinus(p.launchDate);
-              const gates=getGateStatus(p.tasks);
-              const rag=getRAG(gates);
-              return el('div',{key:p.id,style:{padding:'10px 14px',borderBottom:'1px solid var(--bdr)',display:'flex',alignItems:'center',gap:10}},
-                el(RAGDot,{rag,size:8}),
-                el('div',{style:{flex:1,minWidth:0}},
-                  el('div',{style:{fontSize:12,fontWeight:700,color:'var(--text)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},p.shortName||p.name),
-                  el('div',{style:{fontSize:10,color:'var(--text3)',marginTop:1}},p.pcLabel+' · '+fmtTMinus(d))
-                ),
-                el('button',{
-                  onClick:()=>jumpTo(p.pc,p.id),
-                  className:'btn',
-                  style:{fontSize:10,padding:'3px 10px',flexShrink:0,color:'var(--accent)',borderColor:'var(--accent)',background:'var(--accent-bg)',fontWeight:600}
-                },'Go →')
-              );
-            })
-        ),
-    ),
-
-    el('div',{style:{display:'grid',gridTemplateColumns:'1fr 340px',gap:16}},
-
-      /* ── Left col ── */
+  return el('div',{style:{padding:'20px 24px 40px',maxWidth:1360}},
+    /* Header */
+    el('div',{style:{display:'flex',alignItems:'flex-end',gap:14,marginBottom:16,flexWrap:'wrap'}},
       el('div',null,
-        /* Action Items */
-        el('div',{style:{background:'var(--bg)',border:'1px solid var(--bdr)',borderRadius:'var(--r)',overflow:'hidden',marginBottom:14}},
-          el('div',{style:{padding:'11px 14px',borderBottom:'1px solid var(--bdr)',background:'var(--bg2)',display:'flex',alignItems:'center',justifyContent:'space-between'}},
-            el('div',{style:{fontSize:11,fontWeight:700,textTransform:'uppercase',letterSpacing:'.07em',color:'var(--text2)',display:'flex',alignItems:'center',gap:6}},
-              el('i',{className:'ti ti-checklist',style:{color:'var(--accent)'}}),' Action Items',
-              open.length>0&&el('span',{style:{background:'var(--accent)',color:'var(--accent-on)',borderRadius:'var(--r-xs)',padding:'1px 7px',fontSize:10,fontWeight:700}},open.length)
-            )
-          ),
-          el('div',{style:{padding:'10px 14px',borderBottom:'1px solid var(--bdr)',background:'var(--accent-bg)',display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}},
-            el('input',{ref:inputRef,className:'ei',placeholder:'Add action item…',value:newAction,
-              onChange:e=>setNewAction(e.target.value),onKeyDown:e=>e.key==='Enter'&&addAction(),
-              style:{flex:1,minWidth:140,fontSize:12}}),
-            el('input',{className:'ei',placeholder:'Owner',value:newOwner,
-              onChange:e=>setNewOwner(e.target.value),onKeyDown:e=>e.key==='Enter'&&addAction(),
-              style:{width:80,fontSize:12}}),
-            el('input',{className:'ei',type:'date',value:newDue,onChange:e=>setNewDue(e.target.value),style:{width:130,fontSize:12}}),
-            el('button',{onClick:addAction,disabled:!newAction.trim(),className:'btn btn-primary',style:{fontSize:12,padding:'5px 12px',opacity:newAction.trim()?1:.5}},el('i',{className:'ti ti-plus'}),' Add')
-          ),
-          open.length===0&&el('div',{style:{padding:'20px',textAlign:'center',color:'var(--text3)',fontSize:12}},
-            el('i',{className:'ti ti-circle-check',style:{fontSize:22,display:'block',marginBottom:6,opacity:.3}}),'No open action items'
-          ),
-          open.map(a=>{
-            const due=fmtDue(a.due);
-            return el('div',{key:a.id,style:{display:'flex',alignItems:'center',gap:10,padding:'9px 14px',borderBottom:'1px solid var(--bdr)'}},
-              el('button',{onClick:()=>toggleDone(a.id),style:{width:18,height:18,borderRadius:'var(--r-xs)',border:'2px solid var(--bdr2)',background:'transparent',cursor:'pointer',flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',transition:'all .15s'},onMouseEnter:e=>e.currentTarget.style.borderColor='var(--accent)',onMouseLeave:e=>e.currentTarget.style.borderColor='var(--bdr2)'}),
-              el('div',{style:{flex:1,minWidth:0}},
-                el('div',{style:{fontSize:12,color:'var(--text)',fontWeight:500}},a.text),
-                el('div',{style:{display:'flex',gap:10,marginTop:2}},
-                  a.owner&&el('span',{style:{fontSize:10,color:'var(--info)',fontWeight:600}},'@'+a.owner),
-                  due&&el('span',{style:{fontSize:10,color:due.col,fontWeight:600}},due.label)
-                )
-              ),
-              el('button',{onClick:()=>removeAction(a.id),className:'icon-btn',style:{opacity:.4}},el('i',{className:'ti ti-x',style:{fontSize:11}}))
-            );
-          }),
-          done_.length>0&&el('details',{style:{borderTop:'1px solid var(--bdr)'}},
-            el('summary',{style:{padding:'7px 14px',fontSize:11,color:'var(--text3)',cursor:'pointer',userSelect:'none'}},done_.length+' completed'),
-            done_.map(a=>el('div',{key:a.id,style:{display:'flex',alignItems:'center',gap:10,padding:'7px 14px',borderTop:'1px solid var(--bdr)',opacity:.5}},
-              el('button',{onClick:()=>toggleDone(a.id),style:{width:18,height:18,borderRadius:'var(--r-xs)',border:'none',background:'var(--grad-ok)',cursor:'pointer',flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',color:'var(--on-fill)',fontSize:10,boxShadow:'0 1px 4px rgba(26,122,74,.3)'}},el('i',{className:'ti ti-check'})),
-              el('div',{style:{flex:1,fontSize:12,color:'var(--text)',textDecoration:'line-through'}},a.text),
-              el('button',{onClick:()=>removeAction(a.id),className:'icon-btn',style:{opacity:.4}},el('i',{className:'ti ti-x',style:{fontSize:11}}))
-            ))
-          )
-        ),
+        el('div',{style:{fontFamily:'var(--font-display)',fontSize:26,letterSpacing:'-0.01em'}},'Overview'),
+        el('div',{style:{fontFamily:'var(--mono)',fontSize:10,color:'var(--muted)',
+          letterSpacing:'.08em',textTransform:'uppercase',marginTop:4}},
+          new Date().toLocaleDateString('en-CA',{weekday:'long',month:'long',day:'numeric',year:'numeric'}))),
+      nextCall&&el('div',{style:{marginLeft:'auto',display:'flex',alignItems:'center',gap:10,
+        background:tint(nextDays<=45?HUE.err:HUE.gold,88),
+        border:'1px solid '+tint(nextDays<=45?HUE.err:HUE.gold,55),
+        borderRadius:'var(--r)',padding:'9px 14px'}},
+        el('i',{className:'ti ti-alarm',style:{fontSize:16,
+          color:nextDays<=45?'var(--err)':'var(--accent)'}}),
+        el('div',null,
+          el('div',{style:{fontSize:12,fontWeight:600}},
+            'Next OCS submission — '+nextCall.name),
+          el('div',{style:{fontFamily:'var(--mono)',fontSize:10,color:'var(--muted)',marginTop:2}},
+            nextCall.subDue+'  ·  '+nextDays+' days  ·  launches '+(nextCall.l1||'')
+            +(nextCall.l2?' / '+nextCall.l2:''))))),
 
-        /* Meeting Notes */
-        el('div',{style:{background:'var(--bg)',border:'1px solid var(--bdr)',borderRadius:'var(--r)',overflow:'hidden'}},
-          el('div',{style:{padding:'11px 14px',borderBottom:'1px solid var(--bdr)',background:'var(--bg2)',display:'flex',alignItems:'center',justifyContent:'space-between'}},
-            el('div',{style:{fontSize:11,fontWeight:700,textTransform:'uppercase',letterSpacing:'.07em',color:'var(--text2)',display:'flex',alignItems:'center',gap:6}},
-              el('i',{className:'ti ti-notes',style:{color:'var(--accent)'}}),' Meeting Notes'
-            ),
-            el('button',{onClick:()=>setEditNotes(e=>!e),className:'btn',style:{fontSize:11}},
-              el('i',{className:'ti '+(editNotes?'ti-check':'ti-edit')}),editNotes?' Done':' Edit'
-            )
-          ),
-          editNotes
-            ?el('textarea',{className:'ei',value:home.notes||'',onChange:e=>save({...home,notes:e.target.value}),
-                style:{width:'100%',minHeight:120,border:'none',borderRadius:0,padding:'12px 14px',fontSize:13,resize:'vertical',outline:'none'}})
-            :el('div',{style:{padding:'12px 14px',fontSize:13,color:home.notes?'var(--text)':'var(--text3)',minHeight:60,whiteSpace:'pre-wrap',lineHeight:1.6,cursor:'text'},onClick:()=>setEditNotes(true)},
-                home.notes||el('span',{style:{opacity:.5}},'Click to add meeting notes…')
-              )
-        ),
+    /* KPI band */
+    el('div',{style:{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(150px,1fr))',
+      gap:1,background:'var(--border)',border:'1px solid var(--border)',
+      borderRadius:'var(--r)',overflow:'hidden',marginBottom:16}},
+      Kpi('Live SKUs',LIVE_PORTFOLIO.length,LIVE_PORTFOLIO_SRC.split('·')[0].trim(),null,
+        ()=>setView('postlaunch')),
+      Kpi('In development',devProds.length,(data.pcTabs||[]).length+' product calls + R&D',null,
+        ()=>setView((data.pcTabs||[{id:'pc1'}])[0].id)),
+      Kpi('Overdue tasks',overdue.length,overdue.length?'across '+new Set(overdue.map(t=>t.prod.id)).size+' products':'nothing late',
+        overdue.length?'var(--err)':'var(--ok)',()=>setView('workload')),
+      Kpi('Open actions',openActions.length,actions.length+' logged',
+        openActions.length?'var(--warn)':'var(--ok)',()=>setView('actions')),
+      Kpi('Planned 2027',planned,'in the launch grid','var(--accent)',
+        ()=>{setView('in_dev');setProdView('overview');}),
+      Kpi('Ideas in funnel',(data.funnel||FUNNEL_INITIAL).length,'product funnel',null,
+        ()=>setView('funnel'))),
 
-        /* Overdue by owner */
-        Object.keys(overdueByOwner).length>0&&el('div',{style:{background:'var(--bg)',border:'1px solid var(--err-dim)',borderRadius:'var(--r)',overflow:'hidden',marginTop:14}},
-          el('div',{style:{padding:'11px 14px',borderBottom:'1px solid var(--bdr)',background:'var(--err-bg)',fontSize:11,fontWeight:700,textTransform:'uppercase',letterSpacing:'.07em',color:'var(--err)',display:'flex',alignItems:'center',gap:6}},
-            el('i',{className:'ti ti-alert-triangle'}),' Overdue by Owner'
-          ),
-          Object.entries(overdueByOwner).sort(([,a],[,b])=>b-a).map(([owner,count])=>
-            el('div',{key:owner,style:{padding:'8px 14px',borderBottom:'1px solid var(--bdr)',display:'flex',alignItems:'center',justifyContent:'space-between'}},
-              el('div',{style:{fontSize:12,fontWeight:600,color:'var(--text)'}},'@'+owner),
-              el('span',{style:{fontSize:11,fontWeight:700,color:'var(--err)',background:'var(--err-bg)',borderRadius:'var(--r-xs)',padding:'2px 8px'}},count+' task'+(count>1?'s':''))
-            )
-          )
-        ),
+    /* Body */
+    el('div',{style:{display:'grid',gridTemplateColumns:'minmax(0,1.6fr) minmax(0,1fr)',
+      gap:16,alignItems:'start'}},
+      /* ── main column ── */
+      el('div',{style:{display:'grid',gap:16,minWidth:0}},
+        Card('Needs attention','ti-alert-triangle',
+          attention.length===0?Empty('Nothing flagged — no blockers, no overdue tasks.')
+          :el('div',null,attention.slice(0,8).map((a,i)=>el('button',{key:i,
+            onClick:()=>jumpTo(a.p.pc,a.p.id),
+            style:{width:'100%',textAlign:'left',background:'transparent',border:'none',
+              borderBottom:'1px solid var(--border-soft)',padding:'10px 14px',cursor:'pointer',
+              fontFamily:'inherit',display:'flex',alignItems:'flex-start',gap:10}},
+            el('span',{style:{width:3,alignSelf:'stretch',minHeight:26,borderRadius:'var(--r-xs)',
+              background:a.hue,flexShrink:0}}),
+            el('span',{style:{flex:1,minWidth:0}},
+              el('span',{style:{display:'block',fontSize:12,fontWeight:600,
+                overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},a.p.shortName||a.p.name),
+              el('span',{style:{display:'block',fontFamily:'var(--mono)',fontSize:9,
+                color:'var(--muted)',marginTop:2,overflow:'hidden',textOverflow:'ellipsis',
+                whiteSpace:'nowrap'}},a.detail||'—')),
+            el('span',{style:{fontFamily:'var(--mono)',fontSize:9,fontWeight:700,color:a.hue,
+              textTransform:'uppercase',letterSpacing:'.06em',flexShrink:0}},a.kind),
+            el('span',{style:{fontFamily:'var(--mono)',fontSize:9,color:'var(--text4)',
+              flexShrink:0,width:74,textAlign:'right'}},a.p.pcLabel))),
+            attention.length>8&&el('div',{style:{padding:'8px 14px',fontFamily:'var(--mono)',
+              fontSize:9,color:'var(--text4)'}},'+ '+(attention.length-8)+' more'))),
 
-        /* Next gate actions */
-        el('div',{style:{background:'var(--bg)',border:'1px solid var(--bdr)',borderRadius:'var(--r)',overflow:'hidden'}},
-          el('div',{style:{padding:'11px 14px',borderBottom:'1px solid var(--bdr)',background:'var(--bg2)',fontSize:11,fontWeight:700,textTransform:'uppercase',letterSpacing:'.07em',color:'var(--text2)',display:'flex',alignItems:'center',gap:6}},
-            el('i',{className:'ti ti-flag',style:{color:'var(--accent)'}}),' Next Gate Blockers'
-          ),
-          (()=>{
-            const blockers=allProds.flatMap(p=>{
-              const gates=getGateStatus(p.tasks);
-              const cur=getCurrentGate(gates);
-              if(!cur||cur.status==='cleared')return[];
-              const blocked=p.tasks.filter(t=>t.cat===cur.cat&&isOverdue(t));
-              return blocked.map(t=>({prod:p,task:t,gate:cur}));
-            }).slice(0,8);
-            if(!blockers.length)return el('div',{style:{padding:'14px',fontSize:12,color:'var(--ok)',textAlign:'center',display:'flex',alignItems:'center',justifyContent:'center',gap:6}},
-              el('i',{className:'ti ti-circle-check'}),' No blockers right now');
-            return blockers.map(({prod:p,task:t,gate:g},i)=>
-              el('div',{key:i,style:{padding:'8px 14px',borderBottom:'1px solid var(--bdr)',display:'flex',alignItems:'center',gap:10}},
-                el('div',{style:{width:26,height:26,borderRadius:'var(--r-xs)',background:g.bg,border:'1px solid '+g.col,display:'flex',alignItems:'center',justifyContent:'center',fontSize:9,fontWeight:800,color:g.col,flexShrink:0}},g.label),
-                el('div',{style:{flex:1,minWidth:0}},
-                  el('div',{style:{fontSize:11,fontWeight:600,color:'var(--text)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},t.name),
-                  el('div',{style:{fontSize:10,color:'var(--text3)',marginTop:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},p.shortName+' · @'+(t.owner||'unassigned'))
-                ),
-                el('button',{onClick:()=>jumpTo(p.pc,p.id),className:'btn',style:{fontSize:10,padding:'3px 10px',flexShrink:0,color:'var(--err)',borderColor:'var(--err-dim)',fontWeight:600}},'Fix →')
-              )
-            );
-          })()
-        )
+        Card('Launching soon','ti-rocket',
+          launching.length===0?Empty('No launches in the next 90 days.')
+          :el('div',null,launching.slice(0,7).map(p=>{
+            const tm=getTMinus(p.launchDate), gates=getGateStatus(p.tasks||[]), rag=getRAG(gates);
+            return el('button',{key:p.id,onClick:()=>jumpTo(p.pc,p.id),
+              style:{width:'100%',textAlign:'left',background:'transparent',border:'none',
+                borderBottom:'1px solid var(--border-soft)',padding:'10px 14px',cursor:'pointer',
+                fontFamily:'inherit',display:'flex',alignItems:'center',gap:10}},
+              el(RAGDot,{rag,size:8}),
+              el('span',{style:{flex:1,minWidth:0,fontSize:12,fontWeight:600,overflow:'hidden',
+                textOverflow:'ellipsis',whiteSpace:'nowrap'}},p.shortName||p.name),
+              el('span',{style:{fontFamily:'var(--mono)',fontSize:9,color:'var(--muted)',
+                flexShrink:0}},p.pcLabel),
+              el('span',{style:{fontFamily:'var(--mono)',fontSize:10,fontWeight:700,flexShrink:0,
+                width:64,textAlign:'right',
+                color:tm<0?'var(--ok)':tm<=14?'var(--err)':'var(--muted)'}},fmtTMinus(tm)));
+          }))),
+
+        Card('Product calls','ti-package',
+          pcHealth.length===0?Empty('No product calls yet.')
+          :el('div',null,pcHealth.map(h=>el('button',{key:h.tab.id,
+            onClick:()=>{setView(h.tab.id);setProdView('overview');},
+            style:{width:'100%',textAlign:'left',background:'transparent',border:'none',
+              borderBottom:'1px solid var(--border-soft)',padding:'10px 14px',cursor:'pointer',
+              fontFamily:'inherit',display:'flex',alignItems:'center',gap:10}},
+            el('span',{style:{fontSize:12,fontWeight:600,width:120,flexShrink:0}},h.tab.label),
+            el('span',{style:{fontFamily:'var(--mono)',fontSize:9,color:'var(--muted)',
+              width:64,flexShrink:0}},h.n+' SKU'+(h.n===1?'':'s')),
+            el('span',{style:{flex:1,height:6,background:'var(--border)',borderRadius:'var(--pill)',
+              overflow:'hidden',minWidth:40}},
+              el('span',{style:{display:'block',height:'100%',width:h.pct+'%',
+                background:h.pct===100?'var(--ok)':'var(--accent)'}})),
+            el('span',{style:{fontFamily:'var(--mono)',fontSize:10,fontWeight:700,width:34,
+              textAlign:'right',flexShrink:0}},h.pct+'%'),
+            el('span',{style:{fontFamily:'var(--mono)',fontSize:9,fontWeight:700,width:52,
+              textAlign:'right',flexShrink:0,
+              color:h.overdue?'var(--err)':'var(--text4)'}},h.overdue?h.overdue+' late':'on time'))))) 
       ),
 
-      /* ── Right col ── */
-      el('div',null,
-        /* PC Health */
-        el('div',{style:{background:'var(--bg)',border:'1px solid var(--bdr)',borderRadius:'var(--r)',overflow:'hidden',marginBottom:14}},
-          el('div',{style:{padding:'11px 14px',borderBottom:'1px solid var(--bdr)',background:'var(--bg2)',fontSize:11,fontWeight:700,textTransform:'uppercase',letterSpacing:'.07em',color:'var(--text2)',display:'flex',alignItems:'center',gap:6}},
-            el('i',{className:'ti ti-chart-bar',style:{color:'var(--accent)'}}),' PC Health'
-          ),
-          el('div',{style:{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:0}},
-            pcHealth.map(({tab,prods,overdue,pct,total,done})=>
-              el('div',{key:tab.id,onClick:()=>setView(tab.id),style:{
-                padding:'14px 16px',borderRight:'1px solid var(--bdr)',cursor:'pointer',transition:'background .1s'
-              },
-              onMouseEnter:e=>e.currentTarget.style.background='var(--bg2)',
-              onMouseLeave:e=>e.currentTarget.style.background='transparent'},
-                el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:6}},
-                  el('div',{style:{fontSize:12,fontWeight:700,color:'var(--text)'}},tab.label),
-                  overdue>0&&el('span',{style:{fontSize:10,color:'var(--err)',fontWeight:700,background:'var(--err-bg)',borderRadius:'var(--r-xs)',padding:'1px 6px'}},overdue+' overdue')
-                ),
-                el('div',{style:{fontSize:20,fontWeight:800,color:pct===100?'var(--ok)':pct>60?'var(--info)':'var(--warn)',marginBottom:6}},pct+'%'),
-                el('div',{style:{height:6,background:'var(--bg3)',borderRadius:'var(--pill)',overflow:'hidden',marginBottom:5}},
-                  el('div',{style:{height:'100%',width:pct+'%',background:pct===100?'var(--grad-ok)':pct>60?'var(--grad-info)':'var(--grad-warn)',borderRadius:'var(--pill)',transition:'width .3s'}})
-                ),
-                el('div',{style:{fontSize:10,color:'var(--text3)'}},prods.length+' products · '+done+'/'+total+' tasks')
-              )
-            )
-          )
-        ),
+      /* ── side rail ── */
+      el('div',{style:{display:'grid',gap:16,minWidth:0}},
+        Card('Action items','ti-bolt',
+          el('div',null,
+            el('div',{style:{display:'flex',gap:6,padding:'10px 12px',
+              borderBottom:'1px solid var(--border-soft)'}},
+              el('input',{className:'ei',placeholder:'Add an action…',value:newAction,
+                style:{fontSize:12},onChange:e=>setNewAction(e.target.value),
+                onKeyDown:e=>{if(e.key==='Enter')addAction();}}),
+              el('button',{className:'btn',onClick:addAction,style:{flexShrink:0}},'Add')),
+            openActions.length===0?Empty('Nothing open.')
+            :openActions.slice(0,7).map(a=>el('div',{key:a.id,
+              style:{display:'flex',alignItems:'flex-start',gap:9,padding:'9px 12px',
+                borderBottom:'1px solid var(--border-soft)'}},
+              el('button',{onClick:()=>toggleAction(a.id),title:'Mark done',
+                style:{width:15,height:15,flexShrink:0,marginTop:1,borderRadius:'var(--r-xs)',
+                  border:'1.5px solid var(--bdr2)',background:'transparent',cursor:'pointer'}}),
+              el('span',{style:{flex:1,minWidth:0,fontSize:12,lineHeight:1.4}},a.text),
+              a.owner&&el('span',{style:{fontFamily:'var(--mono)',fontSize:9,color:'var(--muted)',
+                flexShrink:0}},a.owner))),
+            openActions.length>7&&el('button',{onClick:()=>setView('actions'),
+              style:{width:'100%',background:'transparent',border:'none',padding:'9px',
+                cursor:'pointer',fontFamily:'var(--mono)',fontSize:9,color:'var(--muted)'}},
+              'See all '+openActions.length+' →'))),
+
+        Card('Product notes','ti-note',
+          el('div',null,
+            el('div',{style:{display:'grid',gap:6,padding:'10px 12px',
+              borderBottom:'1px solid var(--border-soft)'}},
+              el('select',{className:'ei',value:noteFor,style:{fontSize:11},
+                onChange:e=>setNoteFor(e.target.value)},
+                el('option',{value:''},'Pick a product…'),
+                noteTargets.map(p=>el('option',{key:p.pc+'|'+p.id,value:p.pc+'|'+p.id},
+                  (p.shortName||p.name)))),
+              el('div',{style:{display:'flex',gap:6}},
+                el('input',{className:'ei',placeholder:'Note…',value:noteText,style:{fontSize:12},
+                  onChange:e=>setNoteText(e.target.value),
+                  onKeyDown:e=>{if(e.key==='Enter')addNote();}}),
+                el('button',{className:'btn',onClick:addNote,disabled:!noteFor,
+                  style:{flexShrink:0}},'Add'))),
+            openNotes.length===0?Empty('No open notes.')
+            :openNotes.slice(0,8).map(n=>el('div',{key:n.id,
+              style:{display:'flex',alignItems:'flex-start',gap:9,padding:'9px 12px',
+                borderBottom:'1px solid var(--border-soft)'}},
+              el('button',{onClick:()=>toggleNote(n.tid,n.p.id,n.id),title:'Mark done',
+                style:{width:15,height:15,flexShrink:0,marginTop:1,borderRadius:'var(--r-xs)',
+                  border:'1.5px solid var(--bdr2)',background:'transparent',cursor:'pointer'}}),
+              el('span',{style:{flex:1,minWidth:0}},
+                el('span',{style:{display:'block',fontSize:12,lineHeight:1.4}},n.text),
+                el('span',{style:{display:'block',fontFamily:'var(--mono)',fontSize:9,
+                  color:'var(--muted)',marginTop:2}},(n.p.shortName||n.p.name)+' · '+n.date)),
+              el('button',{className:'icon-btn',onClick:()=>dropNote(n.tid,n.p.id,n.id),
+                title:'Delete'},el('i',{className:'ti ti-x',style:{fontSize:12}})))))),
+
+        Card('Jump to','ti-arrow-right',
+          el('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:1,
+            background:'var(--border)'}},
+            [['in_dev','2027 Plan','ti-layout-grid'],['funnel','Product Funnel','ti-bulb'],
+             ['postlaunch','Post-Launch','ti-chart-line'],['workload','Workload','ti-users'],
+             ['actions','Action Items','ti-bolt'],['rejected','Rejected','ti-archive']]
+            .map(([v,label,icon])=>el('button',{key:v,
+              onClick:()=>{setView(v);if(v==='in_dev')setProdView('overview');},
+              style:{background:'var(--surface)',border:'none',padding:'12px 10px',
+                cursor:'pointer',fontFamily:'inherit',fontSize:11,fontWeight:600,
+                color:'var(--fg-2)',display:'flex',alignItems:'center',gap:7}},
+              el('i',{className:'ti '+icon,style:{fontSize:14,color:'var(--muted)'}}),label))))
       )
     )
-
   );
 }
-
-
-
-/* ── SKU Comparator — overlay multiple products' performance ── */
 function SKUComparator({salesData,hidden,activePC,onClose}){
   const pcProducts=Object.entries(salesData)
     .filter(([name,p])=>!hidden.includes(name)&&(p?.pc||'other')===activePC)
@@ -9827,43 +8465,100 @@ const PLAN_QUARTERS=(()=>{const r=[];PLAN_MONTHS.forEach(m=>{
    OCS normally publishes the real calendar late Sep / early Oct 2026.
    `months` = the 2027 grid columns each call's launch windows cover.
    ──────────────────────────────────────────────────────────────── */
-const PLAN_CALL_SRC='Projected 2027/28 — re-baseline when OCS publishes (late Sep/Oct 2026)';
-const PLAN_CALLS=[
-  {n:1,col:'var(--cat-pre)',    subOpen:'28-Oct-26',subDue:'12-Nov-26',
-   ntpOpen:'10-Dec-26',ntpDue:'18-Dec-26',po1:'18–25 Feb 27',po2:'24–31 Mar 27',
-   l1:'April 2027',l2:'May 2027',months:['2027-04','2027-05'],dueISO:'2026-11-12',ms:[{m:'2026-10',k:'open',t:'C1 subs open',d:'28 Oct'},{m:'2026-11',k:'due',t:'C1 SUBMIT',d:'12 Nov'},{m:'2026-12',k:'ntp',t:'C1 NTP/attr',d:'10–18 Dec'},{m:'2027-02',k:'po',t:'C1 PO L1',d:'18–25 Feb'},{m:'2027-03',k:'po',t:'C1 PO L2',d:'24–31 Mar'}]},
-  {n:2,col:'var(--cat-infused)',subOpen:'15-Jan-27',subDue:'29-Jan-27',
-   ntpOpen:'2-Mar-27',ntpDue:'11-Mar-27',po1:'29 Apr–6 May 27',po2:'4–11 Jun 27',
-   l1:'June 2027',l2:'July 2027',months:['2027-06','2027-07'],dueISO:'2027-01-29',ms:[{m:'2027-01',k:'open',t:'C2 subs open',d:'15 Jan'},{m:'2027-01',k:'due',t:'C2 SUBMIT',d:'29 Jan'},{m:'2027-03',k:'ntp',t:'C2 NTP/attr',d:'2–11 Mar'},{m:'2027-04',k:'po',t:'C2 PO L1',d:'29 Apr–6 May'},{m:'2027-06',k:'po',t:'C2 PO L2',d:'4–11 Jun'}]},
-  {n:3,col:'var(--cat-vape)',   subOpen:'30-Mar-27',subDue:'15-Apr-27',
-   ntpOpen:'13-May-27',ntpDue:'25-May-27',po1:'9–16 Jul 27',po2:'17–24 Aug 27',
-   l1:'Aug/Sep 2027',l2:'October 2027',months:['2027-08','2027-09','2027-10'],dueISO:'2027-04-15',ms:[{m:'2027-03',k:'open',t:'C3 subs open',d:'30 Mar'},{m:'2027-04',k:'due',t:'C3 SUBMIT',d:'15 Apr'},{m:'2027-05',k:'ntp',t:'C3 NTP/attr',d:'13–25 May'},{m:'2027-07',k:'po',t:'C3 PO L1',d:'9–16 Jul'},{m:'2027-08',k:'po',t:'C3 PO L2',d:'17–24 Aug'}]},
-  {n:4,col:'var(--cat-extract)',subOpen:'11-Jun-27',subDue:'25-Jun-27',
-   ntpOpen:'23-Jul-27',ntpDue:'5-Aug-27',po1:'22–29 Sep 27',po2:'29 Oct–5 Nov 27',
-   l1:'November 2027',l2:'Dec 2027/Jan 2028',months:['2027-11','2027-12'],dueISO:'2027-06-25',ms:[{m:'2027-06',k:'open',t:'C4 subs open',d:'11 Jun'},{m:'2027-06',k:'due',t:'C4 SUBMIT',d:'25 Jun'},{m:'2027-07',k:'ntp',t:'C4 NTP/attr',d:'23 Jul–5 Aug'},{m:'2027-09',k:'po',t:'C4 PO L1',d:'22–29 Sep'},{m:'2027-10',k:'po',t:'C4 PO L2',d:'29 Oct–5 Nov'}]},
-  {n:5,col:'var(--x-violet)',   subOpen:'20-Aug-27',subDue:'3-Sep-27',
-   ntpOpen:'6-Oct-27',ntpDue:'15-Oct-27',po1:'3–10 Dec 27',po2:'12–19 Jan 28',
-   l1:'Jan/Feb 2028',l2:'Feb/Mar 2028',months:[],dueISO:'2027-09-03',ms:[{m:'2027-08',k:'open',t:'C5 subs open',d:'20 Aug'},{m:'2027-09',k:'due',t:'C5 SUBMIT',d:'3 Sep'},{m:'2027-10',k:'ntp',t:'C5 NTP/attr',d:'6–15 Oct'},{m:'2027-12',k:'po',t:'C5 PO L1',d:'3–10 Dec'}]}
-];
-/* Jan–Mar 2027 launches belong to the PRIOR fiscal's calls. The one hard
-   date we have is 2026/27 Call 5: submission closes 4 Sep 2026 — the last
-   door into the current fiscal before the April 2027 slot. */
-/* Prior-fiscal (2026/27) calls own every launch month before April 2027.
-   Their submission windows are already shut, so no date is invented for
-   Calls 3 and 4 — only Call 5, whose close the user supplied. */
+/* ── OCS Annual Product Call schedules ───────────────────────────
+   Two fiscal schedules overlap inside this grid, so EVERY call is named
+   with its year. A schedule titled "2026/2027" is the 2026 call set: its
+   Call 1 launches Apr/May 2026 and its Call 5 launches Jan–Mar 2027.
+   So Jan/Feb/Mar 2027 is PC#5 2026 — NOT PC#1 2027, which lands Apr/May 2027.
+
+   2026/27 = PUBLISHED (from the OCS schedule sheet).
+   2027/28 = PROJECTED — the published year rolled forward and corrected to
+   the nearest business day. Re-baseline when OCS publishes it.
+   ──────────────────────────────────────────────────────────────── */
+const PLAN_CALL_SRC='2026/27 published · 2027/28 projected — re-baseline when OCS publishes';
+const PLAN_CALL_SRC_PUB='Published OCS 2026/2027 Annual Product Call Schedule';
+const PLAN_CALL_SRC_PROJ='Projected 2027/28 — published year rolled forward, business-day corrected';
+
+/* 2026/2027 — PUBLISHED. Only calls whose launch windows reach into the
+   visible window (Sep 2026 →) carry `months`; 1 and 2 launched earlier. */
 const PLAN_PRIOR_CALLS=[
-  {n:null,short:'2026/27 C3',title:'2026/27 Call 3',col:'var(--muted)',
-   subDue:null,dueISO:null,closed:true,months:['2026-09','2026-10'],
-   note:'Prior fiscal — submission window closed'},
-  {n:null,short:'2026/27 C4',title:'2026/27 Call 4',col:'var(--muted)',
-   subDue:null,dueISO:null,closed:true,months:['2026-11','2026-12'],
-   note:'Prior fiscal — submission window closed'},
-  {n:null,short:'2026/27 C5',title:'2026/27 Call 5',col:'var(--muted)',
-   subDue:'4-Sep-26',dueISO:'2026-09-04',months:['2027-01','2027-02','2027-03'],
-   ms:[{m:'2026-09',k:'due',t:'2026/27 C5 SUBMIT',d:'4 Sep'}],
-   note:'Last door into the current fiscal'}
+  {n:1,fy:'2026',name:'PC#1 2026',short:"PC#1 '26",title:'PC#1 2026',prior:true,published:true,
+   col:'var(--muted)',subOpen:'28-Oct-25',subDue:'12-Nov-25',ntpOpen:'10-Dec-25',ntpDue:'19-Dec-25',
+   po1:'18–25 Feb 26',po2:'24–31 Mar 26',l1:'April 2026',l2:'May 2026',
+   months:[],dueISO:'2025-11-12',ms:[]},
+  {n:2,fy:'2026',name:'PC#2 2026',short:"PC#2 '26",title:'PC#2 2026',prior:true,published:true,
+   col:'var(--muted)',subOpen:'16-Jan-26',subDue:'30-Jan-26',ntpOpen:'2-Mar-26',ntpDue:'11-Mar-26',
+   po1:'29 Apr–6 May 26',po2:'4–11 Jun 26',l1:'June 2026',l2:'July 2026',
+   months:[],dueISO:'2026-01-30',ms:[]},
+  {n:3,fy:'2026',name:'PC#3 2026',short:"PC#3 '26",title:'PC#3 2026',prior:true,published:true,
+   col:'var(--muted)',subOpen:'30-Mar-26',subDue:'15-Apr-26',ntpOpen:'13-May-26',ntpDue:'25-May-26',
+   po1:'10–17 Jul 26',po2:'17–24 Aug 26',l1:'Aug/Sep 2026',l2:'October 2026',
+   months:['2026-09','2026-10'],dueISO:'2026-04-15',ms:[]},
+  {n:4,fy:'2026',name:'PC#4 2026',short:"PC#4 '26",title:'PC#4 2026',prior:true,published:true,
+   col:'var(--muted)',subOpen:'11-Jun-26',subDue:'25-Jun-26',ntpOpen:'24-Jul-26',ntpDue:'5-Aug-26',
+   po1:'22–29 Sep 26',po2:'29 Oct–5 Nov 26',l1:'November 2026',l2:'Dec 2026/Jan 2027',
+   months:['2026-11','2026-12'],dueISO:'2026-06-25',
+   ms:[{m:'2026-09',k:'po',t:"PC#4'26 PO L1",d:'22–29 Sep'},
+       {m:'2026-10',k:'po',t:"PC#4'26 PO L2",d:'29 Oct–5 Nov'}]},
+  {n:5,fy:'2026',name:'PC#5 2026',short:"PC#5 '26",title:'PC#5 2026',prior:true,published:true,
+   col:'var(--cat-flower)',subOpen:'21-Aug-26',subDue:'4-Sep-26',ntpOpen:'6-Oct-26',ntpDue:'16-Oct-26',
+   po1:'3–10 Dec 26',po2:'12–19 Jan 27',l1:'Jan/Feb 2027',l2:'Feb/Mar 2027',
+   months:['2027-01','2027-02','2027-03'],dueISO:'2026-09-04',
+   note:'Last door into the 2026 fiscal — next slot is PC#1 2027 (Apr 2027)',
+   ms:[{m:'2026-09',k:'due',t:"PC#5'26 SUBMIT",d:'4 Sep'},
+       {m:'2026-10',k:'ntp',t:"PC#5'26 NTP",d:'6–16 Oct'},
+       {m:'2026-12',k:'po',t:"PC#5'26 PO L1",d:'3–10 Dec'},
+       {m:'2027-01',k:'po',t:"PC#5'26 PO L2",d:'12–19 Jan'}]}
 ];
-const PLAN_PRIOR_CALL=PLAN_PRIOR_CALLS[2];
+
+/* 2027/2028 — PROJECTED */
+const PLAN_CALLS=[
+  {n:1,fy:'2027',name:'PC#1 2027',short:"PC#1 '27",title:'PC#1 2027',col:'var(--cat-pre)',
+   subOpen:'28-Oct-26',subDue:'12-Nov-26',ntpOpen:'10-Dec-26',ntpDue:'18-Dec-26',
+   po1:'18–25 Feb 27',po2:'24–31 Mar 27',l1:'April 2027',l2:'May 2027',
+   months:['2027-04','2027-05'],dueISO:'2026-11-12',
+   ms:[{m:'2026-10',k:'open',t:"PC#1'27 opens",d:'28 Oct'},
+       {m:'2026-11',k:'due',t:"PC#1'27 SUBMIT",d:'12 Nov'},
+       {m:'2026-12',k:'ntp',t:"PC#1'27 NTP",d:'10–18 Dec'},
+       {m:'2027-02',k:'po',t:"PC#1'27 PO L1",d:'18–25 Feb'},
+       {m:'2027-03',k:'po',t:"PC#1'27 PO L2",d:'24–31 Mar'}]},
+  {n:2,fy:'2027',name:'PC#2 2027',short:"PC#2 '27",title:'PC#2 2027',col:'var(--cat-infused)',
+   subOpen:'15-Jan-27',subDue:'29-Jan-27',ntpOpen:'2-Mar-27',ntpDue:'11-Mar-27',
+   po1:'29 Apr–6 May 27',po2:'4–11 Jun 27',l1:'June 2027',l2:'July 2027',
+   months:['2027-06','2027-07'],dueISO:'2027-01-29',
+   ms:[{m:'2027-01',k:'open',t:"PC#2'27 opens",d:'15 Jan'},
+       {m:'2027-01',k:'due',t:"PC#2'27 SUBMIT",d:'29 Jan'},
+       {m:'2027-03',k:'ntp',t:"PC#2'27 NTP",d:'2–11 Mar'},
+       {m:'2027-04',k:'po',t:"PC#2'27 PO L1",d:'29 Apr–6 May'},
+       {m:'2027-06',k:'po',t:"PC#2'27 PO L2",d:'4–11 Jun'}]},
+  {n:3,fy:'2027',name:'PC#3 2027',short:"PC#3 '27",title:'PC#3 2027',col:'var(--cat-vape)',
+   subOpen:'30-Mar-27',subDue:'15-Apr-27',ntpOpen:'13-May-27',ntpDue:'25-May-27',
+   po1:'9–16 Jul 27',po2:'17–24 Aug 27',l1:'Aug/Sep 2027',l2:'October 2027',
+   months:['2027-08','2027-09','2027-10'],dueISO:'2027-04-15',
+   ms:[{m:'2027-03',k:'open',t:"PC#3'27 opens",d:'30 Mar'},
+       {m:'2027-04',k:'due',t:"PC#3'27 SUBMIT",d:'15 Apr'},
+       {m:'2027-05',k:'ntp',t:"PC#3'27 NTP",d:'13–25 May'},
+       {m:'2027-07',k:'po',t:"PC#3'27 PO L1",d:'9–16 Jul'},
+       {m:'2027-08',k:'po',t:"PC#3'27 PO L2",d:'17–24 Aug'}]},
+  {n:4,fy:'2027',name:'PC#4 2027',short:"PC#4 '27",title:'PC#4 2027',col:'var(--cat-extract)',
+   subOpen:'11-Jun-27',subDue:'25-Jun-27',ntpOpen:'23-Jul-27',ntpDue:'5-Aug-27',
+   po1:'22–29 Sep 27',po2:'29 Oct–5 Nov 27',l1:'November 2027',l2:'Dec 2027/Jan 2028',
+   months:['2027-11','2027-12'],dueISO:'2027-06-25',
+   ms:[{m:'2027-06',k:'open',t:"PC#4'27 opens",d:'11 Jun'},
+       {m:'2027-06',k:'due',t:"PC#4'27 SUBMIT",d:'25 Jun'},
+       {m:'2027-07',k:'ntp',t:"PC#4'27 NTP",d:'23 Jul–5 Aug'},
+       {m:'2027-09',k:'po',t:"PC#4'27 PO L1",d:'22–29 Sep'},
+       {m:'2027-10',k:'po',t:"PC#4'27 PO L2",d:'29 Oct–5 Nov'}]},
+  {n:5,fy:'2027',name:'PC#5 2027',short:"PC#5 '27",title:'PC#5 2027',col:'var(--x-violet)',
+   subOpen:'20-Aug-27',subDue:'3-Sep-27',ntpOpen:'6-Oct-27',ntpDue:'15-Oct-27',
+   po1:'3–10 Dec 27',po2:'12–19 Jan 28',l1:'Jan/Feb 2028',l2:'Feb/Mar 2028',
+   months:[],dueISO:'2027-09-03',
+   ms:[{m:'2027-08',k:'open',t:"PC#5'27 opens",d:'20 Aug'},
+       {m:'2027-09',k:'due',t:"PC#5'27 SUBMIT",d:'3 Sep'},
+       {m:'2027-10',k:'ntp',t:"PC#5'27 NTP",d:'6–15 Oct'},
+       {m:'2027-12',k:'po',t:"PC#5'27 PO L1",d:'3–10 Dec'}]}
+];
+const PLAN_PRIOR_CALL=PLAN_PRIOR_CALLS.find(c=>c.n===5);
 const PLAN_MONTH_CALL=(()=>{
   const m={};
   PLAN_PRIOR_CALLS.forEach(c=>c.months.forEach(k=>{m[k]=c;}));
@@ -9916,10 +8611,11 @@ const planLaunchLabel=c=>{
 function planPrepBy(month){
   const c=planCallFor(month);
   if(!c)return null;
-  if(!c.dueISO)return {call:c,date:null,days:null,state:'shut'};
+  if(!c.dueISO)return {call:c,date:c.subDue||null,days:null,state:'shut'};
   const d=planDaysTo(c.dueISO);
-  return {call:c,date:c.subDue,days:d,
-    state:d<0?'closed':(d<=45?'urgent':(d<=120?'soon':'ok'))};
+  /* A prior-fiscal deadline in the past is history, not a missed target. */
+  const state=d<0?(c.prior?'shut':'closed'):(d<=45?'urgent':(d<=120?'soon':'ok'));
+  return {call:c,date:c.subDue,days:d,state};
 }
 /* A planned product occupies the whole development window, not one cell:
    it starts two months before its OCS submission deadline and ends in the
@@ -10201,7 +8897,7 @@ function PlanCompose({cat,onCommit,onCancel}){
 /* ══════════════════════════════════════════
    MAIN
    ══════════════════════════════════════════ */
-function Plan2027View({data,setData}){
+function Plan2027View({data,setData,onOpenTab,onCreateTab}){
   const cfg=data.plan2027||{};
   const brands=(cfg.brands&&cfg.brands.length)?cfg.brands:PLAN_BRANDS_SEED;
   const fixCat=c=>PLAN_CAT_MERGED[c]||c;
@@ -10383,7 +9079,7 @@ function Plan2027View({data,setData}){
         const sp=b.month?planSpan(b.month,b.leadFrom):null;
         return [b.brand,b.cat,b.name,b.format||'',b.status||'',
           sp?(PLAN_MONTHS[sp.start].s+' '+PLAN_MONTHS[sp.start].y):'',
-          pr?pr.date:'',pr?(pr.call.n?'Call '+pr.call.n:pr.call.title):'',
+          pr?pr.date:'',pr?pr.call.name:'',
           b.month?planInMarket(b.month):'Unscheduled',
           sp?(sp.end-sp.start+1):'',b.notes||''];});
     const csv=[head,...rows].map(r=>r.map(esc).join(',')).join('\r\n');
@@ -10408,7 +9104,7 @@ function Plan2027View({data,setData}){
           +(pr?('\n'+(pr.state==='shut'
                 ? 'Submission window closed — '+pr.call.title+' (prior fiscal)'
                 : 'Prepare by '+pr.date+' — '+(pr.days<0?'submission closed':pr.days+' days')
-                  +' ('+(pr.call.n?'OCS Call '+pr.call.n:pr.call.title)+')')
+                  +' ('+pr.call.name+')')
               +'\nIn market '+planInMarket(b.month))
              :'\nUnscheduled — no submission deadline yet')
           +(b.notes?'\n\n'+b.notes:'');
@@ -10485,7 +9181,7 @@ function Plan2027View({data,setData}){
       title:b.name
         +(pr?('\n'+(pr.state==='shut'?'Submission window closed — '+pr.call.title
               :'Prepare by '+pr.date+' — '+(pr.days<0?'submission closed':pr.days+' days')
-                +' ('+(pr.call.n?'OCS Call '+pr.call.n:pr.call.title)+')')):'')
+                +' ('+pr.call.name+')')):'')
         +'\nDevelopment window '+PLAN_MONTHS[r.start].s+" '"+String(PLAN_MONTHS[r.start].y).slice(2)
         +' → '+PLAN_MONTHS[r.end].s+" '"+String(PLAN_MONTHS[r.end].y).slice(2)
         +'  ('+span+' months'+(r.extended?', runway extended by hand':'')+')'
@@ -10588,7 +9284,7 @@ function Plan2027View({data,setData}){
     const c=r.c, chip=c?planDueChip(c):'';
     const past=c&&planDaysTo(c.dueISO)<0;
     gridKids.push(el('div',{key:'cb'+i,
-      title:c?((c.n?'Call '+c.n:c.title)
+      title:c?(c.name
         +(c.subDue?' — submission deadline '+c.subDue
                   :' — submission window closed (prior fiscal)')
         +(c.l1?'  ·  launches '+c.l1+(c.l2?' / '+c.l2:''):'')):'',
@@ -10601,7 +9297,7 @@ function Plan2027View({data,setData}){
       el('div',{style:{display:'flex',alignItems:'baseline',gap:7}},
         el('span',{style:{fontFamily:'var(--mono)',fontSize:9,fontWeight:700,letterSpacing:'.1em',
           textTransform:'uppercase',color:c?c.col:'var(--muted)'}},
-          c?(c.n?'Call '+c.n:c.short):'—'),
+          c?c.short:'—'),
         chip&&el('span',{style:{fontFamily:'var(--mono)',fontSize:8,fontWeight:700,
           letterSpacing:'.06em',textTransform:'uppercase',marginLeft:'auto',
           color:past?'var(--text4)':'var(--accent)'}},chip)),
@@ -10668,7 +9364,7 @@ function Plan2027View({data,setData}){
       const launchCols=span-leadCols;
       const mk=planLaunchLabel(c);
       gridKids.push(el('div',{key:'fb'+ln+'_'+i,
-        title:(c.n?'OCS Call '+c.n:c.title)
+        title:c.name
           +'\nSubmit by '+(c.subDue||r.due.d)
           +'  →  '+leadCols+' month'+(leadCols===1?'':'s')+' of prep'
           +'  →  in market '+(c.l1||mk)+(c.l2?' / '+c.l2:''),
@@ -10692,7 +9388,7 @@ function Plan2027View({data,setData}){
             background:'color-mix(in oklab,'+c.col+',transparent 80%)'}},
             el('span',{style:{fontFamily:'var(--mono)',fontSize:9,fontWeight:700,color:c.col,
               whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}},
-              (c.n?'CALL '+c.n:c.short)+' IN MARKET'),
+              c.short+' IN MARKET'),
             el('span',{style:{marginLeft:'auto',fontFamily:'var(--mono)',fontSize:9,
               fontWeight:700,color:'var(--fg)',whiteSpace:'nowrap'}},mk))
         )));
@@ -10844,6 +9540,94 @@ function Plan2027View({data,setData}){
         fontFamily:'var(--mono)',fontSize:13,fontWeight:700,
         color:n?'var(--fg)':'var(--text4)'}},n||'—'));
   });
+
+  /* ── Tallies ─────────────────────────────────────────────────────
+     Per product call and per category, over blocks that actually have a
+     launch month. Unscheduled blocks are reported separately so the
+     numbers reconcile to the total rather than quietly dropping. */
+  const scheduledBlocks=blocks.filter(b=>b.month);
+  /* Match each schedule call to the dashboard's own Product Call tab.
+     Primary signal is where that tab's products actually launch — which
+     survives a tab rename. The PC#n-in-the-label pattern is only a fallback
+     for tabs that hold no products yet. Each tab is claimed once. */
+  const callTabMap=React.useMemo(()=>{
+    const tabs=data.pcTabs||[], map={}, claimed=new Set();
+    const inWindow=[...PLAN_PRIOR_CALLS,...PLAN_CALLS]
+      .filter(c=>(c.months||[]).some(k=>PLAN_MONTHS.some(m=>m.k===k)));
+    inWindow.forEach(c=>{                       /* by real launch months */
+      let best=null,bestN=0;
+      tabs.forEach(t=>{
+        if(claimed.has(t.id))return;
+        const n=(data[t.id]||[])
+          .map(pp=>String(pp.launchDate||'').slice(0,7))
+          .filter(mk=>(c.months||[]).indexOf(mk)>-1).length;
+        if(n>bestN){bestN=n;best=t;}
+      });
+      if(best){map[c.name]=best;claimed.add(best.id);}
+    });
+    inWindow.forEach(c=>{                       /* fallback: PC#n + year */
+      if(map[c.name])return;
+      const t=tabs.find(t=>{
+        if(claimed.has(t.id))return false;
+        const num=/#\s*(\d+)/.exec(t.label||''), yr=/(20\d{2})/.exec(t.label||'');
+        return num&&yr&&+num[1]===c.n&&yr[1]===c.fy;
+      });
+      if(t){map[c.name]=t;claimed.add(t.id);}
+    });
+    return map;
+  },[data]);
+  const tabForCall=c=>callTabMap[c.name]||null;
+  const callTally=(()=>{
+    const seen=[];
+    [...PLAN_PRIOR_CALLS,...PLAN_CALLS].forEach(c=>{
+      const idx=(c.months||[]).map(k=>PLAN_MONTHS.findIndex(m=>m.k===k)).filter(i=>i>-1);
+      if(!idx.length)return;
+      const n=scheduledBlocks.filter(b=>planCallFor(b.month)===c).length;
+      seen.push({call:c,n,tab:tabForCall(c),
+        first:Math.min(...idx),last:Math.max(...idx),span:idx.length});
+    });
+    return seen.filter(x=>x.tab||x.n>0).sort((a,z)=>a.first-z.first);
+  })();
+  const catTally=(()=>{
+    const m={};
+    scheduledBlocks.forEach(b=>{m[b.cat]=(m[b.cat]||0)+1;});
+    const known=PLAN_CATS.filter(c=>m[c]).map(c=>({cat:c,n:m[c]}));
+    const extra=Object.keys(m).filter(c=>PLAN_CATS.indexOf(c)<0).map(c=>({cat:c,n:m[c]}));
+    return [...known,...extra].sort((a,z)=>z.n-a.n);
+  })();
+  const maxCall=Math.max(1,...callTally.map(x=>x.n));
+  const maxCat=Math.max(1,...catTally.map(x=>x.n));
+
+  /* Grid footer: planned per product call, spanning that call's months */
+  gridKids.push(el('div',{key:'ctlbl',style:{position:'sticky',left:0,zIndex:2,
+    background:'var(--surface-warm)',borderRight:'1px solid var(--border)',
+    borderBottom:'1px solid var(--border)',padding:'9px 12px',
+    fontFamily:'var(--mono)',fontSize:9,fontWeight:700,letterSpacing:'.1em',
+    textTransform:'uppercase',color:'var(--muted)'}},'Planned / call'));
+  (()=>{
+    let cur=0;
+    callTally.forEach((t,i)=>{
+      if(t.first>cur)gridKids.push(el('div',{key:'ctg'+i,
+        style:{gridColumn:'span '+(t.first-cur),background:'var(--surface-warm)',
+          borderBottom:'1px solid var(--border)'}}));
+      gridKids.push(el('div',{key:'ct'+i,
+        title:t.call.name+' — '+t.n+' planned',
+        style:{gridColumn:'span '+t.span,background:'var(--surface-warm)',
+          borderLeft:'1px solid var(--border)',borderBottom:'1px solid var(--border)',
+          borderTop:'2px solid '+t.call.col,padding:'7px 9px',display:'flex',
+          alignItems:'center',gap:8}},
+        el('span',{style:{fontFamily:'var(--mono)',fontSize:9,fontWeight:700,
+          letterSpacing:'.08em',textTransform:'uppercase',color:t.call.col,
+          whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}},
+          t.tab?t.tab.label:t.call.short),
+        el('span',{style:{marginLeft:'auto',fontFamily:'var(--mono)',fontSize:14,
+          fontWeight:700,color:t.n?'var(--fg)':'var(--text4)'}},t.n||'—')));
+      cur=t.last+1;
+    });
+    if(cur<PLAN_MONTHS.length)gridKids.push(el('div',{key:'ctgz',
+      style:{gridColumn:'span '+(PLAN_MONTHS.length-cur),background:'var(--surface-warm)',
+        borderBottom:'1px solid var(--border)'}}));
+  })();
 
   const editing=blocks.find(b=>b.id===editId);
 
@@ -11004,13 +9788,19 @@ function Plan2027View({data,setData}){
               ['Call','Sub opens','Sub deadline','NTP/Attr opens','NTP/Attr deadline',
                'PO L1','PO L2','Launch 1','Launch 2'].map(h=>el('th',{key:h},h)))),
             el('tbody',null,
-              PLAN_CALLS.map(c=>{
+              [{fy:'2026/2027 — published',rows:PLAN_PRIOR_CALLS},
+               {fy:'2027/2028 — projected',rows:PLAN_CALLS}].map(sec=>
+                el(React.Fragment,{key:sec.fy},
+                  el('tr',null,el('td',{colSpan:9,style:{background:'var(--surface-warm)',
+                    fontFamily:'var(--mono)',fontSize:9,fontWeight:700,letterSpacing:'.1em',
+                    textTransform:'uppercase',color:'var(--muted)'}},sec.fy)),
+                  sec.rows.map(c=>{
                 const d=planDaysTo(c.dueISO), past=d<0;
-                return el('tr',{key:c.n,style:{opacity:past?.55:1}},
+                return el('tr',{key:c.name,style:{opacity:past?.55:1}},
                   el('td',{style:{fontFamily:'var(--font-body)'}},
                     el('span',{style:{display:'inline-flex',alignItems:'center',gap:7}},
                       el('span',{style:{width:3,height:15,borderRadius:'var(--r-xs)',background:c.col}}),
-                      el('span',{style:{fontWeight:700}},'Call '+c.n),
+                      el('span',{style:{fontWeight:700}},c.name),
                       c.months.length>0&&el('span',{className:'plan-chip',
                         style:{color:'var(--muted)'}},
                         c.months.map(m=>(PLAN_MONTHS.find(x=>x.k===m)||{}).s).join('/')))),
@@ -11020,13 +9810,16 @@ function Plan2027View({data,setData}){
                   el('td',null,c.ntpOpen),el('td',null,c.ntpDue),
                   el('td',null,c.po1),el('td',null,c.po2),
                   el('td',null,c.l1),el('td',null,c.l2));
-              }))
+              }))))
           )
         ),
         el('div',{style:{fontFamily:'var(--mono)',fontSize:10,color:'var(--muted)',
           marginTop:9,lineHeight:1.6}},
-          'Jan–Mar 2027 launches sit in the prior fiscal — '+PLAN_PRIOR_CALL.note+'. ',
-          'Call 5 launches Jan–Mar 2028, past the right edge of this grid.')
+          'A schedule titled 2026/2027 is the 2026 call set: PC#1 2026 launched Apr/May 2026 and '
+          +'PC#5 2026 launches Jan–Mar 2027 — so those months are PC#5 2026, not PC#1 2027, which '
+          +'lands Apr/May 2027. ',
+          PLAN_CALL_SRC_PUB+'; '+PLAN_CALL_SRC_PROJ+'. ',
+          'PC#5 2027 launches Jan–Mar 2028, past the right edge of this grid.')
       )
     ),
 
@@ -11063,6 +9856,86 @@ function Plan2027View({data,setData}){
         gridTemplateColumns:PLAN_LABEL_W+'px repeat('+PLAN_MONTHS.length+',minmax('+PLAN_COL_W+'px,1fr))',
         minWidth:PLAN_LABEL_W+PLAN_MONTHS.length*PLAN_COL_W}},gridKids)
     ),
+
+    /* ── Tallies ── */
+    el('div',{style:{borderTop:'2px solid var(--accent)',background:'var(--surface)'}},
+      el('div',{style:{display:'flex',alignItems:'baseline',gap:12,padding:'13px 20px 0',
+        flexWrap:'wrap'}},
+        el('span',{style:{fontFamily:'var(--font-display)',fontSize:15,
+          letterSpacing:'-0.01em'}},'Planned SKUs'),
+        el('span',{style:{fontFamily:'var(--mono)',fontSize:10,color:'var(--muted)',
+          letterSpacing:'.06em',textTransform:'uppercase'}},
+          scheduledBlocks.length+' scheduled'
+          +(backlog.length?('  ·  '+backlog.length+' unscheduled'):'')
+          +'  ·  '+blocks.length+' total')),
+      scheduledBlocks.length===0
+        ? el('div',{style:{padding:'14px 20px 18px',fontFamily:'var(--mono)',fontSize:11,
+            color:'var(--text4)'}},'Nothing scheduled yet — add a product to a month rail.')
+        : el('div',{style:{display:'grid',
+            gridTemplateColumns:'repeat(auto-fit,minmax(320px,1fr))',
+            gap:'8px 32px',padding:'12px 20px 18px'}},
+            /* by product call */
+            el('div',null,
+              el('div',{style:{fontFamily:'var(--mono)',fontSize:9,fontWeight:700,
+                letterSpacing:'.12em',textTransform:'uppercase',color:'var(--muted)',
+                marginBottom:8}},'By product call tab'),
+              callTally.map(t=>{
+                const win=t.first===t.last?PLAN_MONTHS[t.first].s
+                  :(PLAN_MONTHS[t.first].s+'–'+PLAN_MONTHS[t.last].s);
+                const label=t.tab?t.tab.label:t.call.name;
+                return el('div',{key:t.call.name,
+                  style:{display:'flex',alignItems:'center',gap:9,padding:'3px 0'}},
+                  el('span',{style:{width:3,height:15,borderRadius:'var(--r-xs)',
+                    background:t.call.col,flexShrink:0}}),
+                  t.tab
+                    ? el('button',{
+                        onClick:()=>onOpenTab&&onOpenTab(t.tab.id),
+                        title:'Open the '+t.tab.label+' product call tab',
+                        style:{width:96,flexShrink:0,textAlign:'left',background:'transparent',
+                          border:'none',padding:0,cursor:'pointer',fontFamily:'inherit',
+                          fontSize:11,fontWeight:600,color:'var(--fg)',
+                          textDecoration:'underline',textDecorationColor:'var(--border)',
+                          textUnderlineOffset:3}},label)
+                    : el('span',{style:{width:96,flexShrink:0,fontSize:11,fontWeight:600,
+                        color:'var(--muted)'}},label),
+                  el('span',{style:{fontFamily:'var(--mono)',fontSize:9,color:'var(--muted)',
+                    width:74,flexShrink:0}},win+" '"+String(PLAN_MONTHS[t.first].y).slice(2)),
+                  !t.tab&&el('button',{
+                    onClick:()=>onCreateTab&&onCreateTab(t.call.name),
+                    title:'No product call tab exists for '+t.call.name+' — create it',
+                    style:{flexShrink:0,background:'transparent',border:'1px dashed var(--bdr2)',
+                      borderRadius:'var(--r-xs)',cursor:'pointer',padding:'1px 7px',
+                      fontFamily:'var(--mono)',fontSize:8,fontWeight:700,letterSpacing:'.06em',
+                      textTransform:'uppercase',color:'var(--muted)'}},'+ tab'),
+                  el('span',{style:{flex:1,height:6,background:'var(--border)',
+                    borderRadius:'var(--pill)',overflow:'hidden',minWidth:30}},
+                    el('span',{style:{display:'block',height:'100%',
+                      width:(t.n/maxCall*100)+'%',background:t.call.col}})),
+                  el('span',{style:{fontFamily:'var(--mono)',fontSize:12,fontWeight:700,
+                    width:22,textAlign:'right',flexShrink:0,
+                    color:t.n?'var(--fg)':'var(--text4)'}},t.n||'—'));
+              })),
+            /* by category */
+            el('div',null,
+              el('div',{style:{fontFamily:'var(--mono)',fontSize:9,fontWeight:700,
+                letterSpacing:'.12em',textTransform:'uppercase',color:'var(--muted)',
+                marginBottom:8}},'By category'),
+              catTally.map(t=>el('div',{key:t.cat,
+                style:{display:'flex',alignItems:'center',gap:9,padding:'3px 0'}},
+                el('span',{style:{width:3,height:15,borderRadius:'var(--r-xs)',
+                  background:PLAN_CAT_COL[t.cat]||'var(--muted)',flexShrink:0}}),
+                el('span',{style:{fontSize:11,fontWeight:600,width:132,flexShrink:0,
+                  overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},t.cat),
+                el('span',{style:{flex:1,height:6,background:'var(--border)',
+                  borderRadius:'var(--pill)',overflow:'hidden',minWidth:40}},
+                  el('span',{style:{display:'block',height:'100%',
+                    width:(t.n/maxCat*100)+'%',
+                    background:PLAN_CAT_COL[t.cat]||'var(--muted)'}})),
+                el('span',{style:{fontFamily:'var(--mono)',fontSize:12,fontWeight:700,
+                  width:22,textAlign:'right',flexShrink:0}},t.n))))
+          )
+    ),
+
     el('div',{style:{padding:'10px 20px',fontFamily:'var(--mono)',fontSize:10,
       color:'var(--muted)',letterSpacing:'.04em',borderTop:'1px solid var(--border)'}},
       'Click + on a month rail to type a product into the plan · drag a bar to another brand, category or month · click a bar to edit it',
@@ -11163,7 +10036,7 @@ function PlanBlockEditor({block,brands,onChange,onDelete,onClose}){
           el('div',{style:{display:'flex',alignItems:'baseline',gap:8,marginBottom:6}},
             el('span',{style:{fontFamily:'var(--mono)',fontSize:9,fontWeight:700,
               letterSpacing:'.1em',textTransform:'uppercase',color:c.col}},
-              c.n?'OCS Call '+c.n:c.title),
+              c.name),
             el('span',{style:{fontFamily:'var(--mono)',fontSize:9,marginLeft:'auto',
               color:(!pr||pr.state==='shut')?'var(--text4)'
                 :(pr.days<0?'var(--err)':'var(--accent)'),fontWeight:700}},
@@ -11406,11 +10279,23 @@ function App(){
 
   const kbNav=dir=>{const idx=prods.findIndex(p=>p.id===selId);const next=prods[idx+dir];if(next)setSelId(next.id);};
 
+  const nextTabId=()=>{
+    const nums=data.pcTabs.map(t=>{const m=t.id.match(/pc(\d+)/);return m?parseInt(m[1]):0;});
+    return 'pc'+(Math.max(0,...nums)+1);
+  };
+  /* Create a tab with an explicit label (used by the 2027 plan tally). */
+  const createCallTab=label=>{
+    const newId=nextTabId();
+    setData(d=>({...d,pcTabs:[...d.pcTabs,{id:newId,label}],[newId]:[]}));
+    setView(newId);setProdView('overview');
+  };
   const addProductCall=()=>{
     const nums=data.pcTabs.map(t=>{const m=t.id.match(/pc(\d+)/);return m?parseInt(m[1]):0;});
-    const next=Math.max(0,...nums)+1,newId='pc'+next,newLabel='PC#'+next+' 2026';
-    setData(d=>({...d,pcTabs:[...d.pcTabs,{id:newId,label:newLabel}],[newId]:[]}));
-    setView(newId);setProdView('overview');
+    const next=Math.max(0,...nums)+1;
+    /* Inherit the year from the newest tab rather than hardcoding 2026. */
+    const last=data.pcTabs[data.pcTabs.length-1];
+    const yr=(last&&(/(20\d{2})/.exec(last.label||'')||[])[1])||String(new Date().getFullYear());
+    createCallTab('PC#'+next+' '+yr);
   };
   const removeTab=id=>{
     if(data.pcTabs.length<=1){alert('Cannot remove the last product call.');return;}
@@ -11763,7 +10648,7 @@ function App(){
 
       /* Content */
       el('div',{style:{flex:1}},
-        view==='home'       ? el(Home3DView,{data,setData,setView,setSels,setProdView}) :
+        view==='home'       ? el(HomeView,{data,setData,setView,setSels,setProdView}) :
         view==='funnel'     ? el(FunnelView,{data,setData}) :
         view==='rejected'   ? el(RejectedView,{data,setData,setView,setSels,setProdView}) :
         view==='actions'    ? el(ActionItemsView,{data,setData}) :
@@ -11776,7 +10661,9 @@ function App(){
             rdCount:(data.in_dev||[]).length,
             planCount:((data.plan2027||{}).blocks||[]).length}),
           (view==='in_dev'&&devTab==='plan')
-          ? el(Plan2027View,{data,setData})
+          ? el(Plan2027View,{data,setData,
+              onOpenTab:id=>{setView(id);setProdView('overview');},
+              onCreateTab:createCallTab})
           : el('div',null,
           el(ProductPanels,{prods,selId:prod?.id||'',setSelId,onAdd:addProd,onRemove:removeProd,allProds:{...data.postLaunch,...prods.reduce((a,p)=>({...a,[p.id]:p}),{})},isDevTab:view==='in_dev'}),
           prodView==='overview'
