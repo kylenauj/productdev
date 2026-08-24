@@ -786,6 +786,7 @@ const INITIAL={
 pcTabs:[{id:'pc1',label:'PC#1 2026'},{id:'pc2',label:'PC#2 2026'},{id:'pc3',label:'PC#3 2026'}],
   in_dev:[],
   plan2027:{brands:[],rows:{},blocks:[]},
+  sensory:{panelists:[],sessions:[],thresholds:{}},
   rejected:[],
   actionItems:[],
   team:[],
@@ -10075,6 +10076,831 @@ function PlanBlockEditor({block,brands,onChange,onDelete,onClose}){
 }
 
 
+/* ══════════════════════════════════════════════════════════════════
+   SENSORY EVALUATION & MARKET-READINESS
+   Panel → session → scored responses → stage-gate verdict.
+   Scales are standard sensory practice: 9-point hedonic for liking,
+   5-point Just-About-Right for diagnostic attributes, 5-point purchase
+   intent, 0–10 intensity. Every number shown is computed from responses
+   the user entered or imported — nothing is seeded or estimated.
+   ══════════════════════════════════════════════════════════════════ */
+const SENS_CATS=['Infused Pre-Roll','Vape','Concentrate'];
+const SENS_STAGES=[
+  {id:'screen',  label:'Screen',   n:1, blurb:'Internal panel — is the prototype fundamentally sound?'},
+  {id:'optimise',label:'Optimise', n:2, blurb:'JAR-driven — what specifically has to change?'},
+  {id:'validate',label:'Validate', n:3, blurb:'Confirm the revision against a control or benchmark.'}
+];
+const SENS_ATTRS={
+  'Infused Pre-Roll':{jar:['Aroma intensity','Flavour intensity','Smoke smoothness','Burn rate','Pack density','Perceived potency'],
+                      int:['Harshness','Off-notes','Ash quality']},
+  'Vape':{jar:['Aroma intensity','Flavour intensity','Flavour accuracy','Throat hit','Vapour volume','Sweetness','Perceived potency'],
+          int:['Harshness','Off-notes','Draw resistance']},
+  'Concentrate':{jar:['Aroma intensity','Flavour intensity','Terpene expression','Texture','Colour','Perceived potency'],
+                 int:['Harshness','Off-notes','Residual solvent note']}
+};
+const SENS_JAR_ANCHORS=['1 far too little','2 slightly too little','3 just about right','4 slightly too much','5 far too much'];
+const SENS_HEDONIC=['1 dislike extremely','2 dislike very much','3 dislike moderately','4 dislike slightly',
+  '5 neither','6 like slightly','7 like moderately','8 like very much','9 like extremely'];
+const SENS_PI=['1 definitely would not buy','2 probably would not','3 might or might not','4 probably would','5 definitely would'];
+const SENS_DEFAULT_TH={minPanel:7,liking:6.5,top3:60,piTop2:50,jarOff:20,jarPenalty:1.0,intMax:3.0};
+/* Cannabis panels have a constraint food panels do not: the product
+   intoxicates the assessor. Appearance and dry aroma are free — you can run
+   many samples. Anything inhaled is strictly limited, because tolerance,
+   palate fatigue and rising intoxication all corrupt later scores. */
+const SENS_SERVE={
+  'Infused Pre-Roll':{dry:8,inhaled:3,rest:15,draw:'2 puffs · 3 s draw · 5 s hold'},
+  'Vape':{dry:8,inhaled:3,rest:10,draw:'2 puffs · 3 s draw · 5 s hold'},
+  'Concentrate':{dry:6,inhaled:2,rest:15,draw:'1 dab at 500 °F / 260 °C'}
+};
+/* Williams design — a Latin square balanced for position AND first-order
+   carryover, so no sample is flattered by going first or by what preceded
+   it. An odd number of samples needs the mirrored square as well. */
+function williams(t){
+  if(t<2)return [[1]];
+  const first=[];let a=1,b=t;
+  for(let i=0;i<t;i++){ if(i%2===0)first.push(a++); else first.push(b--); }
+  const sq=[];
+  for(let r=0;r<t;r++) sq.push(first.map(v=>((v-1+r)%t)+1));
+  if(t%2===1) sq.push(...sq.slice(0,t).map(r=>r.slice().reverse()));
+  return sq;
+}
+/* Blind codes: 3 digits, never A/B and never 1/2 — assessors read meaning
+   into ordinal labels. Derived deterministically from the session id and a
+   seed rather than drawn at random, so the codes on screen, on the run sheet
+   and on the printed score sheets can never disagree. "New codes" bumps the
+   seed. */
+function sensHash(str){
+  let h=2166136261>>>0;
+  for(let i=0;i<str.length;i++){h^=str.charCodeAt(i);h=Math.imul(h,16777619)>>>0;}
+  return h;
+}
+function sensCodesFor(sess){
+  const samples=(sess.samples||[]).map(x=>x.code);
+  const seed=sess.codeSeed||0,out={},used={};
+  samples.forEach(sc=>{
+    let n=0,code;
+    do{code=String(100+(sensHash(sess.id+':'+sc+':'+seed+':'+n)%900));n++;}
+    while(used[code]&&n<60);
+    used[code]=1;out[sc]=code;
+  });
+  return out;
+}
+/* Serving plan: which coded sample each panelist gets, in which position. */
+function sensBuildRun(sess,panelists){
+  const samples=(sess.samples||[]).map(x=>x.code);
+  const t=samples.length; if(!t)return null;
+  const codes=sensCodesFor(sess);
+  const design=williams(t);
+  const rows=panelists.map((p,i)=>({panelist:p,
+    order:design[i%design.length].map(ix=>({sample:samples[ix-1],code:codes[samples[ix-1]]}))}));
+  /* Position balance only holds when panelists divide evenly into the design. */
+  const balanced=panelists.length%design.length===0;
+  return {codes,design,rows,balanced,cycles:design.length};
+}
+
+const sMean=a=>a.length?a.reduce((s,v)=>s+v,0)/a.length:null;
+const sSd=a=>{if(a.length<2)return null;const m=sMean(a);
+  return Math.sqrt(a.reduce((s,v)=>s+(v-m)*(v-m),0)/(a.length-1));};
+const sBoxPct=(a,lo)=>a.length?a.filter(v=>v>=lo).length/a.length*100:null;
+const sNum=v=>{const n=parseFloat(v);return isNaN(n)?null:n;};
+
+function jarAnalysis(rows,attr,th){
+  const have=rows.filter(r=>r.jar&&r.jar[attr]!=null&&r.liking!=null);
+  const n=have.length; if(!n)return null;
+  const grp=k=>have.filter(r=>k(r.jar[attr]));
+  const jar=grp(v=>v===3),lo=grp(v=>v<=2),hi=grp(v=>v>=4);
+  const mJar=sMean(jar.map(r=>r.liking));
+  const side=(g,dir)=>{
+    if(!g.length||mJar==null)return null;
+    const drop=mJar-sMean(g.map(r=>r.liking)),pct=g.length/n*100;
+    return {dir,n:g.length,pct,drop,weighted:pct/100*drop,
+      actionable:pct>=th.jarOff&&drop>=th.jarPenalty};
+  };
+  return {attr,n,jarPct:jar.length/n*100,mJar,lo:side(lo,'too little'),hi:side(hi,'too much')};
+}
+function nCk(n,k){let r=1;for(let i=1;i<=k;i++)r=r*(n-k+i)/i;return r;}
+function binomP(k,n){if(!n)return null;const kk=Math.max(k,n-k);
+  let t=0;for(let i=kk;i<=n;i++)t+=nCk(n,i);return Math.min(1,2*t/Math.pow(2,n));}
+function minKforSig(n,alpha){alpha=alpha||0.05;
+  for(let k=Math.ceil(n/2);k<=n;k++)if(binomP(k,n)<=alpha)return k;return null;}
+function betacf(a,b,x){const F=1e-300,E=3e-12;
+  let qab=a+b,qap=a+1,qam=a-1,c=1,d=1-qab*x/qap;
+  if(Math.abs(d)<F)d=F;d=1/d;let h=d;
+  for(let m=1;m<=200;m++){const m2=2*m;
+    let aa=m*(b-m)*x/((qam+m2)*(a+m2));
+    d=1+aa*d;if(Math.abs(d)<F)d=F;c=1+aa/c;if(Math.abs(c)<F)c=F;d=1/d;h*=d*c;
+    aa=-(a+m)*(qab+m)*x/((a+m2)*(qap+m2));
+    d=1+aa*d;if(Math.abs(d)<F)d=F;c=1+aa/c;if(Math.abs(c)<F)c=F;d=1/d;
+    const del=d*c;h*=del;if(Math.abs(del-1)<E)break;}
+  return h;}
+function gammaln(x){const c=[76.18009172947146,-86.50532032941677,24.01409824083091,
+  -1.231739572450155,0.1208650973866179e-2,-0.5395239384953e-5];
+  let y=x,tmp=x+5.5;tmp-=(x+0.5)*Math.log(tmp);let ser=1.000000000190015;
+  for(let j=0;j<6;j++)ser+=c[j]/++y;
+  return -tmp+Math.log(2.5066282746310005*ser/x);}
+function betai(a,b,x){if(x<=0)return 0;if(x>=1)return 1;
+  const bt=Math.exp(gammaln(a+b)-gammaln(a)-gammaln(b)+a*Math.log(x)+b*Math.log(1-x));
+  return x<(a+1)/(a+b+2)?bt*betacf(a,b,x)/a:1-bt*betacf(b,a,1-x)/b;}
+const tTwoSidedP=(t,df)=>(df<=0?null:betai(df/2,0.5,df/(df+t*t)));
+function welch(a,b){if(a.length<2||b.length<2)return null;
+  const va=Math.pow(sSd(a),2),vb=Math.pow(sSd(b),2),na=a.length,nb=b.length;
+  const se=Math.sqrt(va/na+vb/nb);
+  if(!se)return {t:0,df:na+nb-2,p:1,diff:sMean(a)-sMean(b)};
+  const t=(sMean(a)-sMean(b))/se;
+  const df=Math.pow(va/na+vb/nb,2)/(Math.pow(va/na,2)/(na-1)+Math.pow(vb/nb,2)/(nb-1));
+  return {t,df,p:tTwoSidedP(Math.abs(t),df),diff:sMean(a)-sMean(b)};}
+
+/* ── Sample-level roll-up ───────────────────────────────────────── */
+function sampleStats(sess,code,th){
+  const rows=(sess.responses||[]).filter(r=>r.sample===code);
+  const lik=rows.map(r=>sNum(r.liking)).filter(v=>v!=null);
+  const pi=rows.map(r=>sNum(r.pi)).filter(v=>v!=null);
+  const attrs=SENS_ATTRS[sess.cat]||{jar:[],int:[]};
+  const jars=attrs.jar.map(a=>jarAnalysis(rows,a,th)).filter(Boolean);
+  const ints=attrs.int.map(a=>{
+    const v=rows.map(r=>r.intensity&&sNum(r.intensity[a])).filter(x=>x!=null);
+    return v.length?{attr:a,n:v.length,mean:sMean(v),over:sMean(v)>th.intMax}:null;}).filter(Boolean);
+  return {code,n:rows.length,
+    liking:sMean(lik),likingSd:sSd(lik),likingN:lik.length,
+    top3:sBoxPct(lik,7),piTop2:sBoxPct(pi,4),piN:pi.length,
+    jars,ints,
+    fixes:jars.flatMap(j=>[j.lo,j.hi].filter(s=>s&&s.actionable)
+      .map(s=>({attr:j.attr,dir:s.dir,pct:s.pct,drop:s.drop})))
+      .concat(ints.filter(i=>i.over).map(i=>({attr:i.attr,dir:'above ceiling',pct:null,drop:i.mean})))};
+}
+/* ── Paired preference ──────────────────────────────────────────── */
+function prefStats(sess){
+  const votes=(sess.responses||[]).map(r=>r.prefer).filter(Boolean);
+  if(!votes.length)return null;
+  const codes=(sess.samples||[]).map(s=>s.code);
+  const tally={};codes.forEach(c=>tally[c]=votes.filter(v=>v===c).length);
+  const ranked=codes.slice().sort((a,b)=>tally[b]-tally[a]);
+  const n=votes.length,k=tally[ranked[0]]||0;
+  return {n,tally,winner:ranked[0],k,p:binomP(k,n),
+    need:minKforSig(n),sig:binomP(k,n)<=0.05};
+}
+/* ── Stage-gate verdict ─────────────────────────────────────────────
+   Order matters: an under-powered panel is DELAY (we don't know), a
+   diagnosed defect is REVISE (we know what to fix), and only a very low
+   liking score is NO-GO (the concept itself is not working). */
+function sensoryVerdict(sess,th){
+  const th2=Object.assign({},SENS_DEFAULT_TH,th||{});
+  const primary=(sess.samples&&sess.samples[0]&&sess.samples[0].code)||'A';
+  const st=sampleStats(sess,primary,th2);
+  const gates=[];const add=(id,label,ok,detail)=>gates.push({id,label,ok,detail});
+  add('panel','Panel size',st.n>=th2.minPanel,
+    st.n+' of '+th2.minPanel+' responses on sample '+primary);
+  /* ok === null means "not assessed" — shown as – , never counted as a fail. */
+  add('liking','Overall liking',st.liking==null?null:st.liking>=th2.liking,
+    st.liking==null?'not scored yet':st.liking.toFixed(2)+' vs '+th2.liking+' target (9-pt)');
+  add('top3','Top-3-box',st.top3==null?null:st.top3>=th2.top3,
+    st.top3==null?'not scored yet':st.top3.toFixed(0)+'% scored 7–9 vs '+th2.top3+'%');
+  add('jar','JAR attributes on target',
+    st.jars.length?!st.fixes.some(f=>f.dir!=='above ceiling'):null,
+    st.jars.length?((st.fixes.filter(f=>f.dir!=='above ceiling').length||'no')+' attribute(s) off target')
+      :'JAR questions not answered');
+  add('int','Defect ceilings',st.ints.length?!st.ints.some(i=>i.over):null,
+    st.ints.length?(st.ints.filter(i=>i.over).map(i=>i.attr).join(', ')||'all within ceiling')
+      :'intensity questions not answered');
+  add('pi','Purchase intent',st.piTop2==null?null:st.piTop2>=th2.piTop2,
+    st.piTop2==null?'not asked':st.piTop2.toFixed(0)+'% top-2-box vs '+th2.piTop2+'%');
+
+  let verdict,why;
+  if(st.n===0){verdict='DELAY';why='No responses recorded yet.';}
+  else if(st.n<th2.minPanel){verdict='DELAY';
+    why='Only '+st.n+' of '+th2.minPanel+' panelists have scored this — not enough to judge.';}
+  else if(st.liking!=null&&st.liking<4.0){verdict='NO-GO';
+    why='Mean liking '+st.liking.toFixed(2)+' sits in the dislike range; this is a concept problem, not a tweak.';}
+  else if(st.fixes.length){verdict='REVISE';
+    why=st.fixes.length+' attribute'+(st.fixes.length>1?'s':'')+' diagnosed off target.';}
+  else if(gates.filter(g=>['liking','top3','pi'].includes(g.id)&&g.ok===false).length){verdict='REVISE';
+    why='Acceptance is below target with no single attribute to blame — reformulate and re-screen.';}
+  else verdict='GO';
+  if(verdict==='GO'){
+    const idx=SENS_STAGES.findIndex(s=>s.id===sess.stage);
+    why=idx<SENS_STAGES.length-1
+      ? 'Clears '+SENS_STAGES[idx].label+'. Advance to '+SENS_STAGES[idx+1].label+'.'
+      : 'Clears Validate — ready to submit to market.';
+  }
+  return {verdict,why,gates,stats:st,pref:prefStats(sess),sample:primary};
+}
+const SENS_VERDICT_HUE={'GO':'var(--ok)','REVISE':'var(--warn)','DELAY':'var(--muted)','NO-GO':'var(--err)'};
+
+/* ── Canonical export/import column names (mirror these in Smartsheet) ── */
+function sensColumns(cat){
+  const a=SENS_ATTRS[cat]||{jar:[],int:[]};
+  return ['Panelist','Sample','Overall liking','Purchase intent']
+    .concat(a.jar.map(x=>'JAR: '+x)).concat(a.int.map(x=>'Intensity: '+x))
+    .concat(['Preference','Comments']);
+}
+const sensNorm=h=>String(h||'').toLowerCase().replace(/[^a-z0-9]/g,'');
+/* Parse a pasted CSV/TSV block into responses, auto-mapping headers. */
+function sensParse(text,cat){
+  const lines=String(text||'').trim().split(/\r?\n/).filter(l=>l.trim());
+  if(lines.length<2)return {rows:[],mapped:[],unmapped:[],error:'Need a header row and at least one response.'};
+  const delim=lines[0].split('\t').length>lines[0].split(',').length?'\t':',';
+  const split=l=>{const out=[];let cur='',q=false;
+    for(let i=0;i<l.length;i++){const ch=l[i];
+      if(ch==='"'){if(q&&l[i+1]==='"'){cur+='"';i++;}else q=!q;}
+      else if(ch===delim&&!q){out.push(cur);cur='';}else cur+=ch;}
+    out.push(cur);return out.map(x=>x.trim());};
+  const hdr=split(lines[0]);
+  const want=sensColumns(cat);
+  const idx={},mapped=[],unmapped=[];
+  hdr.forEach((h,i)=>{const w=want.find(x=>sensNorm(x)===sensNorm(h));
+    if(w){idx[w]=i;mapped.push(w);}else if(h)unmapped.push(h);});
+  const attrs=SENS_ATTRS[cat]||{jar:[],int:[]};
+  const rows=lines.slice(1).map(l=>{
+    const c=split(l);const g=k=>idx[k]!=null?c[idx[k]]:'';
+    const jar={},intensity={};
+    attrs.jar.forEach(a=>{const v=sNum(g('JAR: '+a));if(v!=null)jar[a]=v;});
+    attrs.int.forEach(a=>{const v=sNum(g('Intensity: '+a));if(v!=null)intensity[a]=v;});
+    return {id:uid(),panelist:g('Panelist'),sample:(g('Sample')||'A').toUpperCase(),
+      liking:sNum(g('Overall liking')),pi:sNum(g('Purchase intent')),
+      jar,intensity,prefer:(g('Preference')||'').toUpperCase()||null,comment:g('Comments')};
+  }).filter(r=>r.panelist||r.liking!=null);
+  return {rows,mapped,unmapped,error:null};
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   SENSORY VIEW — Readiness · Sessions · Panel · Protocol
+   ══════════════════════════════════════════════════════════════════ */
+/* Printable pack: the run sheet for whoever serves, plus a blind score
+   sheet per panelist per sample. Opens in a new window ready to print. */
+function sensPrintPack(sess,run,th){
+  if(!run)return;
+  const a=SENS_ATTRS[sess.cat]||{jar:[],int:[]};
+  const srv=SENS_SERVE[sess.cat]||{inhaled:3,rest:15,draw:''};
+  const esc=v=>String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;');
+  const scale=(n,from)=>{let o='';for(let i=from;i<=n;i++)o+='<span class="b">'+i+'</span>';return o;};
+  const sheets=run.rows.map(r=>r.order.map((o,pos)=>`
+    <section class="sheet">
+      <div class="hd"><b>${esc(sess.cat)} sensory</b>
+        <span>Panelist <u>&nbsp;${esc(r.panelist.name)}&nbsp;</u></span>
+        <span>Sample <b class="code">${o.code}</b></span>
+        <span>Position ${pos+1} of ${r.order.length}</span>
+        <span>Date ${esc(sess.date)}</span></div>
+      <p class="note">Do not turn this sheet over until told. Score in the order shown.
+        Judge only what is in front of you — never compare against a previous sample.</p>
+      <div class="q"><b>1 · Appearance</b> — look only.
+        Overall liking <span class="sc">${scale(9,1)}</span></div>
+      <div class="q"><b>2 · Dry aroma</b> — three short sniffs, five seconds apart.
+        Overall liking <span class="sc">${scale(9,1)}</span></div>
+      <div class="q cleanse">Cleanse: unsalted cracker + room-temperature water. Wait 60 seconds.</div>
+      <div class="q"><b>3 · Inhale</b> — ${esc(srv.draw)}.</div>
+      <div class="q"><b>4 · Flavour — overall liking</b>
+        <span class="sc">${scale(9,1)}</span>
+        <span class="anch">1 dislike extremely &nbsp;·&nbsp; 5 neither &nbsp;·&nbsp; 9 like extremely</span></div>
+      <div class="q"><b>5 · Just-about-right</b> — 3 means exactly right.
+        <table class="jar"><tr><th></th><th>1 far too little</th><th>2 slightly little</th>
+          <th>3 just right</th><th>4 slightly much</th><th>5 far too much</th></tr>
+          ${a.jar.map(x=>'<tr><td>'+esc(x)+'</td><td></td><td></td><td></td><td></td><td></td></tr>').join('')}
+        </table></div>
+      <div class="q"><b>6 · Intensity</b> — 0 none, 10 extreme.
+        ${a.int.map(x=>'<div class="int">'+esc(x)+' <span class="sc">'+scale(10,0)+'</span></div>').join('')}</div>
+      <div class="q"><b>7 · Aftertaste at 60 seconds</b> — anything unpleasant?
+        <div class="line"></div></div>
+      <div class="q"><b>8 · Purchase intent</b> <span class="sc">${scale(5,1)}</span>
+        <span class="anch">1 definitely would not buy &nbsp;·&nbsp; 5 definitely would</span></div>
+      ${(sess.samples||[]).length>1?'<div class="q"><b>9 · Preference</b> — after all samples, which code did you prefer? <b class="line short"></b></div>':''}
+      <div class="q"><b>Comments</b> — in your own words. This is where the useful detail is.
+        <div class="line"></div><div class="line"></div></div>
+      <div class="ft">Rest ${srv.rest} minutes before the next sample.</div>
+    </section>`).join('')).join('');
+  const HTML=`<!doctype html><html><head><meta charset="utf-8">
+  <title>${esc(sess.prodName)} — sensory pack</title><style>
+  *{box-sizing:border-box}body{font:12px/1.5 -apple-system,Segoe UI,Roboto,sans-serif;color:#111;margin:0;padding:18px}
+  h1{font-size:17px;margin:0 0 2px}.sub{color:#666;font-size:11px;margin-bottom:14px}
+  table{border-collapse:collapse;width:100%;margin:8px 0}
+  th,td{border:1px solid #bbb;padding:5px 7px;text-align:left;font-size:11px}
+  th{background:#f2f2f2}
+  .run td.code{font-weight:700;font-size:14px;letter-spacing:1px}
+  .warn{border:1px solid #c00;background:#fff4f4;color:#900;padding:8px 10px;border-radius:5px;margin:10px 0;font-size:11px}
+  .sheet{border:1px solid #999;border-radius:6px;padding:12px 14px;margin:0 0 14px;page-break-inside:avoid}
+  .hd{display:flex;gap:14px;flex-wrap:wrap;align-items:baseline;border-bottom:1px solid #ddd;padding-bottom:6px;margin-bottom:8px;font-size:11px}
+  .hd b.code{font-size:17px;letter-spacing:2px}
+  .note{font-size:10px;color:#666;margin:0 0 8px}
+  .q{margin:7px 0;font-size:11px}
+  .cleanse{background:#f6f6f6;padding:5px 8px;border-radius:4px;font-style:italic}
+  .sc .b{display:inline-block;width:20px;height:20px;line-height:19px;text-align:center;
+    border:1px solid #888;border-radius:3px;margin-right:3px;font-size:10px}
+  .anch{color:#777;font-size:9px;margin-left:6px}
+  .int{margin:3px 0}
+  .jar th{font-size:9px;font-weight:600}.jar td{height:20px}
+  .line{border-bottom:1px solid #bbb;height:16px;margin-top:5px}.line.short{display:inline-block;width:70px}
+  .ft{margin-top:8px;padding-top:6px;border-top:1px dashed #ccc;font-size:10px;color:#666}
+  @media print{.no-print{display:none!important}body{padding:0}.sheet{page-break-after:always}}
+  </style></head><body>
+  <button class="no-print" onclick="window.print()" style="float:right;padding:7px 15px;border:none;border-radius:99px;background:#1B1B1E;color:#fff;cursor:pointer">Print</button>
+  <h1>${esc(sess.prodName)} — sensory session pack</h1>
+  <div class="sub">${esc(sess.cat)} · ${esc(sess.date)} · ${run.rows.length} panelists · ${(sess.samples||[]).length} sample(s)</div>
+  ${(sess.samples||[]).length>srv.inhaled?`<div class="warn"><b>Too many samples for one sitting.</b>
+    ${(sess.samples||[]).length} samples are planned but ${esc(sess.cat)} tolerates at most
+    ${srv.inhaled} inhaled samples per session. Beyond that, intoxication and palate fatigue
+    make the later scores unusable. Split this across sessions.</div>`:''}
+  ${!run.balanced?`<div class="warn"><b>Serving order is only partly balanced.</b>
+    ${run.rows.length} panelists do not divide evenly into the ${run.cycles}-row design, so some
+    positions are served slightly more often than others. Use a multiple of ${run.cycles} panelists
+    for a fully balanced order.</div>`:''}
+  <h2 style="font-size:13px;margin:14px 0 4px">Run sheet — for whoever is serving</h2>
+  <table class="run"><tr><th>Panelist</th>${run.rows[0].order.map((_,i)=>'<th>Position '+(i+1)+'</th>').join('')}</tr>
+  ${run.rows.map(r=>'<tr><td>'+esc(r.panelist.name)+'</td>'+
+    r.order.map(o=>'<td class="code">'+o.code+'</td>').join('')+'</tr>').join('')}</table>
+  <table><tr><th>Blind code</th><th>Is actually</th></tr>
+  ${(sess.samples||[]).map(x=>'<tr><td class="code">'+esc(run.codes[x.code])+'</td><td>'+
+    esc(x.label||x.code)+'</td></tr>').join('')}</table>
+  <p style="font-size:10px;color:#900"><b>Keep this key away from the panel.</b></p>
+  <h2 style="font-size:13px;margin:16px 0 6px">Score sheets</h2>
+  ${sheets}
+  </body></html>`;
+  const win=window.open('','_blank');
+  if(!win){alert('Allow pop-ups to open the print pack.');return;}
+  win.document.write(HTML);win.document.close();
+}
+
+function sensData(d){const s=d.sensory||{};
+  return {panelists:s.panelists||[],sessions:s.sessions||[],
+    thresholds:Object.assign({},SENS_DEFAULT_TH,s.thresholds||{})};}
+
+function SensGate({g}){
+  const col=g.ok===true?'var(--ok)':g.ok===false?'var(--err)':'var(--text4)';
+  const mark=g.ok===true?'ti-check':g.ok===false?'ti-x':'ti-minus';
+  return el('div',{style:{display:'flex',alignItems:'baseline',gap:8,padding:'3px 0'}},
+    el('i',{className:'ti '+mark,style:{fontSize:12,color:col,flexShrink:0}}),
+    el('span',{style:{fontSize:11,fontWeight:600,width:150,flexShrink:0,
+      color:g.ok===null?'var(--text4)':'var(--fg)'}},g.label),
+    el('span',{style:{fontFamily:'var(--mono)',fontSize:9,color:'var(--muted)',
+      flex:1,minWidth:0}},g.detail));
+}
+function SensVerdictChip({v,size}){
+  const col=SENS_VERDICT_HUE[v]||'var(--muted)';
+  return el('span',{style:{fontFamily:'var(--mono)',fontSize:size||9,fontWeight:700,
+    letterSpacing:'.1em',background:col,color:'var(--on-fill)',
+    borderRadius:'var(--pill)',padding:size?'3px 12px':'2px 9px'}},v);
+}
+
+function SensoryView({data,setData}){
+  const S=sensData(data);
+  const [tab,setTab]=React.useState(()=>{try{return localStorage.getItem('au_sens_tab')||'ready';}catch{return 'ready';}});
+  React.useEffect(()=>{try{localStorage.setItem('au_sens_tab',tab);}catch{}},[tab]);
+  const [openId,setOpenId]=React.useState(null);
+  const [paste,setPaste]=React.useState('');
+  const [importMsg,setImportMsg]=React.useState(null);
+  const [np,setNp]=React.useState({name:'',cat:SENS_CATS[0],role:'Trained'});
+  const [ns,setNs]=React.useState({prodName:'',cat:SENS_CATS[0],stage:'screen',paired:false});
+
+  const save=fn=>setData(d=>{
+    const cur=Object.assign({panelists:[],sessions:[],thresholds:{}},d.sensory||{});
+    return Object.assign({},d,{sensory:fn(cur)});});
+  const addPanelist=()=>{const n=np.name.trim();if(!n)return;
+    save(s=>Object.assign({},s,{panelists:[...s.panelists,
+      {id:uid(),name:n,cat:np.cat,role:np.role,active:true}]}));
+    setNp(Object.assign({},np,{name:''}));};
+  const dropPanelist=id=>save(s=>Object.assign({},s,{panelists:s.panelists.filter(p=>p.id!==id)}));
+  const togglePanelist=id=>save(s=>Object.assign({},s,{panelists:s.panelists
+    .map(p=>p.id===id?Object.assign({},p,{active:!p.active}):p)}));
+  const addSession=()=>{const n=ns.prodName.trim();if(!n)return;
+    const id=uid();
+    save(s=>Object.assign({},s,{sessions:[{id,date:new Date().toISOString().slice(0,10),
+      cat:ns.cat,stage:ns.stage,prodName:n,
+      samples:ns.paired?[{code:'A',label:'Current'},{code:'B',label:'Revision'}]:[{code:'A',label:''}],
+      responses:[]},...s.sessions]}));
+    setNs(Object.assign({},ns,{prodName:''}));setOpenId(id);setTab('sessions');};
+  const updSession=(id,patch)=>save(s=>Object.assign({},s,{sessions:s.sessions
+    .map(x=>x.id===id?Object.assign({},x,patch):x)}));
+  const dropSession=id=>{if(!confirm('Delete this session and its responses?'))return;
+    save(s=>Object.assign({},s,{sessions:s.sessions.filter(x=>x.id!==id)}));setOpenId(null);};
+  const setTh=(k,v)=>save(s=>Object.assign({},s,{thresholds:
+    Object.assign({},SENS_DEFAULT_TH,s.thresholds,{[k]:v})}));
+
+  const doImport=sess=>{
+    const r=sensParse(paste,sess.cat);
+    if(r.error){setImportMsg({bad:true,text:r.error});return;}
+    if(!r.rows.length){setImportMsg({bad:true,text:'No rows recognised. Check the header row matches the Protocol tab.'});return;}
+    updSession(sess.id,{responses:[...(sess.responses||[]),...r.rows]});
+    setPaste('');
+    setImportMsg({bad:false,text:'Imported '+r.rows.length+' response'+(r.rows.length>1?'s':'')
+      +'. Mapped '+r.mapped.length+' column'+(r.mapped.length>1?'s':'')
+      +(r.unmapped.length?('; ignored: '+r.unmapped.join(', ')):'.')});
+  };
+
+  const Card=(title,icon,body,right,key)=>el('div',{key,style:{background:'var(--surface)',
+    border:'1px solid var(--border)',borderRadius:'var(--r)',overflow:'hidden'}},
+    el('div',{style:{display:'flex',alignItems:'center',gap:8,padding:'10px 14px',
+      borderBottom:'1px solid var(--border)',background:'var(--surface-warm)'}},
+      el('i',{className:'ti '+icon,style:{fontSize:14,color:'var(--muted)'}}),
+      el('span',{style:{fontFamily:'var(--mono)',fontSize:9,fontWeight:700,letterSpacing:'.12em',
+        textTransform:'uppercase',color:'var(--muted)'}},title),
+      right&&el('span',{style:{marginLeft:'auto'}},right)),body);
+  const Empty=t=>el('div',{style:{padding:'20px 14px',textAlign:'center',
+    fontFamily:'var(--mono)',fontSize:11,color:'var(--text4)'}},t);
+  const Lbl=t=>el('div',{style:{fontFamily:'var(--mono)',fontSize:9,color:'var(--muted)',
+    letterSpacing:'.08em',textTransform:'uppercase',marginBottom:4}},t);
+
+  /* ── Readiness ────────────────────────────────────────────────── */
+  const readiness=S.sessions.map(s=>({s,v:sensoryVerdict(s,S.thresholds)}));
+  const byVerdict=v=>readiness.filter(r=>r.v.verdict===v).length;
+
+  const Readiness=el('div',{style:{display:'grid',gap:16}},
+    el('div',{style:{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(140px,1fr))',
+      gap:1,background:'var(--border)',border:'1px solid var(--border)',
+      borderRadius:'var(--r)',overflow:'hidden'}},
+      ['GO','REVISE','DELAY','NO-GO'].map(v=>el('div',{key:v,
+        style:{background:'var(--surface)',padding:'13px 16px'}},
+        el('div',{style:{fontFamily:'var(--mono)',fontSize:9,color:'var(--muted)',
+          letterSpacing:'.1em',textTransform:'uppercase',marginBottom:7}},v),
+        el('div',{style:{fontFamily:'var(--mono)',fontSize:24,fontWeight:600,lineHeight:1,
+          color:byVerdict(v)?SENS_VERDICT_HUE[v]:'var(--text4)'}},byVerdict(v)))) ),
+    readiness.length===0
+      ? Card('Market readiness','ti-clipboard-check',Empty('No sensory sessions yet — start one in Sessions.'))
+      : el('div',{style:{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(420px,1fr))',gap:12}},
+          readiness.map(({s,v})=>el('div',{key:s.id,style:{background:'var(--surface)',
+            border:'1px solid var(--border)',
+            borderLeft:'3px solid '+SENS_VERDICT_HUE[v.verdict],
+            borderRadius:'var(--r)',padding:'12px 14px'}},
+            el('div',{style:{display:'flex',alignItems:'center',gap:9,marginBottom:3}},
+              el('span',{style:{fontSize:13,fontWeight:600,flex:1,minWidth:0,overflow:'hidden',
+                textOverflow:'ellipsis',whiteSpace:'nowrap'}},s.prodName),
+              el(SensVerdictChip,{v:v.verdict})),
+            el('div',{style:{fontFamily:'var(--mono)',fontSize:9,color:'var(--muted)',marginBottom:8}},
+              s.cat+'  ·  '+(SENS_STAGES.find(x=>x.id===s.stage)||{}).label+'  ·  '+s.date
+              +'  ·  n='+v.stats.n),
+            el('div',{style:{fontSize:11,lineHeight:1.5,marginBottom:9,
+              color:v.verdict==='GO'?'var(--ok)':'var(--fg-2)'}},v.why),
+            el('div',{style:{borderTop:'1px solid var(--border-soft)',paddingTop:7}},
+              v.gates.map(g=>el(SensGate,{key:g.id,g}))),
+            v.stats.fixes.length>0&&el('div',{style:{marginTop:9,paddingTop:8,
+              borderTop:'1px solid var(--border-soft)'}},
+              Lbl('What to change'),
+              v.stats.fixes.map((f,i)=>el('div',{key:i,style:{fontSize:11,lineHeight:1.5}},
+                '· '+f.attr+' — '+f.dir+(f.pct!=null
+                  ? ' for '+f.pct.toFixed(0)+'% of the panel, costing '+f.drop.toFixed(2)+' liking points'
+                  : ' (mean '+f.drop.toFixed(1)+' vs ceiling '+S.thresholds.intMax+')')))),
+            el('button',{className:'btn',style:{marginTop:10,fontSize:11},
+              onClick:()=>{setOpenId(s.id);setTab('sessions');}},'Open session')))));
+
+  /* ── Sessions ─────────────────────────────────────────────────── */
+  const open=S.sessions.find(s=>s.id===openId);
+  const Sessions=el('div',{style:{display:'grid',gridTemplateColumns:'300px minmax(0,1fr)',
+    gap:16,alignItems:'start'}},
+    el('div',{style:{display:'grid',gap:12}},
+      Card('New session','ti-plus',el('div',{style:{padding:'12px 14px',display:'grid',gap:8}},
+        el('input',{className:'ei',placeholder:'Product or sample name',value:ns.prodName,
+          style:{fontSize:12},onChange:e=>setNs(Object.assign({},ns,{prodName:e.target.value})),
+          onKeyDown:e=>{if(e.key==='Enter')addSession();}}),
+        el('select',{className:'ei',value:ns.cat,style:{fontSize:12},
+          onChange:e=>setNs(Object.assign({},ns,{cat:e.target.value}))},
+          SENS_CATS.map(c=>el('option',{key:c,value:c},c))),
+        el('select',{className:'ei',value:ns.stage,style:{fontSize:12},
+          onChange:e=>setNs(Object.assign({},ns,{stage:e.target.value}))},
+          SENS_STAGES.map(x=>el('option',{key:x.id,value:x.id},x.n+' · '+x.label))),
+        el('label',{style:{display:'flex',alignItems:'center',gap:7,fontSize:11,cursor:'pointer'}},
+          el('input',{type:'checkbox',checked:ns.paired,
+            onChange:e=>setNs(Object.assign({},ns,{paired:e.target.checked}))}),
+          'Paired A/B (two samples)'),
+        el('button',{className:'btn btn-primary',onClick:addSession},'Create session'))),
+      Card('Sessions','ti-list',S.sessions.length===0?Empty('None yet.')
+        :el('div',null,S.sessions.map(s=>{
+          const v=sensoryVerdict(s,S.thresholds);
+          return el('button',{key:s.id,onClick:()=>setOpenId(s.id),
+            style:{width:'100%',textAlign:'left',background:openId===s.id?'var(--accent-bg)':'transparent',
+              border:'none',borderBottom:'1px solid var(--border-soft)',padding:'9px 12px',
+              cursor:'pointer',fontFamily:'inherit'}},
+            el('div',{style:{display:'flex',alignItems:'center',gap:7}},
+              el('span',{style:{fontSize:12,fontWeight:600,flex:1,minWidth:0,overflow:'hidden',
+                textOverflow:'ellipsis',whiteSpace:'nowrap'}},s.prodName),
+              el(SensVerdictChip,{v:v.verdict})),
+            el('div',{style:{fontFamily:'var(--mono)',fontSize:9,color:'var(--muted)',marginTop:3}},
+              s.cat+' · '+(SENS_STAGES.find(x=>x.id===s.stage)||{}).label+' · n='+v.stats.n));})))),
+    !open?Card('Session','ti-flask-2',Empty('Pick a session on the left, or create one.'))
+    :(()=>{
+      const v=sensoryVerdict(open,S.thresholds);
+      const attrs=SENS_ATTRS[open.cat]||{jar:[],int:[]};
+      return el('div',{style:{display:'grid',gap:12}},
+        Card(open.prodName,'ti-flask-2',
+          el('div',{style:{padding:'12px 14px'}},
+            el('div',{style:{display:'flex',gap:14,flexWrap:'wrap',alignItems:'center',marginBottom:10}},
+              el(SensVerdictChip,{v:v.verdict,size:11}),
+              el('span',{style:{fontFamily:'var(--mono)',fontSize:10,color:'var(--muted)'}},
+                open.cat+'  ·  n='+v.stats.n+' responses'),
+              el('select',{className:'ei',value:open.stage,style:{width:'auto',fontSize:11},
+                onChange:e=>updSession(open.id,{stage:e.target.value})},
+                SENS_STAGES.map(x=>el('option',{key:x.id,value:x.id},x.n+' · '+x.label)))),
+            el('div',{style:{fontSize:11,marginBottom:10,lineHeight:1.5}},v.why),
+            el('div',{style:{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(120px,1fr))',
+              gap:10,marginBottom:4}},
+              [['Mean liking',v.stats.liking==null?'—':v.stats.liking.toFixed(2),'/ 9'],
+               ['Top-3-box',v.stats.top3==null?'—':v.stats.top3.toFixed(0)+'%',''],
+               ['Purchase intent',v.stats.piTop2==null?'—':v.stats.piTop2.toFixed(0)+'%','top-2'],
+               ['Std dev',v.stats.likingSd==null?'—':v.stats.likingSd.toFixed(2),'']]
+              .map(([k,val,sub])=>el('div',{key:k},Lbl(k),
+                el('div',{style:{fontFamily:'var(--mono)',fontSize:18,fontWeight:600}},val,
+                  sub&&el('span',{style:{fontSize:9,color:'var(--muted)',marginLeft:4}},sub))))),
+            el('div',{style:{marginTop:10,paddingTop:9,borderTop:'1px solid var(--border-soft)'}},
+              v.gates.map(g=>el(SensGate,{key:g.id,g}))),
+            el('button',{className:'btn',style:{marginTop:10,fontSize:11,color:'var(--err)',
+              borderColor:'var(--err-dim)'},onClick:()=>dropSession(open.id)},'Delete session')),
+          el('span',{style:{fontFamily:'var(--mono)',fontSize:9,color:'var(--muted)'}},open.date)),
+
+        (()=>{
+          const roster=S.panelists.filter(x=>x.cat===open.cat&&x.active);
+          const srv=SENS_SERVE[open.cat]||{inhaled:3,rest:15,draw:''};
+          const nSamp=(open.samples||[]).length;
+          if(!roster.length)return Card('Run sheet','ti-clipboard-list',
+            Empty('No active panelists for '+open.cat+' — add them in the Panel tab.'));
+          const run=sensBuildRun(open,roster);
+          return Card('Run sheet','ti-clipboard-list',
+            el('div',null,
+              nSamp>srv.inhaled&&el('div',{style:{margin:'10px 14px 0',padding:'9px 11px',
+                background:'var(--err-bg)',border:'1px solid var(--err-dim)',
+                borderRadius:'var(--rs)',fontSize:11,lineHeight:1.55}},
+                el('b',null,'Too many samples for one sitting. '),
+                nSamp+' planned, but '+open.cat.toLowerCase()+' tolerates at most '+srv.inhaled
+                +' inhaled samples before intoxication and palate fatigue make later scores unusable. '
+                +'Split this across sessions.'),
+              !run.balanced&&el('div',{style:{margin:'10px 14px 0',padding:'9px 11px',
+                background:'var(--warn-bg)',border:'1px solid var(--warn-dim)',
+                borderRadius:'var(--rs)',fontSize:11,lineHeight:1.55}},
+                el('b',null,'Order only partly balanced. '),
+                roster.length+' panelists do not divide evenly into the '+run.cycles
+                +'-row design, so some positions come up slightly more often. A multiple of '
+                +run.cycles+' panelists gives a clean balance.'),
+              el('div',{style:{overflowX:'auto',padding:'10px 0 0'}},
+                el('table',{className:'task-tbl',style:{minWidth:360}},
+                  el('thead',null,el('tr',null,
+                    [el('th',{key:'p'},'Panelist')].concat(
+                      run.rows[0].order.map((_,i)=>el('th',{key:i},'Position '+(i+1)))))),
+                  el('tbody',null,run.rows.map(r=>el('tr',{key:r.panelist.id},
+                    el('td',{style:{fontFamily:'var(--font-body)',fontWeight:600}},r.panelist.name),
+                    r.order.map((o,i)=>el('td',{key:i,
+                      style:{fontWeight:700,letterSpacing:'1px'}},o.code))))))),
+              el('div',{style:{padding:'10px 14px',display:'flex',gap:8,alignItems:'center',
+                flexWrap:'wrap',borderTop:'1px solid var(--border-soft)'}},
+                el('button',{className:'btn btn-primary',
+                  onClick:()=>sensPrintPack(open,run,S.thresholds)},
+                  el('i',{className:'ti ti-printer'}),' Print run sheet + score sheets'),
+                el('button',{className:'btn',title:'Draw fresh blind codes',
+                  onClick:()=>updSession(open.id,{codeSeed:(open.codeSeed||0)+1})},'New codes'),
+                el('span',{style:{fontFamily:'var(--mono)',fontSize:9,color:'var(--muted)'}},
+                  srv.draw+'  ·  rest '+srv.rest+' min between samples')),
+              el('div',{style:{padding:'0 14px 12px',fontFamily:'var(--mono)',fontSize:9,
+                color:'var(--text4)',lineHeight:1.6}},
+                'Codes are blind and the order is a Williams design — balanced so no sample is '
+                +'flattered by going first or by what preceded it. Keep the code key away from the panel.')),
+            el('span',{style:{fontFamily:'var(--mono)',fontSize:9,color:'var(--muted)'}},
+              roster.length+' panelists'));
+        })(),
+
+        v.pref&&Card('Paired preference','ti-arrows-left-right',
+          el('div',{style:{padding:'12px 14px'}},
+            el('div',{style:{fontSize:13,fontWeight:600,marginBottom:4}},
+              'Sample '+v.pref.winner+' preferred '+v.pref.k+' of '+v.pref.n),
+            el('div',{style:{fontFamily:'var(--mono)',fontSize:10,
+              color:v.pref.sig?'var(--ok)':'var(--warn)',marginBottom:6}},
+              'exact binomial p = '+v.pref.p.toFixed(4)+'  ·  '
+              +(v.pref.sig?'significant at 0.05':'NOT significant')),
+            el('div',{style:{fontSize:11,lineHeight:1.55,color:'var(--muted)'}},
+              v.pref.need
+                ? 'With '+v.pref.n+' panelists you need at least '+v.pref.need+' of '+v.pref.n
+                  +' ('+(v.pref.need/v.pref.n*100).toFixed(0)+'%) before a preference is statistically real.'
+                : 'At '+v.pref.n+' panelists no split can reach significance — this panel cannot prove a preference.'))),
+
+        Card('Import responses','ti-table-import',
+          el('div',{style:{padding:'12px 14px'}},
+            el('div',{style:{fontSize:11,color:'var(--muted)',marginBottom:8,lineHeight:1.55}},
+              'Export your Smartsheet form responses and paste them here (CSV or tab-separated, header row included). '
+              +'Column names must match the Protocol tab.'),
+            el('textarea',{className:'ei',value:paste,placeholder:'Panelist,Sample,Overall liking,…',
+              style:{minHeight:90,fontFamily:'var(--mono)',fontSize:10},
+              onChange:e=>setPaste(e.target.value)}),
+            el('div',{style:{display:'flex',gap:8,alignItems:'center',marginTop:8}},
+              el('button',{className:'btn btn-primary',onClick:()=>doImport(open),
+                disabled:!paste.trim()},'Import'),
+              el('button',{className:'btn',onClick:()=>{
+                navigator.clipboard&&navigator.clipboard.writeText(sensColumns(open.cat).join(','));
+              }},'Copy column headers'),
+              importMsg&&el('span',{style:{fontFamily:'var(--mono)',fontSize:10,
+                color:importMsg.bad?'var(--err)':'var(--ok)'}},importMsg.text)))),
+
+        Card('Responses','ti-users',
+          (open.responses||[]).length===0?Empty('No responses yet.')
+          :el('div',{style:{overflowX:'auto'}},
+            el('table',{className:'task-tbl',style:{minWidth:520}},
+              el('thead',null,el('tr',null,['Panelist','Smp','Like','PI',
+                'Off-target JAR','Comment',''].map(h=>el('th',{key:h},h)))),
+              el('tbody',null,(open.responses||[]).map(r=>{
+                const off=Object.keys(r.jar||{}).filter(k=>r.jar[k]!==3)
+                  .map(k=>k+' '+(r.jar[k]<3?'↓':'↑'));
+                return el('tr',{key:r.id},
+                  el('td',null,r.panelist||'—'),
+                  el('td',null,r.sample),
+                  el('td',{style:{fontWeight:700}},r.liking==null?'—':r.liking),
+                  el('td',null,r.pi==null?'—':r.pi),
+                  el('td',{style:{color:off.length?'var(--warn)':'var(--text4)'}},
+                    off.length?off.join(', '):'on target'),
+                  el('td',{style:{color:'var(--muted)'}},r.comment||''),
+                  el('td',null,el('button',{className:'icon-btn',title:'Remove',
+                    onClick:()=>updSession(open.id,{responses:open.responses.filter(x=>x.id!==r.id)})},
+                    el('i',{className:'ti ti-x',style:{fontSize:12}}))));
+              }))))),
+
+        v.stats.jars.length>0&&Card('JAR penalty analysis','ti-adjustments',
+          el('div',{style:{overflowX:'auto'}},
+            el('table',{className:'task-tbl',style:{minWidth:560}},
+              el('thead',null,el('tr',null,['Attribute','JAR %','Too little','Too much','Verdict']
+                .map(h=>el('th',{key:h},h)))),
+              el('tbody',null,v.stats.jars.map(j=>{
+                const side=s=>!s?'—':(s.pct.toFixed(0)+'%  −'+s.drop.toFixed(2));
+                const act=[j.lo,j.hi].filter(x=>x&&x.actionable);
+                return el('tr',{key:j.attr},
+                  el('td',{style:{fontFamily:'var(--font-body)',fontWeight:600}},j.attr),
+                  el('td',null,j.jarPct.toFixed(0)+'%'),
+                  el('td',{style:{color:j.lo&&j.lo.actionable?'var(--err)':'var(--muted)'}},side(j.lo)),
+                  el('td',{style:{color:j.hi&&j.hi.actionable?'var(--err)':'var(--muted)'}},side(j.hi)),
+                  el('td',{style:{color:act.length?'var(--err)':'var(--ok)',fontWeight:700}},
+                    act.length?'fix':'ok'));
+              }))),
+            el('div',{style:{padding:'9px 14px',fontFamily:'var(--mono)',fontSize:9,
+              color:'var(--text4)',lineHeight:1.6}},
+              'Each cell shows the share of the panel off target and the mean liking they gave up. '
+              +'Flagged as "fix" only when at least '+S.thresholds.jarOff+'% are off target AND the drop is '
+              +S.thresholds.jarPenalty+' points or more — one unhappy panelist is noise, not a finding.')))
+      );
+    })());
+
+  /* ── Panel ────────────────────────────────────────────────────── */
+  const Panel=el('div',{style:{display:'grid',gap:16}},
+    Card('Add panelist','ti-user-plus',el('div',{style:{padding:'12px 14px',display:'flex',
+      gap:8,flexWrap:'wrap',alignItems:'center'}},
+      el('input',{className:'ei',placeholder:'Name',value:np.name,style:{width:200,fontSize:12},
+        onChange:e=>setNp(Object.assign({},np,{name:e.target.value})),
+        onKeyDown:e=>{if(e.key==='Enter')addPanelist();}}),
+      el('select',{className:'ei',value:np.cat,style:{width:'auto',fontSize:12},
+        onChange:e=>setNp(Object.assign({},np,{cat:e.target.value}))},
+        SENS_CATS.map(c=>el('option',{key:c,value:c},c))),
+      el('select',{className:'ei',value:np.role,style:{width:'auto',fontSize:12},
+        onChange:e=>setNp(Object.assign({},np,{role:e.target.value}))},
+        ['Trained','Consumer','Expert'].map(c=>el('option',{key:c,value:c},c))),
+      el('button',{className:'btn btn-primary',onClick:addPanelist},'Add'))),
+    el('div',{style:{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(300px,1fr))',gap:12}},
+      SENS_CATS.map(cat=>{
+        const ps=S.panelists.filter(p=>p.cat===cat);
+        const act=ps.filter(p=>p.active).length;
+        return Card(cat,'ti-users',
+          ps.length===0?Empty('No panelists assigned.')
+          :el('div',null,ps.map(p=>el('div',{key:p.id,
+            style:{display:'flex',alignItems:'center',gap:9,padding:'8px 12px',
+              borderBottom:'1px solid var(--border-soft)',opacity:p.active?1:.45}},
+            el('button',{onClick:()=>togglePanelist(p.id),title:p.active?'Set inactive':'Set active',
+              style:{width:14,height:14,borderRadius:'50%',flexShrink:0,cursor:'pointer',
+                border:'1.5px solid '+(p.active?'var(--ok)':'var(--bdr2)'),
+                background:p.active?'var(--ok)':'transparent'}}),
+            el('span',{style:{flex:1,minWidth:0,fontSize:12,fontWeight:600}},p.name),
+            el('span',{style:{fontFamily:'var(--mono)',fontSize:9,color:'var(--muted)'}},p.role),
+            el('button',{className:'icon-btn',onClick:()=>dropPanelist(p.id)},
+              el('i',{className:'ti ti-x',style:{fontSize:12}}))))),
+          el('span',{style:{fontFamily:'var(--mono)',fontSize:9,
+            color:act>=S.thresholds.minPanel?'var(--ok)':'var(--warn)'}},
+            act+' active / '+S.thresholds.minPanel+' needed'),cat);
+      })),
+    Card('Decision thresholds','ti-adjustments-alt',
+      el('div',{style:{padding:'12px 14px',display:'grid',
+        gridTemplateColumns:'repeat(auto-fit,minmax(150px,1fr))',gap:12}},
+        [['minPanel','Min panelists',''],['liking','Mean liking','/9'],
+         ['top3','Top-3-box','%'],['piTop2','Purchase intent','%'],
+         ['jarOff','JAR off-target','%'],['jarPenalty','JAR penalty','pts'],
+         ['intMax','Defect ceiling','/10']].map(([k,label,unit])=>
+          el('div',{key:k},Lbl(label),
+            el('div',{style:{display:'flex',alignItems:'baseline',gap:5}},
+              el('input',{className:'ei',type:'number',step:'0.1',value:S.thresholds[k],
+                style:{width:74,fontFamily:'var(--mono)',fontSize:12},
+                onChange:e=>setTh(k,parseFloat(e.target.value)||0)}),
+              el('span',{style:{fontFamily:'var(--mono)',fontSize:9,color:'var(--muted)'}},unit)))))));
+
+  /* ── Protocol ─────────────────────────────────────────────────── */
+  const need7=minKforSig(7),need24=minKforSig(24),need60=minKforSig(60);
+  const Protocol=el('div',{style:{display:'grid',gap:16,maxWidth:920}},
+    Card('How the gates work','ti-route',el('div',{style:{padding:'14px'}},
+      SENS_STAGES.map(st=>el('div',{key:st.id,style:{display:'flex',gap:12,padding:'8px 0',
+        borderBottom:'1px solid var(--border-soft)'}},
+        el('span',{style:{fontFamily:'var(--mono)',fontSize:18,fontWeight:700,
+          color:'var(--accent)',width:24,flexShrink:0}},st.n),
+        el('span',null,
+          el('span',{style:{display:'block',fontSize:13,fontWeight:600}},st.label),
+          el('span',{style:{display:'block',fontSize:11,color:'var(--muted)',marginTop:2}},st.blurb)))),
+      el('div',{style:{marginTop:12,display:'grid',gap:6}},
+        [['GO','every gate clear — advance to the next stage, or submit if validated'],
+         ['REVISE','a specific attribute is diagnosed off target, or acceptance is short'],
+         ['DELAY','not enough panelists have scored it to make a call'],
+         ['NO-GO','mean liking sits in the dislike range — a concept problem, not a tweak']]
+        .map(([v,txt])=>el('div',{key:v,style:{display:'flex',gap:10,alignItems:'baseline'}},
+          el(SensVerdictChip,{v}),
+          el('span',{style:{fontSize:11,color:'var(--fg-2)'}},txt)))))),
+
+    Card('Running the session','ti-list-check',
+      el('div',{style:{padding:'14px',fontSize:12,lineHeight:1.7}},
+        [['Before — the day of',
+          ['No cannabis for 12 hours beforehand. No food, coffee or mint for 60 minutes. No perfume, scented lotion or smoking on the way in.',
+           'Anyone with a cold or an allergy flare sits it out — record why, do not quietly drop them.',
+           'The formulator does not score. They know which sample is theirs and it will show.',
+           'Use the same seven people across a product\u2019s Screen → Optimise → Validate so the scores are comparable.']],
+         ['Prepare',
+          ['Print the run sheet. Every sample gets a random 3-digit blind code — never A/B, never 1/2, because people read meaning into order.',
+           'Identical vessel, identical fill, identical temperature. Any visible difference that is not the variable under test becomes the variable under test.',
+           'Serve in the order on the run sheet. It is balanced so each sample lands in each position equally often.',
+           'Keep the code key with the server, not in the room.']],
+         ['The room',
+          ['Odour-neutral, consistently lit — colour judgements shift badly under warm light.',
+           'Panelists separated, no talking, no phones. One person talking sets the whole panel\u2019s scores.',
+           'Same time of day every session.']],
+         ['Per sample, in this order',
+          ['Appearance — look only, score it.',
+           'Dry aroma — three short sniffs five seconds apart, score it.',
+           'Cleanse: unsalted cracker and room-temperature water, wait 60 seconds.',
+           'Inhale to the standard draw for the category, then score flavour immediately.',
+           'Score the JAR attributes while the sample is still fresh in the mouth.',
+           'Aftertaste at 60 seconds, then comments in their own words.',
+           'Rest 10–15 minutes before the next sample.']],
+         ['Stop rules',
+          ['Three inhaled samples is the ceiling for pre-rolls and vapes; two for concentrates.',
+           'Anyone who feels too intoxicated to judge stops there. Keep the scores they already gave — discarding them biases the result toward high-tolerance panelists.',
+           'Never run a validation panel on the same day as a screening panel.']]]
+        .map(([h,items])=>el('div',{key:h,style:{marginBottom:12}},
+          el('div',{style:{fontFamily:'var(--mono)',fontSize:9,fontWeight:700,letterSpacing:'.12em',
+            textTransform:'uppercase',color:'var(--accent)',marginBottom:5}},h),
+          items.map((t,i)=>el('div',{key:i,style:{display:'flex',gap:8,padding:'2px 0'}},
+            el('span',{style:{color:'var(--text4)',flexShrink:0}},'·'),
+            el('span',null,t))))),
+        el('div',{style:{marginTop:6,padding:'10px 12px',background:'var(--surface-warm)',
+          border:'1px solid var(--border)',borderRadius:'var(--rs)',fontSize:11,lineHeight:1.6}},
+          el('b',null,'Why so few samples? '),
+          'Appearance and dry aroma cost you nothing — you can screen eight samples that way in one '
+          +'sitting. The moment anything is inhaled the assessor starts changing: tolerance, palate '
+          +'fatigue and rising intoxication all push later scores around. A panel that tastes six '
+          +'vapes in an hour is measuring the hour, not the vapes.'))),
+
+    Card('What your panel size can and cannot prove','ti-alert-circle',
+      el('div',{style:{padding:'14px',fontSize:12,lineHeight:1.65}},
+        el('p',{style:{marginBottom:9}},
+          'Seven panelists per category is a ',el('b',null,'screening'),' panel. It is genuinely good at '
+          +'diagnosis — JAR analysis will tell you which attribute to change — but it cannot establish '
+          +'consumer acceptance or a preference.'),
+        el('div',{style:{fontFamily:'var(--mono)',fontSize:11,background:'var(--surface-warm)',
+          border:'1px solid var(--border)',borderRadius:'var(--rs)',padding:'10px 12px',
+          marginBottom:9,lineHeight:1.8}},
+          'paired preference · minimum split for significance (p ≤ 0.05)',el('br'),
+          'n = 7   → '+need7+' / 7 — only a unanimous panel counts',el('br'),
+          'n = 24  → '+need24+' / 24',el('br'),
+          'n = 60  → '+need60+' / 60'),
+        el('p',{style:{color:'var(--muted)'}},
+          'So run A/B at n=7 to steer formulation, but do not report "panel preferred A" as a finding '
+          +'unless the vote is unanimous. To make a preference claim you want 24+ for a screening read '
+          +'and 60–100 consumers for anything customer-facing.'))),
+
+    Card('Questionnaire — put these in Smartsheet','ti-clipboard-text',
+      el('div',{style:{padding:'14px'}},
+        el('div',{style:{fontSize:12,lineHeight:1.6,marginBottom:12}},
+          'One response per panelist per sample. Serve samples blind with 3-digit codes, '
+          +'randomise the order, and never show the panelist their earlier scores.'),
+        [['Panelist','Short text — the taster’s name (must match the Panel tab)'],
+         ['Sample','Dropdown — A / B (the blind code you served)'],
+         ['Overall liking','Dropdown 1–9 — '+SENS_HEDONIC[0]+' … '+SENS_HEDONIC[8]],
+         ['Purchase intent','Dropdown 1–5 — '+SENS_PI[0]+' … '+SENS_PI[4]]]
+          .map(([q,a])=>el('div',{key:q,style:{padding:'7px 0',
+            borderTop:'1px solid var(--border-soft)'}},
+            el('div',{style:{fontSize:12,fontWeight:600}},q),
+            el('div',{style:{fontSize:11,color:'var(--muted)',marginTop:2}},a))),
+        el('div',{style:{marginTop:14}},Lbl('Then, per category')),
+        SENS_CATS.map(cat=>el('div',{key:cat,style:{marginTop:9,padding:'10px 12px',
+          background:'var(--surface-warm)',border:'1px solid var(--border)',
+          borderRadius:'var(--rs)'}},
+          el('div',{style:{fontSize:12,fontWeight:700,marginBottom:6}},cat),
+          el('div',{style:{fontSize:11,marginBottom:6,lineHeight:1.6}},
+            el('b',null,'JAR (1–5, 3 = just about right): '),
+            (SENS_ATTRS[cat].jar).join(' · ')),
+          el('div',{style:{fontSize:11,marginBottom:8,lineHeight:1.6}},
+            el('b',null,'Intensity (0–10): '),(SENS_ATTRS[cat].int).join(' · ')),
+          el('div',{style:{fontFamily:'var(--mono)',fontSize:9,color:'var(--muted)',
+            wordBreak:'break-all',lineHeight:1.6}},sensColumns(cat).join(',')),
+          el('button',{className:'btn',style:{marginTop:8,fontSize:11},
+            onClick:()=>{navigator.clipboard&&navigator.clipboard.writeText(sensColumns(cat).join(','));}},
+            'Copy '+cat+' headers'))),
+        el('div',{style:{marginTop:14,fontSize:11,color:'var(--muted)',lineHeight:1.6}},
+          'Add ',el('b',null,'Preference'),' (A / B) only on paired sessions, and a free-text ',
+          el('b',null,'Comments'),' field — the comments are usually where the real diagnosis is.'))));
+
+  const TABS=[['ready','Readiness','ti-clipboard-check'],['sessions','Sessions','ti-flask-2'],
+    ['panel','Panel','ti-users'],['protocol','Protocol','ti-book']];
+  return el('div',null,
+    el('div',{className:'sectabs',style:{background:'var(--surface)'}},
+      TABS.map(([id,label,icon])=>el('button',{key:id,
+        className:'stab '+(tab===id?'on':''),onClick:()=>setTab(id),
+        style:{display:'inline-flex',alignItems:'center',gap:6}},
+        el('i',{className:'ti '+icon,style:{fontSize:14}}),label))),
+    el('div',{style:{padding:'18px 20px 40px'}},
+      tab==='ready'?Readiness:tab==='sessions'?Sessions:tab==='panel'?Panel:Protocol));
+}
+
 function App(){
   const [authed,setAuthed_]=useState(isAuthed);
   const init=(()=>{
@@ -10480,6 +11306,19 @@ function App(){
           )
         ),
 
+        el('div',{style:{display:'flex',alignItems:'center',gap:0,borderRadius:'var(--rs)',overflow:'hidden'}},
+          el('button',{
+            className:'sidebar-item '+(view==='sensory'?'active':''),
+            style:{flex:1,borderRadius:0},
+            onClick:()=>setView('sensory')
+          },
+            el('i',{className:'ti ti-flask-2'}),
+            'Sensory',
+            (()=>{const n=((data.sensory||{}).sessions||[]).length;
+              return n>0&&el('span',{className:'sidebar-pc-badge'},n);})()
+          )
+        ),
+
         /* Product Calls */
         el('div',{className:'sidebar-section-label',style:{marginTop:8}},'Product Calls'),
         data.pcTabs.map(tab=>{
@@ -10588,6 +11427,7 @@ function App(){
           view==='postlaunch'?'Post Launch Analytics':
           view==='macro'?'Macro Timeline':
           view==='workload'?'Team Workload':
+      view==='sensory'?'Sensory & Market Readiness':
           (data.pcTabs.find(t=>t.id===view)?.label||'Dashboard')
         ),
         el('div',{className:'topbar2-sep'}),
@@ -10656,6 +11496,7 @@ function App(){
         view==='postlaunch' ? el(PostLaunchView,{data,setData,addChangelogEntry}) :
         view==='macro'      ? MacroTimeline :
         view==='workload'   ? el(WorkloadViewComp,{data,setView,setSels,setProdView}) :
+        view==='sensory'    ? el(SensoryView,{data,setData}) :
         el('div',null,
           view==='in_dev'&&el(DevSubTabs,{devTab,setDevTab,
             rdCount:(data.in_dev||[]).length,
